@@ -21,10 +21,8 @@ const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
 const ordersRoutes = require('./routes/orders');
 
-// Garantir que o diretório de uploads existe (fallback local)
-const uploadDir = process.env.UPLOAD_DIR || (process.env.NODE_ENV === 'production'
-  ? path.join(os.tmpdir(), 'cia-condimentos-uploads')
-  : path.join(__dirname, 'uploads'));
+// Garantir que o diretório de uploads existe
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -70,8 +68,9 @@ const upload = multer({ storage });
 // Servir arquivos estáticos da pasta img
 app.use('/img', express.static(path.join(__dirname, '../img')));
 
-// Servir uploads (pasta configurável)
+// Servir uploads
 app.use('/uploads', express.static(uploadDir));
+app.use('/api/uploads', express.static(uploadDir));
 
 // Rota para upload de imagem
 app.post('/api/upload', upload.single('image'), (req, res) => {
@@ -80,13 +79,20 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    const imageUrl = req.file.path || req.file.secure_url || req.file.url || (req.file.filename ? `/uploads/${req.file.filename}` : null);
-    if (!imageUrl) {
-      console.error('Upload: não foi possível determinar URL da imagem', req.file);
-      return res.status(500).json({ error: 'Não foi possível determinar URL da imagem' });
+    // Para Cloudinary: usar secure_url ou url
+    if (req.file.secure_url || req.file.url) {
+      return res.json({ imageUrl: req.file.secure_url || req.file.url });
     }
 
-    res.json({ imageUrl });
+    // Para diskStorage local: retornar URL baseada no filename
+    if (req.file.filename) {
+      const imageUrl = `/api/uploads/${req.file.filename}`;
+      console.log('Upload salvo:', imageUrl);
+      return res.json({ imageUrl });
+    }
+
+    console.error('Upload: não foi possível determinar URL da imagem', req.file);
+    res.status(500).json({ error: 'Não foi possível determinar URL da imagem' });
   } catch (error) {
     console.error('Erro no upload:', error);
     res.status(500).json({ error: 'Erro interno do servidor' });

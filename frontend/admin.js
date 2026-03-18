@@ -55,11 +55,26 @@ function showPage(pageId, buttonElement) {
 function showToast(message, type = 'success') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
-  toast.className = 'toast show';
+  
+  // Define classes based on type
+  let className = 'toast show';
+  if (type === 'error') {
+    className += ' toast-error';
+  } else if (type === 'warning') {
+    className += ' toast-warning';
+  } else if (type === 'info') {
+    className += ' toast-info';
+  } else {
+    className += ' toast-success';
+  }
+  
+  toast.className = className;
+  
+  const duration = type === 'error' ? 5000 : (type === 'warning' ? 4000 : 3000);
   
   setTimeout(() => {
     toast.classList.remove('show');
-  }, 3000);
+  }, duration);
 }
 
 // ==================== DASHBOARD ====================
@@ -231,11 +246,18 @@ function renderProductsTable(products) {
   const filtered = products;
 
   const tbody = document.getElementById('productsTableBody');
-  tbody.innerHTML = filtered.map(prod => `
+  tbody.innerHTML = filtered.map(prod => {
+    // Get first image or emoji
+    const firstImage = prod.images && prod.images.length > 0 ? prod.images[0] : null;
+    const imgHtml = firstImage 
+      ? `<img src="${firstImage}" alt="${prod.name}" onerror="this.parentElement.innerHTML='🌶️'">` 
+      : '🌶️';
+    
+    return `
     <tr>
       <td>
         <div class="prod-cell">
-          <div class="prod-thumb">${prod.image ? `<img src="${prod.image}" alt="${prod.name}" onerror="this.parentElement.innerHTML='🌶️'">` : '🌶️'}</div>
+          <div class="prod-thumb">${imgHtml}</div>
           <div>
             <div class="prod-name">${prod.name}</div>
             <div class="prod-cat">${prod.category || 'Sem categoria'}</div>
@@ -254,7 +276,8 @@ function renderProductsTable(products) {
         </div>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 
   // Update badge
   document.getElementById('prodCount').textContent = filtered.length;
@@ -307,8 +330,9 @@ function openAddProduct() {
       </div>
     </div>
     <div class="fg">
-      <label>Imagem do Produto</label>
-      <input type="file" id="prodImageFile" accept="image/*">
+      <label>Imagens do Produto (múltiplos arquivos)</label>
+      <input type="file" id="prodImageFile" accept="image/*" multiple onchange="updateFileList()">
+      <div id="prodImageList" style="margin-top: 10px; font-size: 12px; color: #666;"></div>
     </div>
     <div class="fg">
       <label>Descrição</label>
@@ -317,6 +341,92 @@ function openAddProduct() {
   `;
   
   modal.classList.add('open');
+}
+
+function updateFileList() {
+  const fileInput = document.getElementById('prodImageFile');
+  const listDiv = document.getElementById('prodImageList');
+  
+  if (!fileInput || fileInput.files.length === 0) {
+    listDiv.innerHTML = '';
+    return;
+  }
+  
+  let html = `<div style="margin-bottom: 15px;">
+    <strong style="color: #27ae60; font-size: 14px;">✓ ${fileInput.files.length} arquivo(s) selecionado(s):</strong>
+  </div>
+  <div style="display: flex; gap: 12px; flex-wrap: wrap; border: 2px dashed #e0d8c8; padding: 15px; border-radius: 8px; background: #faf7f2;">
+  `;
+  
+  // Criar previews das imagens
+  for (let i = 0; i < fileInput.files.length; i++) {
+    const file = fileInput.files[i];
+    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const imgPreview = document.getElementById(`preview-${i}`);
+      if (imgPreview) {
+        imgPreview.src = e.target.result;
+      }
+    };
+    
+    reader.readAsDataURL(file);
+    
+    html += `
+      <div style="text-align: center; position: relative;">
+        <div style="
+          width: 100px; 
+          height: 100px; 
+          background: white; 
+          border: 2px solid #e0d8c8;
+          border-radius: 6px; 
+          display: flex; 
+          align-items: center; 
+          justify-content: center;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">
+          <img id="preview-${i}" style="max-width: 100%; max-height: 100%; object-fit: cover;" alt="Preview ${i + 1}">
+        </div>
+        <div style="
+          margin-top: 8px; 
+          font-size: 11px; 
+          color: #666; 
+          max-width: 110px;
+          word-break: break-word;
+          line-height: 1.3;
+        ">
+          <strong>${file.name}</strong><br>
+          ${sizeMB} MB
+        </div>
+      </div>
+    `;
+  }
+  
+  html += `
+  </div>
+  <div style="margin-top: 12px; font-size: 11px; color: #888;">
+    💡 Dica: As imagens aparecerão acima conforme forem selecionadas
+  </div>
+  `;
+  
+  listDiv.innerHTML = html;
+  
+  // Carregar as imagens novamente
+  for (let i = 0; i < fileInput.files.length; i++) {
+    const file = fileInput.files[i];
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const imgPreview = document.getElementById(`preview-${i}`);
+      if (imgPreview) {
+        imgPreview.src = e.target.result;
+      }
+    };
+    
+    reader.readAsDataURL(file);
+  }
 }
 
 function closeProductModal() {
@@ -332,12 +442,30 @@ function saveProduct() {
   const stock = parseInt(document.getElementById('prodStock')?.value) || 0;
   const status = document.getElementById('prodStatus')?.value === 'active';
   const description = document.getElementById('prodDescription')?.value?.trim();
-  if (!name || !price || stock < 0) {
-    showToast('Preencha todos os campos obrigatórios', 'error');
+  
+  // Validações
+  if (!name || name.length === 0) {
+    showToast('Por favor, preencha o Nome do Produto', 'error');
     return;
   }
   
-  const saveProductData = (imageUrl) => {
+  if (price <= 0) {
+    showToast('Por favor, preencha um Preço válido (maior que 0)', 'error');
+    return;
+  }
+  
+  if (stock < 0) {
+    showToast('Por favor, preencha um Estoque válido (maior ou igual a 0)', 'error');
+    return;
+  }
+  
+  // Verificar se selecionou pelo menos uma imagem para novo produto
+  const fileInput = document.getElementById('prodImageFile');
+  if (!id && (!fileInput || fileInput.files.length === 0)) {
+    showToast('⚠️ Aviso: Nenhuma imagem selecionada! Recomendamos adicionar imagens ao produto.', 'warning');
+  }
+  
+  const saveProductData = (images) => {
     const productData = {
       name,
       sku,
@@ -345,9 +473,11 @@ function saveProduct() {
       price,
       stock,
       active: status,
-      image: imageUrl,
+      images: images || [],
       description
     };
+    
+    console.log('Salvando produto:', productData);
     
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}/products/${id}` : `${API_BASE}/products`;
@@ -357,54 +487,79 @@ function saveProduct() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productData)
     })
-    .then(res => res.json())
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
     .then(data => {
       if (data.error) {
         showToast('Erro ao salvar produto: ' + data.error, 'error');
+        console.error('API Error:', data);
       } else {
-        showToast('Produto salvo com sucesso!');
+        showToast('✅ Produto salvo com sucesso!', 'success');
         closeProductModal();
         renderProductsTableAsync();
       }
     })
     .catch(error => {
       console.error('Error saving product:', error);
-      showToast('Erro ao salvar produto', 'error');
+      showToast('Erro ao salvar produto: ' + error.message, 'error');
     });
   };
   
-  const fileInput = document.getElementById('prodImageFile');
-  if (fileInput.files.length > 0) {
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]);
+  // Upload multiple images
+  if (fileInput && fileInput.files.length > 0) {
+    showToast('📤 Enviando ' + fileInput.files.length + ' imagem(ns)...', 'info');
+    const uploadPromises = [];
     
-    fetch(`${API_BASE}/upload`, {
-      method: 'POST',
-      body: formData
-    })
-    .then(async res => {
-      if (!res.ok) {
-        const text = await res.text();
-        console.error('Upload failed:', res.status, text);
-        throw new Error('Upload falhou: ' + res.status);
-      }
-      return res.json();
-    })
-    .then(data => {
-      if (data.imageUrl) {
-        saveProductData(data.imageUrl);
-      } else {
-        const message = data.error || 'Erro no upload da imagem';
-        showToast(message, 'error');
-        console.error('Upload response error:', data);
-      }
-    })
-    .catch(error => {
-      console.error('Error uploading image:', error);
-      showToast(error.message || 'Erro no upload da imagem', 'error');
-    });
+    console.log('Iniciando upload de ' + fileInput.files.length + ' arquivo(s)');
+    
+    for (let i = 0; i < fileInput.files.length; i++) {
+      const file = fileInput.files[i];
+      console.log(`Upload arquivo ${i + 1}:`, file.name);
+      
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      uploadPromises.push(
+        fetch(`${API_BASE}/upload`, {
+          method: 'POST',
+          body: formData
+        })
+        .then(async res => {
+          if (!res.ok) {
+            const text = await res.text();
+            console.error(`Upload file ${i + 1} failed:`, res.status, text);
+            throw new Error(`Upload falhou para "${file.name}": ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          if (data.imageUrl) {
+            console.log(`Upload bem-sucedido arquivo ${i + 1}:`, data.imageUrl);
+            return data.imageUrl;
+          } else {
+            throw new Error(data.error || `Erro no upload de "${file.name}"`);
+          }
+        })
+      );
+    }
+    
+    Promise.all(uploadPromises)
+      .then(imageUrls => {
+        console.log('Todos os uploads concluídos. URLs:', imageUrls);
+        showToast('✅ Imagens enviadas! Salvando produto...', 'success');
+        saveProductData(imageUrls);
+      })
+      .catch(error => {
+        console.error('Error uploading images:', error);
+        showToast('❌ Erro no upload: ' + error.message, 'error');
+      });
   } else {
-    saveProductData('');
+    console.log('Nenhum arquivo selecionado, salvando sem imagens');
+    saveProductData([]);
   }
 }
 
@@ -426,6 +581,56 @@ function openEditProduct(product) {
   const body = document.getElementById('productModalBody');
   
   title.textContent = 'Editar Produto';
+  
+  // Build images display with previews
+  let imagesHtml = '';
+  if (product.images && product.images.length > 0) {
+    imagesHtml = `
+      <div style="margin-bottom: 15px;">
+        <strong style="color: #c0392b; font-size: 13px;">📷 Imagens Atuais:</strong>
+      </div>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; border: 2px solid #e0d8c8; padding: 15px; border-radius: 8px; background: #fff9f5; margin-bottom: 12px;">
+    `;
+    
+    product.images.forEach((img, idx) => {
+      imagesHtml += `
+        <div style="text-align: center; position: relative;">
+          <div style="
+            width: 100px; 
+            height: 100px; 
+            background: white; 
+            border: 2px solid #e0d8c8;
+            border-radius: 6px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          ">
+            <img src="${img}" style="max-width: 100%; max-height: 100%; object-fit: cover;" alt="Imagem ${idx + 1}" onerror="this.parentElement.innerHTML='❌'">
+          </div>
+          <div style="
+            margin-top: 8px; 
+            font-size: 10px; 
+            color: #666; 
+            max-width: 110px;
+            word-break: break-word;
+            line-height: 1.2;
+          ">
+            Imagem ${idx + 1}
+          </div>
+        </div>
+      `;
+    });
+    
+    imagesHtml += `
+      </div>
+      <div style="background: #fdf8f5; border-left: 4px solid #c0392b; padding: 10px 12px; margin-bottom: 12px; border-radius: 4px; font-size: 12px; color: #666;">
+        ⚠️ <strong>Atenção:</strong> As novas imagens que selecionar SUBSTITUIRÃO as imagens acima
+      </div>
+    `;
+  }
+  
   body.innerHTML = `
     <div class="form-row-2">
       <div class="fg">
@@ -467,9 +672,10 @@ function openEditProduct(product) {
       </div>
     </div>
     <div class="fg">
-      <label>Imagem do Produto</label>
-      <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
-        <input type="file" id="prodImageFile" accept="image/*">
+      <label>Imagens do Produto (múltiplos arquivos)</label>
+      ${imagesHtml}
+      <input type="file" id="prodImageFile" accept="image/*" multiple onchange="updateFileList()" style="margin-top: 10px;">
+      <div id="prodImageList" style="margin-top: 10px;"></div>
     </div>
     <div class="fg">
       <label>Descrição</label>

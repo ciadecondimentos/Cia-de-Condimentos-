@@ -46,6 +46,10 @@ app.use('/uploads', express.static(uploadDir, {
     if (mimeTypes[ext]) {
       res.set('Content-Type', mimeTypes[ext]);
     }
+    // Adicionar headers CORS para permitir cross-origin
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type');
   }
 }));
 

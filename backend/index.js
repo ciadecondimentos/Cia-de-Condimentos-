@@ -39,7 +39,6 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 let storage;
 const useCloudinary = Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
 const isProd = process.env.NODE_ENV === 'production';
-let cloudinaryNotConfiguredInProd = false;
 
 if (useCloudinary) {
   // Usar Cloudinary se configurado
@@ -53,13 +52,8 @@ if (useCloudinary) {
     }
   });
 } else {
-  // Fallback para diskStorage local
-  if (isProd) {
-    cloudinaryNotConfiguredInProd = true;
-    console.warn('Upload: Cloudinary não configurado em produção. O upload de imagens falhará até que as variáveis de ambiente sejam definidas.');
-  } else {
-    console.warn('Upload: Cloudinary não configurado. Usando armazenamento local em ./uploads');
-  }
+  // Fallback para diskStorage local (funciona em produção também)
+  console.log('Upload: usando armazenamento local em ' + uploadDir);
 
   storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -81,10 +75,6 @@ app.use('/uploads', express.static(uploadDir));
 
 // Rota para upload de imagem
 app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (cloudinaryNotConfiguredInProd) {
-    return res.status(500).json({ error: 'Upload de imagens não está configurado no servidor. Configure as variáveis CLOUDINARY_*.' });
-  }
-
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Imagens</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        img { max-width: 200px; border: 1px solid #ccc; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug: Por que imagens não aparecem</h1>
+
+    <div class="test">
+        <h2>1. Qual é a URL da API?</h2>
+        <p id="apiUrl"></p>
+    </div>
+
+    <div class="test">
+        <h2>2. Produtos da API</h2>
+        <pre id="productsData"></pre>
+    </div>
+
+    <div class="test">
+        <h2>3. Primeira imagem - URL</h2>
+        <p id="imageUrl"></p>
+    </div>
+
+    <div class="test">
+        <h2>4. Tentando carregar a imagem</h2>
+        <p id="imageTest"></p>
+        <div id="imageContainer"></div>
+    </div>
+
+    <div class="test">
+        <h2>5. Teste Manual de Cada URL</h2>
+        <pre id="urlTests"></pre>
+    </div>
+
+    <script>
+        const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? 'http://localhost:3000/api'
+            : 'https://cia-de-condimentos.onrender.com/api';
+
+        document.getElementById('apiUrl').innerHTML = `<strong>${API_URL}</strong>`;
+
+        async function debug() {
+            try {
+                // Get products
+                const response = await fetch(API_URL + '/products');
+                const products = await response.json();
+                
+                document.getElementById('productsData').textContent = JSON.stringify(products, null, 2);
+
+                if (!products || products.length === 0) {
+                    document.getElementById('imageUrl').innerHTML = '<span class="error">❌ Nenhum produto</span>';
+                    return;
+                }
+
+                const product = products[0];
+                console.log('Primeiro produto:', product);
+
+                // Check images array
+                let imageUrl = null;
+                let imageSource = 'nenhuma';
+
+                if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+                    imageUrl = product.images[0];
+                    imageSource = `images[0]`;
+                } else if (product.image) {
+                    imageUrl = product.image;
+                    imageSource = `image (fallback)`;
+                }
+
+                document.getElementById('imageUrl').innerHTML = `
+                    <strong>Source:</strong> ${imageSource}<br>
+                    <strong>URL:</strong> ${imageUrl || 'null'}
+                `;
+
+                if (!imageUrl) {
+                    document.getElementById('imageTest').innerHTML = '<span class="error">❌ Sem URL de imagem</span>';
+                    return;
+                }
+
+                // Make absolute URL if needed
+                let fullUrl = imageUrl;
+                if (!imageUrl.startsWith('http')) {
+                    if (imageUrl.startsWith('/')) {
+                        fullUrl = new URL(imageUrl, API_URL.replace('/api', '')).href;
+                    } else {
+                        fullUrl = new URL(imageUrl, window.location.origin).href;
+                    }
+                }
+
+                console.log('URL completa:', fullUrl);
+
+                // Try to load image
+                const img = new Image();
+                let loadTimeout = setTimeout(() => {
+                    document.getElementById('imageTest').innerHTML = '<span class="error">❌ Timeout ao carregar (>5s)</span>';
+                }, 5000);
+
+                img.onload = () => {
+                    clearTimeout(loadTimeout);
+                    document.getElementById('imageTest').innerHTML = '<span class="success">✅ Imagem carrega OK!</span>';
+                    const container = document.getElementById('imageContainer');
+                    container.innerHTML = '';
+                    container.appendChild(img);
+                };
+
+                img.onerror = (e) => {
+                    clearTimeout(loadTimeout);
+                    document.getElementById('imageTest').innerHTML = `
+                        <span class="error">❌ Erro ao carregar imagem</span><br>
+                        <strong>URL testada:</strong> ${fullUrl}<br>
+                        <strong>Erro:</strong> ${e.message || 'Network error / CORS / 404'}
+                    `;
+                };
+
+                img.src = fullUrl;
+
+                // Test all image URLs
+                let testResults = 'Testando cada URL:\n\n';
+                
+                if (product.images && Array.isArray(product.images)) {
+                    for (let i = 0; i < product.images.length; i++) {
+                        testResults += `[${i}] ${product.images[i]}\n`;
+                        
+                        let url = product.images[i];
+                        if (!url.startsWith('http')) {
+                            if (url.startsWith('/')) {
+                                url = new URL(url, API_URL.replace('/api', '')).href;
+                            } else {
+                                url = new URL(url, window.location.origin).href;
+                            }
+                        }
+                        
+                        try {
+                            const headResponse = await fetch(url, { method: 'HEAD' });
+                            testResults += `    → Status: ${headResponse.status}\n`;
+                        } catch (err) {
+                            testResults += `    → Erro: ${err.message}\n`;
+                        }
+                    }
+                }
+
+                if (product.image) {
+                    testResults += `\nFallback image: ${product.image}\n`;
+                }
+
+                document.getElementById('urlTests').textContent = testResults;
+
+            } catch (error) {
+                console.error('Erro:', error);
+                document.getElementById('productsData').innerHTML = `<span class="error">❌ ${error.message}</span>`;
+            }
+        }
+
+        window.addEventListener('load', debug);
+    </script>
+</body>
+</html>

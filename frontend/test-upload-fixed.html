@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de Imagens - Upload Corrigido</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 30px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .status {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .status h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      margin: 10px 0;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 5px;
+    }
+    
+    .status-item.success {
+      background: #e8f5e9;
+      border-left: 4px solid #4caf50;
+    }
+    
+    .status-item.error {
+      background: #ffebee;
+      border-left: 4px solid #f44336;
+    }
+    
+    .status-icon {
+      font-size: 20px;
+      margin-right: 10px;
+      min-width: 30px;
+    }
+    
+    .images-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    
+    .image-card {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .image-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+    }
+    
+    .image-container {
+      width: 100%;
+      height: 250px;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .image-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    
+    .image-container.loading::after {
+      content: '⏳ Carregando...';
+      position: absolute;
+      color: #999;
+      font-size: 14px;
+    }
+    
+    .image-container.error::after {
+      content: '❌ Erro ao carregar';
+      position: absolute;
+      color: #f44336;
+      font-size: 14px;
+    }
+    
+    .image-info {
+      padding: 15px;
+      background: white;
+    }
+    
+    .image-name {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 5px;
+      word-break: break-all;
+      font-size: 14px;
+    }
+    
+    .image-url {
+      color: #666;
+      font-size: 12px;
+      word-break: break-all;
+      font-family: monospace;
+      margin: 8px 0;
+    }
+    
+    .image-status {
+      font-size: 12px;
+      margin-top: 8px;
+      padding: 6px 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+    
+    .image-status.success {
+      background: #e8f5e9;
+      color: #2e7d32;
+    }
+    
+    .image-status.error {
+      background: #ffebee;
+      color: #c62828;
+    }
+    
+    .upload-section {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .upload-section h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    
+    .upload-area {
+      border: 2px dashed #667eea;
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      background: #f8f9ff;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .upload-area:hover {
+      background: #eeeeff;
+      border-color: #764ba2;
+    }
+    
+    .upload-area.dragover {
+      background: #dce3ff;
+      border-color: #764ba2;
+    }
+    
+    .upload-icon {
+      font-size: 40px;
+      margin-bottom: 10px;
+    }
+    
+    .upload-text {
+      color: #333;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+    
+    .upload-subtext {
+      color: #999;
+      font-size: 14px;
+    }
+    
+    input[type="file"] {
+      display: none;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin-top: 15px;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .btn:active {
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ Teste de Imagens - Upload Corrigido</h1>
+    
+    <div class="status">
+      <h2>📊 Status do Sistema</h2>
+      <div id="statusContainer"></div>
+    </div>
+    
+    <div class="upload-section">
+      <h2>📤 Fazer Upload de Imagem</h2>
+      <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Clique ou arraste imagem aqui</div>
+        <div class="upload-subtext">JPG, PNG, SVG, GIF, WebP, BMP, TIFF etc.</div>
+      </div>
+      <input type="file" id="fileInput" accept="image/*">
+      <button class="btn" onclick="testUpload()">🚀 Testar Upload</button>
+    </div>
+    
+    <h2 style="color: white; margin-bottom: 20px;">🎞️ Imagens Salvos no Sistema</h2>
+    <div class="images-grid" id="imagesGrid"></div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000/api';
+    const UPLOAD_BASE = 'http://localhost:3000/api/uploads';
+    
+    // Arquivos SVG que devem estar funcionando agora
+    const imagesToTest = [
+      { name: 'SVG 1', url: '1773834667070-132864491.svg' },
+      { name: 'SVG 2', url: '1773834820054-355712129.svg' },
+      { name: 'SVG 3', url: '1773835179893-870516258.svg' },
+    ];
+
+    async function checkServerStatus() {
+      const statusContainer = document.getElementById('statusContainer');
+      statusContainer.innerHTML = '';
+      
+      // Verificar servidor
+      try {
+        const res = await fetch(`${API_BASE}/products`);
+        statusContainer.innerHTML += `<div class="status-item success">
+          <span class="status-icon">✅</span>
+          <span>Servidor Express rodando em localhost:3000</span>
+        </div>`;
+      } catch (e) {
+        statusContainer.innerHTML += `<div class="status-item error">
+          <span class="status-icon">❌</span>
+          <span>Erro ao conectar no servidor: ${e.message}</span>
+        </div>`;
+        return;
+      }
+      
+      // Verificar suporte a SVG
+      const svgTest = `${UPLOAD_BASE}/1773834667070-132864491.svg`;
+      try {
+        const res = await fetch(svgTest);
+        if (res.ok) {
+          const contentType = res.headers.get('content-type') || '';
+          statusContainer.innerHTML += `<div class="status-item success">
+            <span class="status-icon">✅</span>
+            <span>SVG sendo servido corretamente (${contentType})</span>
+          </div>`;
+        } else {
+          statusContainer.innerHTML += `<div class="status-item error">
+            <span class="status-icon">❌</span>
+            <span>Erro 404 ao acessar SVG (status: ${res.status})</span>
+          </div>`;
+        }
+      } catch (e) {
+        statusContainer.innerHTML += `<div class="status-item error">
+          <span class="status-icon">❌</span>
+          <span>Erro ao testar SVG: ${e.message}</span>
+        </div>`;
+      }
+      
+      // Verificar rota de upload
+      try {
+        const res = await fetch(`${API_BASE}/upload`, { method: 'POST' });
+        statusContainer.innerHTML += `<div class="status-item success">
+          <span class="status-icon">✅</span>
+          <span>Rota de upload disponível em /api/upload</span>
+        </div>`;
+      } catch (e) {
+        statusContainer.innerHTML += `<div class="status-item error">
+          <span class="status-icon">❌</span>
+          <span>Erro ao acessar rota de upload</span>
+        </div>`;
+      }
+    }
+
+    function displayImages() {
+      const grid = document.getElementById('imagesGrid');
+      grid.innerHTML = '';
+      
+      imagesToTest.forEach(img => {
+        const card = document.createElement('div');
+        card.className = 'image-card';
+        const fullUrl = `${UPLOAD_BASE}/${img.url}`;
+        
+        card.innerHTML = `
+          <div class="image-container loading" id="img-${img.url}">
+            <img src="${fullUrl}" 
+                 alt="${img.name}"
+                 onload="handleImageLoad(event, '${img.url}')"
+                 onerror="handleImageError(event, '${img.url}')"
+                 style="display: block;">
+          </div>
+          <div class="image-info">
+            <div class="image-name">${img.name}</div>
+            <div class="image-url">${fullUrl}</div>
+            <div class="image-status" id="status-${img.url}">🔄 Carregando...</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function handleImageLoad(event, filename) {
+      const container = document.getElementById(`img-${filename}`);
+      const status = document.getElementById(`status-${filename}`);
+      container.classList.remove('loading');
+      status.className = 'image-status success';
+      status.textContent = '✅ Carregado com sucesso';
+    }
+
+    function handleImageError(event, filename) {
+      const container = document.getElementById(`img-${filename}`);
+      const status = document.getElementById(`status-${filename}`);
+      container.classList.add('error');
+      status.className = 'image-status error';
+      status.textContent = '❌ Erro ao carregar (404)';
+    }
+
+    async function testUpload() {
+      const fileInput = document.getElementById('fileInput');
+      if (!fileInput.files.length) {
+        alert('Selecione uma imagem primeiro');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('image', fileInput.files[0]);
+      
+      try {
+        const res = await fetch(`${API_BASE}/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!res.ok) {
+          alert(`Erro no upload: ${res.status}`);
+          return;
+        }
+        
+        const data = await res.json();
+        alert(`✅ Upload bem-sucedido!\nURL: ${data.imageUrl}`);
+        checkServerStatus();
+        displayImages();
+      } catch (e) {
+        alert(`Erro: ${e.message}`);
+      }
+    }
+
+    // Setup drag & drop
+    const uploadArea = document.getElementById('uploadArea');
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length) {
+        document.getElementById('fileInput').files = files;
+        testUpload();
+      }
+    });
+
+    // Inicializar
+    checkServerStatus();
+    displayImages();
+    
+    // Atualizar a cada 5 segundos
+    setInterval(checkServerStatus, 5000);
+  </script>
+</body>
+</html>

@@ -4,18 +4,8 @@ const helmet = require('helmet');
 const dotenv = require('dotenv');
 const multer = require('multer');
 const path = require('path');
-const os = require('os');
 const fs = require('fs');
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 dotenv.config();
-
-// Configurar Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
 
 const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
@@ -33,44 +23,66 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Configurar multer
-let storage;
-const useCloudinary = Boolean(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
-const isProd = process.env.NODE_ENV === 'production';
+// Configurar multer com armazenamento local
+console.log('Upload: usando armazenamento local em ' + uploadDir);
 
-if (useCloudinary) {
-  // Usar Cloudinary se configurado
-  console.log('Upload: usando Cloudinary');
-  storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-      folder: 'cia-condimentos',
-      allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'webp'],
-      transformation: [{ width: 800, height: 800, crop: 'limit' }]
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    // Preservar extensão original
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ 
+  storage,
+  // Aceitar qualquer tipo de arquivo de imagem
+  fileFilter: (req, file, cb) => {
+    // Aceitar qualquer arquivo com extensão de imagem
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Formato de arquivo não permitido: ${ext}. Formatos permitidos: ${allowedExtensions.join(', ')}`), false);
     }
-  });
-} else {
-  // Fallback para diskStorage local (funciona em produção também)
-  console.log('Upload: usando armazenamento local em ' + uploadDir);
+  }
+});
 
-  storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
-  });
-}
-const upload = multer({ storage });
+// Middleware para definir MIME types corretos
+const mimeTypes = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.tiff': 'image/tiff'
+};
 
 // Servir arquivos estáticos da pasta img
 app.use('/img', express.static(path.join(__dirname, '../img')));
 
-// Servir uploads
-app.use('/uploads', express.static(uploadDir));
-app.use('/api/uploads', express.static(uploadDir));
+// Servir uploads com tipos MIME corretos
+const uploadMiddleware = (res, fullPath) => {
+  const ext = path.extname(fullPath).toLowerCase();
+  if (mimeTypes[ext]) {
+    res.set('Content-Type', mimeTypes[ext]);
+  }
+};
+
+app.use('/uploads', express.static(uploadDir, {
+  setHeaders: (res, fullPath) => uploadMiddleware(res, fullPath)
+}));
+
+app.use('/api/uploads', express.static(uploadDir, {
+  setHeaders: (res, fullPath) => uploadMiddleware(res, fullPath)
+}));
 
 // Rota para upload de imagem
 app.post('/api/upload', upload.single('image'), (req, res) => {
@@ -79,12 +91,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
     }
 
-    // Para Cloudinary: usar secure_url ou url
-    if (req.file.secure_url || req.file.url) {
-      return res.json({ imageUrl: req.file.secure_url || req.file.url });
-    }
-
-    // Para diskStorage local: retornar URL baseada no filename
+    // Retornar URL baseada no filename
     if (req.file.filename) {
       const imageUrl = `/api/uploads/${req.file.filename}`;
       console.log('Upload salvo:', imageUrl);

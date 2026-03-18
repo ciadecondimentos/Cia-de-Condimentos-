@@ -20,7 +20,8 @@ html, body { height: 100%; font-family: 'Lato', sans-serif; background: #f8f6f0;
 
 /* LAYOUT */
 body { display: flex; }
-.sidebar { width: 280px; background: linear-gradient(135deg, var(--marrom) 0%, #5a3a1d 100%); color: white; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 2px 0 12px rgba(0,0,0,0.15); z-index: 100; }
+.sidebar { width: 280px; background: linear-gradient(135deg, var(--marrom) 0%, #5a3a1d 100%); color: white; display: flex; flex-direction: column; position: fixed; left: 0; top: 0; height: 100vh; overflow-y: auto; box-shadow: 2px 0 12px rgba(0,0,0,0.15); z-index: 100; transition: transform 0.3s ease; transform: translateX(0); }
+.sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 99; }
 .sidebar-logo { padding: 28px 20px; border-bottom: 2px solid rgba(255,255,255,0.1); text-align: center; font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 900; letter-spacing: 1px; }
 .nav-label { font-size: 10px; color: rgba(255,255,255,0.5); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 0 20px; margin: 20px 0 12px 0; }
 .nav-item { padding: 14px 20px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; font-size: 14px; border-left: 4px solid transparent; position: relative; }
@@ -34,6 +35,7 @@ body { display: flex; }
 
 .main { flex: 1; margin-left: 280px; display: flex; flex-direction: column; }
 .topbar { background: white; padding: 20px 32px; border-bottom: 1px solid #e8e0d4; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.menu-toggle { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--marrom); margin-right: 16px; }
 .topbar h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 900; color: var(--marrom); }
 .topbar-right { display: flex; align-items: center; gap: 20px; }
 .topbar-badge { background: #d4edda; color: #155724; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
@@ -76,8 +78,31 @@ body { display: flex; }
 
 @media (max-width: 768px) {
   .stats-grid { grid-template-columns: 1fr; }
-  .sidebar { width: 100%; height: auto; position: relative; }
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar.open ~ .sidebar-overlay { display: block; }
   .main { margin-left: 0; }
+  .menu-toggle { display: block; }
+  .topbar { padding: 20px 16px; }
+  .topbar h2 { font-size: 24px; }
+  .content { padding: 16px; }
+  .card { padding: 16px; }
+  .stat-card { padding: 16px; }
+  .modal { max-width: 95vw; }
+  table { font-size: 12px; overflow-x: auto; display: block; white-space: nowrap; }
+  th, td { padding: 8px 4px; white-space: nowrap; }
+  .form-row-2, .form-row-3 { grid-template-columns: 1fr; }
+  .order-row { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .order-id, .order-total { width: auto; }
+}
+
+@media (max-width: 480px) {
+  .topbar { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .topbar-right { width: 100%; justify-content: space-between; }
+  .modal { max-width: 100vw; margin: 10px; }
+  .modal-header, .modal-body, .modal-footer { padding: 16px; }
+  .stat-icon { font-size: 32px; }
+  .stat-value { font-size: 24px; }
 }
 
 /* BAR CHART */
@@ -283,10 +308,15 @@ tr:hover td { background: #faf7f2; }
   </div>
 </aside>
 
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <!-- MAIN -->
 <main class="main">
   <div class="topbar">
-    <h2 id="pageTitle">Dashboard</h2>
+    <div style="display: flex; align-items: center;">
+      <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+      <h2 id="pageTitle">Dashboard</h2>
+    </div>
     <div class="topbar-right">
       <span class="topbar-badge">🟢 Sistema Online</span>
       <button class="refresh-btn" onclick="reloadAll()">↻ Atualizar</button>

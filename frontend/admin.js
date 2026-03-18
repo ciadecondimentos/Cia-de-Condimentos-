@@ -3,6 +3,12 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
   ? 'http://localhost:3000/api'
   : 'https://cia-condimentos.onrender.com/api';
 
+// ==================== SIDEBAR TOGGLE ====================
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  sidebar.classList.toggle('open');
+}
+
 // ==================== PAGE NAVIGATION ====================
 function showPage(pageId, buttonElement) {
   // Hide all pages
@@ -384,17 +390,26 @@ function saveProduct() {
         method: 'POST',
         body: formData
       })
-      .then(res => res.json())
+      .then(async res => {
+        if (!res.ok) {
+          const text = await res.text();
+          console.error('Upload failed:', res.status, text);
+          throw new Error('Upload falhou: ' + res.status);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.imageUrl) {
           saveProductData(data.imageUrl);
         } else {
-          showToast('Erro no upload da imagem', 'error');
+          const message = data.error || 'Erro no upload da imagem';
+          showToast(message, 'error');
+          console.error('Upload response error:', data);
         }
       })
       .catch(error => {
         console.error('Error uploading image:', error);
-        showToast('Erro no upload da imagem', 'error');
+        showToast(error.message || 'Erro no upload da imagem', 'error');
       });
     } else {
       saveProductData('');

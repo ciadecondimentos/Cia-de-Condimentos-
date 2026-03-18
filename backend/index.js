@@ -87,7 +87,17 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
     // Retornar URL baseada no filename
     if (req.file.filename) {
-      const imageUrl = `/uploads/${req.file.filename}`;
+      // Usar URL absoluta em produção, relativa em desenvolvimento
+      let imageUrl;
+      if (process.env.NODE_ENV === 'production') {
+        // Em produção, construir URL completa
+        const protocol = req.protocol;
+        const host = req.get('host');
+        imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
+      } else {
+        // Em desenvolvimento, usar URL relativa
+        imageUrl = `/uploads/${req.file.filename}`;
+      }
       console.log('Upload salvo:', imageUrl);
       return res.json({ imageUrl });
     }

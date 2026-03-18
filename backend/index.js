@@ -23,6 +23,32 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+// Middleware para definir MIME types corretos
+const mimeTypes = {
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.tiff': 'image/tiff'
+};
+
+// Servir arquivos estáticos da pasta img
+app.use('/img', express.static(path.join(__dirname, '../img')));
+
+// Servir uploads com tipos MIME corretos - ANTES das rotas da API
+app.use('/uploads', express.static(uploadDir, {
+  setHeaders: (res, pathname) => {
+    const ext = path.extname(pathname).toLowerCase();
+    if (mimeTypes[ext]) {
+      res.set('Content-Type', mimeTypes[ext]);
+    }
+  }
+}));
+
 // Configurar multer com armazenamento local
 console.log('Upload: usando armazenamento local em ' + uploadDir);
 
@@ -52,38 +78,6 @@ const upload = multer({
   }
 });
 
-// Middleware para definir MIME types corretos
-const mimeTypes = {
-  '.svg': 'image/svg+xml',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.tiff': 'image/tiff'
-};
-
-// Servir arquivos estáticos da pasta img
-app.use('/img', express.static(path.join(__dirname, '../img')));
-
-// Servir uploads com tipos MIME corretos
-const uploadMiddleware = (res, fullPath) => {
-  const ext = path.extname(fullPath).toLowerCase();
-  if (mimeTypes[ext]) {
-    res.set('Content-Type', mimeTypes[ext]);
-  }
-};
-
-app.use('/uploads', express.static(uploadDir, {
-  setHeaders: (res, fullPath) => uploadMiddleware(res, fullPath)
-}));
-
-app.use('/api/uploads', express.static(uploadDir, {
-  setHeaders: (res, fullPath) => uploadMiddleware(res, fullPath)
-}));
-
 // Rota para upload de imagem
 app.post('/api/upload', upload.single('image'), (req, res) => {
   try {
@@ -93,7 +87,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
     // Retornar URL baseada no filename
     if (req.file.filename) {
-      const imageUrl = `/api/uploads/${req.file.filename}`;
+      const imageUrl = `/uploads/${req.file.filename}`;
       console.log('Upload salvo:', imageUrl);
       return res.json({ imageUrl });
     }

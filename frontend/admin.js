@@ -308,12 +308,7 @@ function openAddProduct() {
     </div>
     <div class="fg">
       <label>Imagem do Produto</label>
-      <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
-        <label><input type="radio" name="imageType" value="url" checked onchange="toggleImageInput()"> URL</label>
-        <label><input type="radio" name="imageType" value="upload" onchange="toggleImageInput()"> Upload</label>
-      </div>
-      <input type="url" id="prodImage" placeholder="https://exemplo.com/imagem.jpg" style="display: block;">
-      <input type="file" id="prodImageFile" accept="image/*" style="display: none;">
+      <input type="file" id="prodImageFile" accept="image/*">
     </div>
     <div class="fg">
       <label>Descrição</label>
@@ -337,8 +332,6 @@ function saveProduct() {
   const stock = parseInt(document.getElementById('prodStock')?.value) || 0;
   const status = document.getElementById('prodStatus')?.value === 'active';
   const description = document.getElementById('prodDescription')?.value?.trim();
-  const imageType = document.querySelector('input[name="imageType"]:checked')?.value;
-  
   if (!name || !price || stock < 0) {
     showToast('Preencha todos os campos obrigatórios', 'error');
     return;
@@ -380,43 +373,38 @@ function saveProduct() {
     });
   };
   
-  if (imageType === 'upload') {
-    const fileInput = document.getElementById('prodImageFile');
-    if (fileInput.files.length > 0) {
-      const formData = new FormData();
-      formData.append('image', fileInput.files[0]);
-      
-      fetch(`${API_BASE}/upload`, {
-        method: 'POST',
-        body: formData
-      })
-      .then(async res => {
-        if (!res.ok) {
-          const text = await res.text();
-          console.error('Upload failed:', res.status, text);
-          throw new Error('Upload falhou: ' + res.status);
-        }
-        return res.json();
-      })
-      .then(data => {
-        if (data.imageUrl) {
-          saveProductData(data.imageUrl);
-        } else {
-          const message = data.error || 'Erro no upload da imagem';
-          showToast(message, 'error');
-          console.error('Upload response error:', data);
-        }
-      })
-      .catch(error => {
-        console.error('Error uploading image:', error);
-        showToast(error.message || 'Erro no upload da imagem', 'error');
-      });
-    } else {
-      saveProductData('');
-    }
+  const fileInput = document.getElementById('prodImageFile');
+  if (fileInput.files.length > 0) {
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    
+    fetch(`${API_BASE}/upload`, {
+      method: 'POST',
+      body: formData
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const text = await res.text();
+        console.error('Upload failed:', res.status, text);
+        throw new Error('Upload falhou: ' + res.status);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (data.imageUrl) {
+        saveProductData(data.imageUrl);
+      } else {
+        const message = data.error || 'Erro no upload da imagem';
+        showToast(message, 'error');
+        console.error('Upload response error:', data);
+      }
+    })
+    .catch(error => {
+      console.error('Error uploading image:', error);
+      showToast(error.message || 'Erro no upload da imagem', 'error');
+    });
   } else {
-    const imageUrl = document.getElementById('prodImage')?.value?.trim() || '';
-    saveProductData(imageUrl);
+    saveProductData('');
   }
 }
 
@@ -481,11 +469,7 @@ function openEditProduct(product) {
     <div class="fg">
       <label>Imagem do Produto</label>
       <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 10px;">
-        <label><input type="radio" name="imageType" value="url" ${product.image && !product.image.startsWith('/uploads/') ? 'checked' : ''} onchange="toggleImageInput()"> URL</label>
-        <label><input type="radio" name="imageType" value="upload" ${product.image && product.image.startsWith('/uploads/') ? 'checked' : ''} onchange="toggleImageInput()"> Upload</label>
-      </div>
-      <input type="url" id="prodImage" placeholder="https://exemplo.com/imagem.jpg" value="${product.image && !product.image.startsWith('/uploads/') ? product.image : ''}" style="display: ${product.image && !product.image.startsWith('/uploads/') ? 'block' : 'none'};">
-      <input type="file" id="prodImageFile" accept="image/*" style="display: ${product.image && product.image.startsWith('/uploads/') ? 'block' : 'none'};">
+        <input type="file" id="prodImageFile" accept="image/*">
     </div>
     <div class="fg">
       <label>Descrição</label>
@@ -989,18 +973,7 @@ function closeConfirm() {
   document.getElementById('confirmModal').classList.remove('open');
 }
 
-function toggleImageInput() {
-  const imageType = document.querySelector('input[name="imageType"]:checked').value;
-  const urlInput = document.getElementById('prodImage');
-  const fileInput = document.getElementById('prodImageFile');
-  if (imageType === 'url') {
-    urlInput.style.display = 'block';
-    fileInput.style.display = 'none';
-  } else {
-    urlInput.style.display = 'none';
-    fileInput.style.display = 'block';
-  }
-}
+
 
 // ==================== RELOAD ====================
 function reloadAll() {

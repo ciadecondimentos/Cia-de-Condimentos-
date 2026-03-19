@@ -224,6 +224,21 @@ const API_URL = (window.location.hostname === 'localhost' || window.location.hos
   ? 'http://localhost:3000/api'
   : 'https://cia-de-condimentos.onrender.com/api';
 
+const BACKEND_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3000'
+  : 'https://cia-de-condimentos.onrender.com';
+
+// Resolver URL de imagem relativa para absoluta
+function getImageUrl(imageUrl) {
+  if (!imageUrl) return '';
+  // Se for URL absoluta, retorna como está
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  // Se for URL relativa, usa a base do backend
+  return BACKEND_BASE + imageUrl;
+}
+
 let cart = [];
 let currentFilter = 'all';
 let currentSearch = '';
@@ -740,7 +755,7 @@ function renderProducts() {
 
     grid.innerHTML = filtered.map(function(p) {
       // Use first image from images array, fallback to image field for compatibility
-      var imageUrl = (p.images && p.images.length > 0) ? p.images[0] : p.image;
+      var imageUrl = (p.images && p.images.length > 0) ? getImageUrl(p.images[0]) : p.image;
       var imgHtml = imageUrl
         ? '<img src="' + imageUrl + '" alt="' + p.name + '" onerror="this.parentElement.innerHTML=\'&#x1F336;&#xFE0F;\'">'
         : '&#x1F336;&#xFE0F;';

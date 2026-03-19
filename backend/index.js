@@ -7,6 +7,7 @@ const path = require('path');
 const fs = require('fs');
 dotenv.config();
 
+const db = require('./db');
 const authRoutes = require('./routes/auth');
 const productsRoutes = require('./routes/products');
 const ordersRoutes = require('./routes/orders');
@@ -91,17 +92,9 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
 
     // Retornar URL baseada no filename
     if (req.file.filename) {
-      // Usar URL absoluta em produção, relativa em desenvolvimento
-      let imageUrl;
-      if (process.env.NODE_ENV === 'production') {
-        // Em produção, construir URL completa
-        const protocol = req.protocol;
-        const host = req.get('host');
-        imageUrl = `${protocol}://${host}/uploads/${req.file.filename}`;
-      } else {
-        // Em desenvolvimento, usar URL relativa
-        imageUrl = `/uploads/${req.file.filename}`;
-      }
+      // Sempre salvar URL relativa no banco de dados
+      // O frontend vai resolver a URL completa conforme necessário
+      const imageUrl = `/uploads/${req.file.filename}`;
       console.log('Upload salvo:', imageUrl);
       return res.json({ imageUrl });
     }
@@ -121,6 +114,25 @@ app.get('/', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/admin.html'));
+});
+
+// Endpoint para corrigir URLs das imagens (remove domínio onrender se houver)
+app.post('/api/fix-urls', async (req, res) => {
+  try {
+    const result = await db.query(
+      `UPDATE product_images 
+       SET image_url = REPLACE(image_url, 'https://cia-de-condimentos.onrender.com', '')
+       WHERE image_url LIKE '%onrender%'`
+    );
+    res.json({ 
+      success: true, 
+      fixed: result.rowCount,
+      message: `${result.rowCount} imagem(ns) corrigida(s)`
+    });
+  } catch (error) {
+    console.error('Erro ao corrigir URLs:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.use('/api/auth', authRoutes);

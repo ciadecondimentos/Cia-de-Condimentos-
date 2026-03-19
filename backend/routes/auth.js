@@ -3,7 +3,6 @@ const router = express.Router();
 const db = require('../db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { sendConfirmationEmail } = require('../email');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 
@@ -64,12 +63,12 @@ router.post('/register', async (req, res) => {
     );
     const user = result.rows[0];
     const token = genToken(user);
-    // Enviar e-mail com confirmationCode para o usuário
-    try {
-      await sendConfirmationEmail(user.email, confirmationCode);
-    } catch (err) {
-      console.error('Erro ao enviar e-mail de confirmação:', err);
-    }
+    // Envio de e-mail removido - módulo não está mais disponível
+    // try {
+    //   await sendConfirmationEmail(user.email, confirmationCode);
+    // } catch (err) {
+    //   console.error('Erro ao enviar e-mail de confirmação:', err);
+    // }
     res.json({ token, user: { id: user.id, name: user.name, email: user.email, cpf: user.cpf || '', phone: user.phone || '', email_confirmed: user.email_confirmed } });
   }catch(err){
     console.error(err);

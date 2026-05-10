@@ -513,21 +513,21 @@ function showMoneyConfirmation() {
         '<p style="color: #999; font-size: 14px; margin-bottom: 32px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
         
         '<div style="background: #faf7f2; border: 2px solid var(--amarelo); padding: 20px; border-radius: 8px; margin-bottom: 32px; text-align: left;">' +
-          '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">💰 <strong>Valor do Pedido</strong></div>' +
-          '<div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
+          '<div style="font-size: 14px; color: #666; margin-bottom: 16px;">💰 <strong>Valor do Pedido</strong></div>' +
+          '<div style="font-size: 28px; font-weight: 900; color: var(--marrom); margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
           
-          '<label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 20px;">' +
-            '<input type="checkbox" id="exactPaymentCheckbox" onchange="toggleChangeField()" style="width: 20px; height: 20px; cursor: pointer;">' +
-            '<span style="font-size: 14px; color: #333;">Vou pagar exatamente o valor</span>' +
-          '</label>' +
+          '<div style="display: flex; gap: 12px; margin-bottom: 24px;">' +
+            '<button onclick="selectPaymentType(\'exact\', ' + total + ')" id="btnExact" style="flex: 1; background: white; border: 2px solid var(--amarelo); color: var(--marrom); padding: 12px; font-weight: 700; cursor: pointer; border-radius: 4px; font-size: 14px; transition: all 0.2s;">✓ Pagar Exato</button>' +
+            '<button onclick="selectPaymentType(\'change\', ' + total + ')" id="btnChange" style="flex: 1; background: white; border: 2px solid #e0d8c8; color: var(--marrom); padding: 12px; font-weight: 700; cursor: pointer; border-radius: 4px; font-size: 14px; transition: all 0.2s;">💵 Com Troco</button>' +
+          '</div>' +
           
-          '<div id="changeSection" style="display: none;">' +
-            '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">💵 <strong>Quanto você vai pagar?</strong></div>' +
-            '<input type="number" id="paymentAmountInput" placeholder="Ex: 100.00" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #e0d8c8; border-radius: 4px; margin-bottom: 16px;">' +
+          '<div id="changePaymentSection" style="display: none;">' +
+            '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">Quanto você vai pagar?</div>' +
+            '<input type="number" id="paymentAmountInput" placeholder="Digite o valor que vai pagar" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 14px; font-size: 16px; border: 2px solid #e0d8c8; border-radius: 4px; margin-bottom: 16px; box-sizing: border-box;">' +
             
-            '<div id="changeDisplay" style="display: none; background: white; padding: 12px; border-radius: 4px; border-left: 4px solid #27ae60;">' +
-              '<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Troco</div>' +
-              '<div style="font-size: 20px; font-weight: 900; color: #27ae60;" id="changeValue">R$ 0,00</div>' +
+            '<div id="changeDisplay" style="display: none; background: white; padding: 14px; border-radius: 4px; border-left: 4px solid #27ae60; margin-bottom: 16px;">' +
+              '<div style="font-size: 12px; color: #666; margin-bottom: 4px;">Troco</div>' +
+              '<div style="font-size: 24px; font-weight: 900; color: #27ae60;" id="changeValue">R$ 0,00</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -543,21 +543,52 @@ function showMoneyConfirmation() {
       body.innerHTML = confirmationHtml;
       // Guardar total para uso posterior
       window.moneyPaymentTotal = total;
+      window.moneyPaymentType = 'exact'; // Por padrão: pagar exato
+      
+      // Selecionar "Pagar Exato" por padrão
+      selectPaymentType('exact', total);
     }
   });
 }
 
-function toggleChangeField() {
-  var checkbox = document.getElementById('exactPaymentCheckbox');
-  var changeSection = document.getElementById('changeSection');
+function selectPaymentType(type, total) {
+  window.moneyPaymentType = type;
+  
+  var btnExact = document.getElementById('btnExact');
+  var btnChange = document.getElementById('btnChange');
+  var changeSection = document.getElementById('changePaymentSection');
   var paymentInput = document.getElementById('paymentAmountInput');
   
-  if (checkbox.checked) {
-    changeSection.style.display = 'none';
-    paymentInput.value = '';
+  // Reset inputs
+  if (paymentInput) paymentInput.value = '';
+  
+  if (type === 'exact') {
+    // Pagar exato
+    if (btnExact) {
+      btnExact.style.background = 'var(--amarelo)';
+      btnExact.style.borderColor = 'var(--amarelo)';
+      btnExact.style.color = 'var(--marrom)';
+    }
+    if (btnChange) {
+      btnChange.style.background = 'white';
+      btnChange.style.borderColor = '#e0d8c8';
+      btnChange.style.color = 'var(--marrom)';
+    }
+    if (changeSection) changeSection.style.display = 'none';
   } else {
-    changeSection.style.display = 'block';
-    paymentInput.focus();
+    // Com troco
+    if (btnChange) {
+      btnChange.style.background = 'var(--vermelho)';
+      btnChange.style.borderColor = 'var(--vermelho)';
+      btnChange.style.color = 'white';
+    }
+    if (btnExact) {
+      btnExact.style.background = 'white';
+      btnExact.style.borderColor = '#e0d8c8';
+      btnExact.style.color = 'var(--marrom)';
+    }
+    if (changeSection) changeSection.style.display = 'block';
+    if (paymentInput) paymentInput.focus();
   }
 }
 
@@ -588,10 +619,16 @@ function submitOrderWithMoneyPayment() {
   var phone = window.checkoutData.phone;
   var address = window.checkoutData.address;
   var obs = window.checkoutData.obs;
-  var isExactPayment = document.getElementById('exactPaymentCheckbox')?.checked || false;
+  var paymentType = window.moneyPaymentType || 'exact';
   var paymentAmountInput = document.getElementById('paymentAmountInput');
   var moneyChange = window.moneyChange || 0;
-  var paymentAmount = isExactPayment ? 0 : (parseFloat(paymentAmountInput?.value) || 0);
+  var paymentAmount = paymentType === 'exact' ? 0 : (parseFloat(paymentAmountInput?.value) || 0);
+
+  // Validar se foi preenchido corretamente
+  if (paymentType === 'change' && (!paymentAmount || paymentAmount < window.moneyPaymentTotal)) {
+    showToast('❌ Digite um valor igual ou maior que o total do pedido');
+    return;
+  }
 
   getProducts().then(function(products) {
     var total = 0;
@@ -611,8 +648,8 @@ function submitOrderWithMoneyPayment() {
       total: total,
       payment: 'Dinheiro',
       moneyPaymentDetails: {
-        isExactPayment: isExactPayment,
-        paymentAmount: isExactPayment ? total : paymentAmount,
+        paymentType: paymentType,
+        paymentAmount: paymentType === 'exact' ? total : paymentAmount,
         change: moneyChange
       },
       status: 'Pendente',
@@ -634,7 +671,7 @@ function submitOrderWithMoneyPayment() {
       }).join('\n');
 
       var paymentInfo = '';
-      if (isExactPayment) {
+      if (paymentType === 'exact') {
         paymentInfo = '💵 *Pagamento:* Exatamente R$ ' + total.toFixed(2).replace('.', ',');
       } else if (paymentAmount > 0) {
         paymentInfo = '💵 *Pagamento:* R$ ' + paymentAmount.toFixed(2).replace('.', ',') + '\n' +

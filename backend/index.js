@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const dotenv = require('dotenv');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 dotenv.config();
@@ -41,72 +40,62 @@ const mimeTypes = {
 // Servir arquivos estáticos da pasta img
 app.use('/img', express.static(path.join(__dirname, '../img')));
 
-// Servir uploads com tipos MIME corretos - ANTES das rotas da API
-app.use('/uploads', express.static(uploadDir, {
-  setHeaders: (res, pathname) => {
-    const ext = path.extname(pathname).toLowerCase();
-    if (mimeTypes[ext]) {
-      res.set('Content-Type', mimeTypes[ext]);
-    }
-    // Adicionar headers CORS para permitir cross-origin
-    res.set('Access-Control-Allow-Origin', '*');
-    res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.set('Access-Control-Allow-Headers', 'Content-Type');
-  }
-}));
+// TODO: Servir uploads com Cloudinary ou S3 depois
+// app.use('/uploads', express.static(uploadDir, {
+//   setHeaders: (res, pathname) => {
+//     const ext = path.extname(pathname).toLowerCase();
+//     if (mimeTypes[ext]) {
+//       res.set('Content-Type', mimeTypes[ext]);
+//     }
+//     res.set('Access-Control-Allow-Origin', '*');
+//     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
+//     res.set('Access-Control-Allow-Headers', 'Content-Type');
+//   }
+// }));
 
-// Configurar multer com armazenamento local
-console.log('Upload: usando armazenamento local em ' + uploadDir);
+// TODO: Implementar upload com Cloudinary/S3
+// console.log('Upload: usando armazenamento local em ' + uploadDir);
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    // Preservar extensão original
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-const upload = multer({ 
-  storage,
-  // Aceitar qualquer tipo de arquivo de imagem
-  fileFilter: (req, file, cb) => {
-    // Aceitar qualquer arquivo com extensão de imagem
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff'];
-    const ext = path.extname(file.originalname).toLowerCase();
-    
-    if (allowedExtensions.includes(ext)) {
-      cb(null, true);
-    } else {
-      cb(new Error(`Formato de arquivo não permitido: ${ext}. Formatos permitidos: ${allowedExtensions.join(', ')}`), false);
-    }
-  }
-});
+// TODO: Implementar upload com Cloudinary/S3 depois
+// const storage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, uploadDir);
+//   },
+//   filename: (req, file, cb) => {
+//     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+//     cb(null, uniqueSuffix + path.extname(file.originalname));
+//   }
+// });
+// const upload = multer({ 
+//   storage,
+//   fileFilter: (req, file, cb) => {
+//     const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico', '.tiff'];
+//     const ext = path.extname(file.originalname).toLowerCase();
+//     if (allowedExtensions.includes(ext)) {
+//       cb(null, true);
+//     } else {
+//       cb(new Error(`Formato de arquivo não permitido: ${ext}`), false);
+//     }
+//   }
+// });
 
-// Rota para upload de imagem
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    }
+// Dummy upload handler - TODO: usar Cloudinary/S3
+const upload = { single: (field) => (req, res, next) => next() };
 
-    // Retornar URL baseada no filename
-    if (req.file.filename) {
-      // Sempre salvar URL relativa no banco de dados
-      // O frontend vai resolver a URL completa conforme necessário
-      const imageUrl = `/uploads/${req.file.filename}`;
-      console.log('Upload salvo:', imageUrl);
-      return res.json({ imageUrl });
-    }
-
-    console.error('Upload: não foi possível determinar URL da imagem', req.file);
-    res.status(500).json({ error: 'Não foi possível determinar URL da imagem' });
-  } catch (error) {
-    console.error('Erro no upload:', error);
-    res.status(500).json({ error: 'Erro interno do servidor' });
-  }
-});
+// TODO: Implementar rota de upload com Cloudinary/S3 depois
+// app.post('/api/upload', upload.single('image'), (req, res) => {
+//   try {
+//     if (!req.file) {
+//       return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+//     }
+//     const imageUrl = `/uploads/${req.file.filename}`;
+//     console.log('Upload salvo:', imageUrl);
+//     return res.json({ imageUrl });
+//   } catch (error) {
+//     console.error('Erro no upload:', error);
+//     res.status(500).json({ error: 'Erro interno do servidor' });
+//   }
+// });
 
 // Servir frontend
 app.get('/', (req, res) => {
@@ -141,13 +130,16 @@ app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payments', paymentsRoutes);
 
-// Tratamento de erros para multer / outros
+// Tratamento de erros geral
 app.use((err, req, res, next) => {
   res.setHeader('Content-Type', 'application/json');
 
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ error: 'Erro no upload: ' + err.message });
-  } else if (err) {
+  // TODO: Adicionar tratamento de multer quando implementar uploads com Cloudinary
+  // if (err instanceof multer.MulterError) {
+  //   return res.status(400).json({ error: 'Erro no upload: ' + err.message });
+  // }
+  
+  if (err) {
     console.error('Erro interno:', err);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }

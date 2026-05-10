@@ -865,6 +865,18 @@ function showPixQrCode(payment, order, total) {
     maxPolling: 120
   };
 
+  var pixCopyPasteHtml = '';
+  if (payment.qr_code) {
+    pixCopyPasteHtml = 
+      '<div style="background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-top: 20px; margin-bottom: 24px;">' +
+        '<p style="color: #666; font-size: 14px; margin-bottom: 12px; font-weight: 600;">PIX Copia e Cola:</p>' +
+        '<div style="display: flex; align-items: center; gap: 8px;">' +
+          '<input type="text" id="pixCopyPasteField" value="' + payment.qr_code + '" style="flex: 1; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; font-family: monospace; color: #333; background: white;" readonly>' +
+          '<button onclick="copyPixToClipboard()" style="padding: 10px 18px; background: var(--vermelho); color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; white-space: nowrap; transition: background 0.3s;">📋 Copiar</button>' +
+        '</div>' +
+      '</div>';
+  }
+
   var pixHtml = 
     '<div style="text-align: center; padding: 30px 20px;">' +
       '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 24px; margin-bottom: 8px;">QR Code PIX</h3>' +
@@ -872,14 +884,15 @@ function showPixQrCode(payment, order, total) {
       '<div style="background: white; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 24px;">' +
         '<img src="' + qrCodeSrc + '" alt="QR Code PIX" style="width: 250px; height: 250px; display: block;">' +
       '</div>' +
+      pixCopyPasteHtml +
       '<p style="color: #666; font-size: 16px; margin-bottom: 8px;"><strong>Valor:</strong></p>' +
       '<p style="color: var(--vermelho); font-family: Playfair Display, serif; font-size: 32px; font-weight: 900; margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</p>' +
       '<div style="background: #ffe5e0; border-left: 4px solid var(--vermelho); padding: 16px; border-radius: 4px; margin-bottom: 24px; text-align: left;">' +
         '<p style="color: var(--vermelho); font-weight: 900; margin-bottom: 8px;">📱 Instruções:</p>' +
         '<ol style="color: #666; font-size: 14px; margin-left: 20px;">' +
           '<li>Abra seu app de banco ou PIX</li>' +
-          '<li>Escolha "Pagar com QR Code"</li>' +
-          '<li>Escaneie a imagem acima</li>' +
+          '<li>Escolha "Pagar com QR Code" ou "Copia e Cola"</li>' +
+          '<li>Escaneie a imagem acima ou cole a chave</li>' +
           '<li>Confirme o pagamento</li>' +
         '</ol>' +
       '</div>' +
@@ -962,6 +975,33 @@ function showPixSuccessMessage(orderId) {
 
   body.innerHTML = successHtml;
 }
+
+function copyPixToClipboard() {
+  var pixField = document.getElementById('pixCopyPasteField');
+  if (!pixField) return;
+  
+  pixField.select();
+  pixField.setSelectionRange(0, 99999);
+  
+  try {
+    document.execCommand('copy');
+    
+    var button = event.target;
+    var originalText = button.innerHTML;
+    button.innerHTML = '✅ Copiado!';
+    button.style.background = '#4CAF50';
+    
+    setTimeout(function() {
+      button.innerHTML = originalText;
+      button.style.background = 'var(--vermelho)';
+    }, 2000);
+    
+    showToast('✅ Chave PIX copiada para área de transferência!');
+  } catch (e) {
+    showToast('❌ Erro ao copiar. Tente novamente.');
+  }
+}
+
 function getProducts() {
   var controller = new AbortController();
   var timeout = setTimeout(function() { controller.abort(); }, 10000);

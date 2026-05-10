@@ -1,49 +1,48 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const QRCode = require('qrcode');
 const db = require('../db');
+
+// Importar SDK do Mercado Pago
+const { MercadoPagoConfig, Payment } = require('mercadopago');
 
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN;
 const MP_WEBHOOK_SECRET = process.env.MP_WEBHOOK_SECRET;
-const MP_API_BASE = 'https://api.mercadopago.com/v1';
 
 if (!MP_ACCESS_TOKEN) {
   console.warn('⚠️  MP_ACCESS_TOKEN não configurado');
 }
 
+// Inicializar cliente Mercado Pago
+const mpClient = new MercadoPagoConfig({
+  accessToken: MP_ACCESS_TOKEN
+});
+
+const mpPayment = new Payment(mpClient);
+
 // ==================== Funções Auxiliares ====================
 
 async function createPaymentMP(paymentData) {
-  const response = await fetch(`${MP_API_BASE}/payments`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(paymentData)
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`MP API Error ${response.status}: ${error}`);
+  try {
+    const result = await mpPayment.create({
+      body: paymentData
+    });
+    return result;
+  } catch (error) {
+    throw new Error(`MP API Error: ${error.message}`);
   }
-
-  return response.json();
 }
 
 async function getPaymentMP(paymentId) {
-  const response = await fetch(`${MP_API_BASE}/payments/${paymentId}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`MP API Error: ${response.status}`);
+  try {
+    const result = await mpPayment.get({
+      id: paymentId
+    });
+    return result;
+  } catch (error) {
+    throw new Error(`MP API Error: ${error.message}`);
   }
-
-  return response.json();
 }
 
 // ==================== Rotas ====================
@@ -57,20 +56,38 @@ router.post('/pix', async (req, res) => {
       return res.status(400).json({ error: 'Valor inválido' });
     }
 
-    if (!payerEmail) {
-      return res.status(400).json({ error: 'Email do pagador é obrigatório' });
-    }
+    // Email é obrigatório para Mercado Pago
+    const email = payerEmail || 'cliente@condimentos.com';
 
-    // Criar pagamento no Mercado Pago
-    const mpPayment = await createPaymentMP({
+    // Criar pagamento PIX via SDK Mercado Pago
+    const mpPaymentResult = await createPaymentMP({
       transaction_amount: Number(amount),
       description: description || 'Pagamento PIX',
       payment_method_id: 'pix',
       payer: {
-        email: payerEmail,
-        phone: payerPhone ? { area_code: '55', number: payerPhone } : undefined
+        email: email,
+        phone: payerPhone ? { area_code: '55', number: payerPhone.replace(/\D/g, '') } : undefined
       }
     });
+
+    // Extrair QR code da resposta
+    const qrCode = mpPaymentResult.point_of_interaction?.transaction_data?.qr_code || null;
+    const qrCodeBase64 = mpPaymentResult.point_of_interaction?.transaction_data?.qr_code_base64 || null;
+
+    // Se não tiver QR code da API, gerar localmente (fallback)
+    let finalQrCodeBase64 = qrCodeBase64;
+    if (!finalQrCodeBase64 && qrCode) {
+      try {
+        finalQrCodeBase64 = await QRCode.toDataURL(qrCode);
+        console.log('⚠️  QR Code gerado localmente (fallback)');
+      } catch (qrError) {
+        console.warn('⚠️  Erro ao gerar QR Code local:', qrError.message);
+      }
+    }
+
+    if (!finalQrCodeBase64) {
+      return res.status(500).json({ error: 'Erro ao gerar QR Code' });
+    }
 
     // Salvar no banco de dados
     const result = await db.query(
@@ -79,18 +96,18 @@ router.post('/pix', async (req, res) => {
        RETURNING id, mp_payment_id, status, amount, qr_code, qr_code_base64`,
       [
         orderId || null,
-        mpPayment.id,
-        mpPayment.status,
+        mpPaymentResult.id,
+        mpPaymentResult.status,
         amount,
         'pix',
-        mpPayment.point_of_interaction?.transaction_data?.qr_code || null,
-        mpPayment.point_of_interaction?.transaction_data?.qr_code_base64 || null,
-        payerEmail,
+        qrCode,
+        finalQrCodeBase64,
+        email,
         payerPhone || null
       ]
     );
 
-    console.log('✅ Pagamento PIX criado:', mpPayment.id);
+    console.log('✅ Pagamento PIX criado:', mpPaymentResult.id);
 
     res.status(201).json({
       id: result.rows[0].id,
@@ -103,7 +120,8 @@ router.post('/pix', async (req, res) => {
 
   } catch (error) {
     console.error('❌ Erro ao gerar PIX:', error.message);
-    res.status(500).json({ error: 'Erro ao gerar PIX' });
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Erro ao gerar PIX: ' + error.message });
   }
 });
 
@@ -126,30 +144,38 @@ router.get('/status/:paymentId', async (req, res) => {
 
     // Consultar no Mercado Pago para atualizar status
     try {
-      const mpPayment = await getPaymentMP(paymentId);
+      const mpPaymentResult = await getPaymentMP(paymentId);
 
       // Atualizar status no banco
-      if (mpPayment.status !== payment.status) {
+      if (mpPaymentResult.status !== payment.status) {
         await db.query(
           'UPDATE payments SET status = $1, updated_at = NOW() WHERE mp_payment_id = $2',
-          [mpPayment.status, paymentId]
+          [mpPaymentResult.status, paymentId]
         );
 
-        if (mpPayment.status === 'approved') {
+        if (mpPaymentResult.status === 'approved') {
           await db.query(
             'UPDATE payments SET confirmed_at = NOW() WHERE mp_payment_id = $1',
             [paymentId]
           );
+
+          // Se tiver order_id, atualizar status do pedido
+          if (payment.order_id) {
+            await db.query(
+              'UPDATE orders SET payment_status = $1 WHERE id = $2',
+              ['Confirmado', payment.order_id]
+            );
+          }
         }
       }
 
-      console.log(`📊 Status atualizado - ID: ${paymentId} - Status: ${mpPayment.status}`);
+      console.log(`📊 Status atualizado - ID: ${paymentId} - Status: ${mpPaymentResult.status}`);
 
       return res.json({
         id: payment.id,
-        mp_payment_id: mpPayment.id,
-        status: mpPayment.status,
-        amount: mpPayment.transaction_amount,
+        mp_payment_id: mpPaymentResult.id,
+        status: mpPaymentResult.status,
+        amount: mpPaymentResult.transaction_amount,
         order_id: payment.order_id
       });
     } catch (mpError) {

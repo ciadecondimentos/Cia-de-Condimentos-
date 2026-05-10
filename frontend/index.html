@@ -498,20 +498,88 @@ function cancelCardPayment() {
 }
 
 function showMoneyConfirmation() {
-  var confirmationHtml = 
-    '<div style="text-align: center; padding: 40px 20px;">' +
-      '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 22px; margin-bottom: 24px;">Pagamento em Dinheiro</h3>' +
-      '<p style="color: #666; font-size: 16px; margin-bottom: 24px;">O pagamento será feito na entrega.</p>' +
-      '<p style="color: #999; font-size: 14px; margin-bottom: 24px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
-      '<div style="display: flex; gap: 16px; justify-content: center;">' +
-        '<button onclick="submitOrderWithMoneyPayment()" style="background: var(--vermelho); color: white; border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Confirmar</button>' +
-        '<button onclick="cancelCardPayment()" style="background: #ccc; color: var(--marrom); border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Cancelar</button>' +
-      '</div>' +
-    '</div>';
+  // Calcular total do pedido
+  getProducts().then(function(products) {
+    var total = 0;
+    cart.forEach(function(item) {
+      var p = products.find(function(x) { return x.id === item.id; });
+      if (p) total += p.price * item.qty;
+    });
+
+    var confirmationHtml = 
+      '<div style="text-align: center; padding: 40px 20px;">' +
+        '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 22px; margin-bottom: 24px;">💵 Pagamento em Dinheiro</h3>' +
+        '<p style="color: #666; font-size: 16px; margin-bottom: 8px;">O pagamento será feito na entrega.</p>' +
+        '<p style="color: #999; font-size: 14px; margin-bottom: 32px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
+        
+        '<div style="background: #faf7f2; border: 2px solid var(--amarelo); padding: 20px; border-radius: 8px; margin-bottom: 32px; text-align: left;">' +
+          '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">💰 <strong>Valor do Pedido</strong></div>' +
+          '<div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
+          
+          '<label style="display: flex; align-items: center; gap: 12px; cursor: pointer; margin-bottom: 20px;">' +
+            '<input type="checkbox" id="exactPaymentCheckbox" onchange="toggleChangeField()" style="width: 20px; height: 20px; cursor: pointer;">' +
+            '<span style="font-size: 14px; color: #333;">Vou pagar exatamente o valor</span>' +
+          '</label>' +
+          
+          '<div id="changeSection" style="display: none;">' +
+            '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">💵 <strong>Quanto você vai pagar?</strong></div>' +
+            '<input type="number" id="paymentAmountInput" placeholder="Ex: 100.00" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 12px; font-size: 16px; border: 2px solid #e0d8c8; border-radius: 4px; margin-bottom: 16px;">' +
+            
+            '<div id="changeDisplay" style="display: none; background: white; padding: 12px; border-radius: 4px; border-left: 4px solid #27ae60;">' +
+              '<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Troco</div>' +
+              '<div style="font-size: 20px; font-weight: 900; color: #27ae60;" id="changeValue">R$ 0,00</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        
+        '<div style="display: flex; gap: 16px; justify-content: center;">' +
+          '<button onclick="submitOrderWithMoneyPayment()" style="background: var(--vermelho); color: white; border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Confirmar</button>' +
+          '<button onclick="cancelCardPayment()" style="background: #ccc; color: var(--marrom); border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Cancelar</button>' +
+        '</div>' +
+      '</div>';
+    
+    var body = document.getElementById('checkoutBody');
+    if (body) {
+      body.innerHTML = confirmationHtml;
+      // Guardar total para uso posterior
+      window.moneyPaymentTotal = total;
+    }
+  });
+}
+
+function toggleChangeField() {
+  var checkbox = document.getElementById('exactPaymentCheckbox');
+  var changeSection = document.getElementById('changeSection');
+  var paymentInput = document.getElementById('paymentAmountInput');
   
-  var body = document.getElementById('checkoutBody');
-  if (body) {
-    body.innerHTML = confirmationHtml;
+  if (checkbox.checked) {
+    changeSection.style.display = 'none';
+    paymentInput.value = '';
+  } else {
+    changeSection.style.display = 'block';
+    paymentInput.focus();
+  }
+}
+
+function calculateChange(total) {
+  var paymentInput = document.getElementById('paymentAmountInput');
+  var paymentAmount = parseFloat(paymentInput.value) || 0;
+  var changeDisplay = document.getElementById('changeDisplay');
+  var changeValue = document.getElementById('changeValue');
+  
+  if (paymentAmount > 0) {
+    var change = paymentAmount - total;
+    if (change >= 0) {
+      changeDisplay.style.display = 'block';
+      changeValue.textContent = 'R$ ' + change.toFixed(2).replace('.', ',');
+      window.moneyChange = change;
+    } else {
+      changeDisplay.style.display = 'none';
+      paymentInput.value = '';
+    }
+  } else {
+    changeDisplay.style.display = 'none';
+    window.moneyChange = 0;
   }
 }
 
@@ -520,6 +588,10 @@ function submitOrderWithMoneyPayment() {
   var phone = window.checkoutData.phone;
   var address = window.checkoutData.address;
   var obs = window.checkoutData.obs;
+  var isExactPayment = document.getElementById('exactPaymentCheckbox')?.checked || false;
+  var paymentAmountInput = document.getElementById('paymentAmountInput');
+  var moneyChange = window.moneyChange || 0;
+  var paymentAmount = isExactPayment ? 0 : (parseFloat(paymentAmountInput?.value) || 0);
 
   getProducts().then(function(products) {
     var total = 0;
@@ -538,6 +610,11 @@ function submitOrderWithMoneyPayment() {
       frete: 0,
       total: total,
       payment: 'Dinheiro',
+      moneyPaymentDetails: {
+        isExactPayment: isExactPayment,
+        paymentAmount: isExactPayment ? total : paymentAmount,
+        change: moneyChange
+      },
       status: 'Pendente',
       paymentStatus: 'Pendente'
     };
@@ -556,13 +633,24 @@ function submitOrderWithMoneyPayment() {
         return '• ' + item.name + ' x' + item.qty + ' = R$ ' + (item.price * item.qty).toFixed(2).replace('.', ',');
       }).join('\n');
 
+      var paymentInfo = '';
+      if (isExactPayment) {
+        paymentInfo = '💵 *Pagamento:* Exatamente R$ ' + total.toFixed(2).replace('.', ',');
+      } else if (paymentAmount > 0) {
+        paymentInfo = '💵 *Pagamento:* R$ ' + paymentAmount.toFixed(2).replace('.', ',') + '\n' +
+                     '🪙 *Troco:* R$ ' + moneyChange.toFixed(2).replace('.', ',');
+      } else {
+        paymentInfo = '💵 *Pagamento:* A confirmar';
+      }
+
       var whatsappMsg = '🌶️ *PEDIDO - PAGAMENTO EM DINHEIRO*\n\n' +
         '👤 *Cliente:* ' + name + '\n' +
         '📱 *Telefone:* ' + phone + '\n' +
         '📍 *Endereço:* ' + address + '\n' +
         (obs ? '📝 *Obs:* ' + obs + '\n' : '') +
         '\n*Itens:*\n' + lines + '\n\n' +
-        '💰 *Total: R$ ' + total.toFixed(2).replace('.', ',') + '*\n\n' +
+        '💰 *Total: R$ ' + total.toFixed(2).replace('.', ',') + '*\n' +
+        paymentInfo + '\n\n' +
         '*Pedido #' + orderResult.id + '*';
 
       showOrderSuccess(orderResult.id, whatsappMsg);

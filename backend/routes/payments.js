@@ -175,10 +175,32 @@ router.get('/status/:paymentId', async (req, res) => {
 
           // Se tiver order_id, atualizar status do pedido
           if (payment.order_id) {
+            // Atualizar payment_status
             await db.query(
               'UPDATE orders SET payment_status = $1 WHERE id = $2',
               ['Confirmado', payment.order_id]
             );
+
+            // ✅ NOVO: Também atualizar status do pedido para "Confirmado"
+            await db.query(
+              'UPDATE orders SET status = $1 WHERE id = $2',
+              ['Confirmado', payment.order_id]
+            );
+
+            // ✅ NOVO: Diminuir estoque se ainda não foi feito
+            const itemsResult = await db.query(
+              'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+              [payment.order_id]
+            );
+
+            for (const item of itemsResult.rows) {
+              await db.query(
+                `UPDATE products SET stock = stock - $1 WHERE id = $2`,
+                [item.quantity, item.product_id]
+              );
+            }
+
+            console.log(`✅ PIX CONFIRMADO (polling) - Pedido #${payment.order_id}`);
           }
         }
       }
@@ -294,8 +316,15 @@ router.post('/webhook', async (req, res) => {
       // Se tiver order_id, atualizar status do pedido E CONFIRMAR ESTOQUE
       const payment = dbResult.rows[0];
       if (payment.order_id) {
+        // Atualizar status de pagamento para "Confirmado"
         await db.query(
           'UPDATE orders SET payment_status = $1 WHERE id = $2',
+          ['Confirmado', payment.order_id]
+        );
+
+        // ✅ NOVO: Também atualizar status do pedido para "Confirmado" (para PIX ir direto para aba confirmados)
+        await db.query(
+          'UPDATE orders SET status = $1 WHERE id = $2',
           ['Confirmado', payment.order_id]
         );
 
@@ -312,7 +341,7 @@ router.post('/webhook', async (req, res) => {
           );
         }
 
-        console.log(`✅ PIX CONFIRMADO - Pedido #${payment.order_id} - Estoque atualizado`);
+        console.log(`✅ PIX CONFIRMADO - Pedido #${payment.order_id} - Status: Confirmado, Estoque atualizado`);
       }
     }
 

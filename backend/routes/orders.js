@@ -96,6 +96,20 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { status, payment_status } = req.body;
 
+    // Buscar pedido atual antes de atualizar
+    const currentOrderResult = await db.query(
+      'SELECT * FROM orders WHERE id = $1',
+      [id]
+    );
+
+    if (currentOrderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const currentOrder = currentOrderResult.rows[0];
+    const newPaymentStatus = payment_status || currentOrder.payment_status;
+
+    // Atualizar pedido
     const result = await db.query(
       `UPDATE orders 
        SET status = COALESCE($1, status),
@@ -104,6 +118,33 @@ router.put('/:id', async (req, res) => {
        RETURNING *`,
       [status, payment_status, id]
     );
+
+    // ✅ NOVO: Se admin marcou como "Pago", diminuir estoque
+    if (newPaymentStatus === 'Pago' && currentOrder.payment_status !== 'Pago') {
+      console.log(`💳 Admin marcou pedido #${id} como Pago - Diminuindo estoque...`);
+      
+      const itemsResult = await db.query(
+        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+        [id]
+      );
+
+      for (const item of itemsResult.rows) {
+        await db.query(
+          `UPDATE products SET stock = stock - $1 WHERE id = $2`,
+          [item.quantity, item.product_id]
+        );
+      }
+
+      // Se for Cartão/Dinheiro, mudar status para "Confirmado"
+      if (currentOrder.payment_method !== 'PIX') {
+        await db.query(
+          `UPDATE orders SET status = $1 WHERE id = $2`,
+          ['Confirmado', id]
+        );
+        
+        console.log(`✅ Pedido #${id} (${currentOrder.payment_method}) - Estoque baixado, Status: Confirmado`);
+      }
+    }
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Order not found' });

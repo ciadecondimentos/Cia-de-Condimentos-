@@ -59,20 +59,32 @@ router.post('/pix', async (req, res) => {
     // Email é obrigatório para Mercado Pago
     const email = payerEmail || 'cliente@condimentos.com';
 
+    console.log('📝 Criando pagamento PIX:', { amount, email, payerPhone });
+
     // Criar pagamento PIX via SDK Mercado Pago
-    const mpPaymentResult = await createPaymentMP({
-      transaction_amount: Number(amount),
-      description: description || 'Pagamento PIX',
-      payment_method_id: 'pix',
-      payer: {
-        email: email,
-        phone: payerPhone ? { area_code: '55', number: payerPhone.replace(/\D/g, '') } : undefined
-      }
-    });
+    let mpPaymentResult;
+    try {
+      mpPaymentResult = await createPaymentMP({
+        transaction_amount: Number(amount),
+        description: description || 'Pagamento PIX',
+        payment_method_id: 'pix',
+        payer: {
+          email: email,
+          phone: payerPhone ? { area_code: '55', number: payerPhone.replace(/\D/g, '') } : undefined
+        }
+      });
+      console.log('✅ Resposta do Mercado Pago recebida:', JSON.stringify(mpPaymentResult, null, 2).substring(0, 500));
+    } catch (mpError) {
+      console.error('❌ Erro ao chamar Mercado Pago:', mpError.message);
+      console.error('MP Error Details:', mpError);
+      throw mpError;
+    }
 
     // Extrair QR code da resposta
     const qrCode = mpPaymentResult.point_of_interaction?.transaction_data?.qr_code || null;
     const qrCodeBase64 = mpPaymentResult.point_of_interaction?.transaction_data?.qr_code_base64 || null;
+
+    console.log('🔍 QR Code da resposta:', qrCode ? 'SIM' : 'NÃO', qrCodeBase64 ? 'Base64: SIM' : 'Base64: NÃO');
 
     // Se não tiver QR code da API, gerar localmente (fallback)
     let finalQrCodeBase64 = qrCodeBase64;
@@ -86,6 +98,7 @@ router.post('/pix', async (req, res) => {
     }
 
     if (!finalQrCodeBase64) {
+      console.error('❌ Nenhum QR Code disponível!', { qrCode, qrCodeBase64 });
       return res.status(500).json({ error: 'Erro ao gerar QR Code' });
     }
 
@@ -121,6 +134,7 @@ router.post('/pix', async (req, res) => {
   } catch (error) {
     console.error('❌ Erro ao gerar PIX:', error.message);
     console.error('Stack:', error.stack);
+    console.error('Full Error:', error);
     res.status(500).json({ error: 'Erro ao gerar PIX: ' + error.message });
   }
 });

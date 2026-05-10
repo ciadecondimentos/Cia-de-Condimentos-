@@ -836,7 +836,7 @@ function submitOrderWithPixPayment() {
         return response.json();
       })
       .then(function(paymentResult) {
-        showPixQrCode(paymentResult, orderResult, total);
+        showPixQrCode(paymentResult, orderResult, total, name, phone, address, orderItems);
       });
     })
     .catch(function(error) {
@@ -846,7 +846,7 @@ function submitOrderWithPixPayment() {
   });
 }
 
-function showPixQrCode(payment, order, total) {
+function showPixQrCode(payment, order, total, customerName, customerPhone, customerAddress, orderItems) {
   var body = document.getElementById('checkoutBody');
   if (!body) return;
 
@@ -862,7 +862,13 @@ function showPixQrCode(payment, order, total) {
     qrCode: payment.qr_code,
     qrCodeBase64: payment.qr_code_base64,
     pollingCount: 0,
-    maxPolling: 120
+    maxPolling: 36, // 3 minutos (36 * 5 segundos = 180 segundos)
+    canceled: false,
+    customerName: customerName,
+    customerPhone: customerPhone,
+    customerAddress: customerAddress,
+    orderItems: orderItems,
+    total: total
   };
 
   var pixCopyPasteHtml = '';
@@ -896,7 +902,10 @@ function showPixQrCode(payment, order, total) {
           '<li>Confirme o pagamento</li>' +
         '</ol>' +
       '</div>' +
-      '<div id="pixStatus" style="color: #999; font-size: 13px; margin-top: 20px;">Aguardando confirmação do pagamento...</div>' +
+      '<div id="pixStatus" style="color: #999; font-size: 13px; margin-top: 20px;">⏳ Aguardando confirmação do pagamento... <strong id="pixTimer">Expira em: 3:00</strong></div>' +
+      '<div style="display: flex; gap: 12px; margin-top: 24px; justify-content: center;">' +
+        '<button onclick="cancelPixPayment()" style="padding: 12px 24px; background: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 14px;">❌ Cancelar Pedido</button>' +
+      '</div>' +
     '</div>';
 
   body.innerHTML = pixHtml;
@@ -907,7 +916,21 @@ function pollPixStatus() {
   if (!window.pixPaymentData) return;
 
   var data = window.pixPaymentData;
+  
+  if (data.canceled) {
+    return;
+  }
+
   data.pollingCount++;
+
+  // Atualizar timer visual
+  var secondsRemaining = (data.maxPolling - data.pollingCount) * 5;
+  var minutesRemaining = Math.floor(secondsRemaining / 60);
+  var secsRemaining = secondsRemaining % 60;
+  var timerEl = document.getElementById('pixTimer');
+  if (timerEl) {
+    timerEl.innerHTML = 'Expira em: ' + minutesRemaining + ':' + (secsRemaining < 10 ? '0' : '') + secsRemaining;
+  }
 
   fetch(API_URL + '/payments/status/' + data.paymentId, {
     method: 'GET',
@@ -925,35 +948,60 @@ function pollPixStatus() {
         statusEl.innerHTML = '✅ <span style="color: #4CAF50;"><strong>Pagamento confirmado!</strong></span>';
       }
       
+      data.canceled = true; // Parar polling
+      
       setTimeout(function() {
-        showPixSuccessMessage(data.orderId);
+        redirectToWhatsAppWithOrder(data);
       }, 1500);
       
       return;
     }
     
-    if (statusEl) {
-      var elapsed = data.pollingCount * 5;
-      var minutes = Math.floor(elapsed / 60);
-      var seconds = elapsed % 60;
-      statusEl.innerHTML = '⏳ Aguardando... (' + (minutes > 0 ? minutes + 'm ' : '') + seconds + 's)';
+    // Se passou de 3 minutos, cancelar pagamento
+    if (data.pollingCount >= data.maxPolling) {
+      data.canceled = true;
+      if (statusEl) {
+        statusEl.innerHTML = '⏱️ <span style="color: #FF9800;"><strong>Tempo expirado!</strong></span>';
+      }
+      
+      setTimeout(function() {
+        showPixExpiredMessage();
+      }, 1000);
+      
+      return;
     }
 
-    if (data.pollingCount < data.maxPolling) {
-      setTimeout(pollPixStatus, 5000);
-    } else {
-      if (statusEl) {
-        statusEl.innerHTML = '⏱️ <span style="color: #FF9800;">Tempo limite atingido.</span>';
-      }
+    if (statusEl) {
+      statusEl.innerHTML = '⏳ Aguardando confirmação do pagamento... <strong id="pixTimer">Expira em: ' + minutesRemaining + ':' + (secsRemaining < 10 ? '0' : '') + secsRemaining + '</strong>';
     }
+
+    setTimeout(pollPixStatus, 5000);
   })
   .catch(function(error) {
     console.error('Erro no polling:', error);
-    var statusEl = document.getElementById('pixStatus');
-    if (statusEl) {
-      statusEl.innerHTML = '❌ Erro ao verificar status';
+    if (data.pollingCount < data.maxPolling && !data.canceled) {
+      setTimeout(pollPixStatus, 5000);
     }
   });
+}
+
+function showPixExpiredMessage() {
+  var body = document.getElementById('checkoutBody');
+  if (!body) return;
+
+  var expiredHtml = 
+    '<div style="text-align: center; padding: 40px 20px;">' +
+      '<div style="font-size: 64px; margin-bottom: 20px;">⏱️</div>' +
+      '<h3 style="color: #FF9800; font-family: Playfair Display, serif; font-size: 24px; margin-bottom: 12px;">Tempo Expirado</h3>' +
+      '<p style="color: #666; font-size: 16px; margin-bottom: 24px;">O QR Code expirou após 3 minutos sem confirmação</p>' +
+      '<div style="background: #fff3e0; border: 2px solid #FF9800; padding: 16px; border-radius: 8px; margin-bottom: 24px;">' +
+        '<p style="color: #FF9800; font-size: 14px;">Para prosseguir, gere um novo código PIX</p>' +
+      '</div>' +
+      '<button onclick="regeneratePixQrCode()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px; margin-bottom: 12px;">🔄 Gerar Novo QR Code</button>' +
+      '<button onclick="goBackToCart()" style="width: 100%; background: #999; color: white; border: none; padding: 12px; font-weight: 600; cursor: pointer; border-radius: 4px; font-size: 14px;">Voltar para Carrinho</button>' +
+    '</div>';
+
+  body.innerHTML = expiredHtml;
 }
 
 function showPixSuccessMessage(orderId) {
@@ -969,11 +1017,85 @@ function showPixSuccessMessage(orderId) {
         '<p style="font-size: 14px; color: #999; margin-bottom: 8px;">Número do Pedido</p>' +
         '<p style="font-size: 32px; font-weight: 900; color: var(--vermelho);">#' + orderId + '</p>' +
       '</div>' +
-      '<p style="color: #666; font-size: 14px; margin-bottom: 24px;">Você receberá atualizações por WhatsApp</p>' +
-      '<button onclick="finishCheckout()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Finalizar</button>' +
+      '<p style="color: #666; font-size: 14px; margin-bottom: 24px;">Redirecionando para WhatsApp...</p>' +
+      '<div style="display: flex; gap: 12px; margin-top: 24px; justify-content: center;">' +
+        '<button onclick="goBackToCart()" style="padding: 12px 24px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Voltar ao Catálogo</button>' +
+      '</div>' +
     '</div>';
 
   body.innerHTML = successHtml;
+}
+
+function redirectToWhatsAppWithOrder(data) {
+  if (!data) return;
+  
+  // Montar mensagem do pedido
+  var message = '🛍️ *NOVO PEDIDO* #' + data.orderId + '\n\n';
+  message += '*Cliente:* ' + data.customerName + '\n';
+  message += '*Telefone:* ' + data.customerPhone + '\n';
+  message += '*Endereço:* ' + data.customerAddress + '\n\n';
+  message += '*Itens:*\n';
+  
+  if (data.orderItems && Array.isArray(data.orderItems)) {
+    data.orderItems.forEach(function(item, index) {
+      message += (index + 1) + '. ' + item.name + ' - Qtd: ' + item.quantity + ' x R$ ' + parseFloat(item.price).toFixed(2).replace('.', ',') + '\n';
+    });
+  }
+  
+  message += '\n*TOTAL:* R$ ' + data.total.toFixed(2).replace('.', ',') + '\n\n';
+  message += '💰 *Pagamento:* PIX (Confirmado)\n';
+  message += '✅ *Status:* Aguardando preparo\n\n';
+  message += 'Obrigado pela compra! 🙏';
+  
+  // Número de WhatsApp da Cia de Condimentos (81992555317)
+  var whatsappNumber = '5581992555317';
+  var whatsappUrl = 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(message);
+  
+  // Redirecionar após 2 segundos
+  setTimeout(function() {
+    window.open(whatsappUrl, '_blank');
+    // Depois de abrir, voltar ao catálogo
+    setTimeout(function() {
+      finishCheckout();
+    }, 1000);
+  }, 2000);
+}
+
+function cancelPixPayment() {
+  if (!window.pixPaymentData) return;
+  
+  if (confirm('Tem certeza que deseja cancelar este pedido?')) {
+    window.pixPaymentData.canceled = true;
+    
+    // Chamar backend para cancelar pagamento no Mercado Pago
+    fetch(API_URL + '/payments/cancel/' + window.pixPaymentData.paymentId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .catch(function(e) {
+      console.error('Erro ao cancelar pagamento:', e);
+    });
+    
+    showToast('❌ Pedido cancelado');
+    setTimeout(function() {
+      goBackToCart();
+    }, 1000);
+  }
+}
+
+function regeneratePixQrCode() {
+  if (!window.pixPaymentData) return;
+  
+  // Voltar ao carrinho para gerar novo pedido
+  goBackToCart();
+}
+
+function goBackToCart() {
+  window.pixPaymentData = null;
+  window.showCheckout = false;
+  document.getElementById('checkoutBody').innerHTML = '';
+  document.getElementById('checkoutModal').style.display = 'none';
+  loadCheckout();
 }
 
 function copyPixToClipboard() {

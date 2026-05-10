@@ -316,4 +316,60 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
+// POST /payments/cancel/:paymentId - Cancelar pagamento
+router.post('/cancel/:paymentId', async (req, res) => {
+  const { paymentId } = req.params;
+
+  try {
+    console.log('🚫 Cancelando pagamento:', paymentId);
+
+    // Buscar pagamento no banco
+    const payment = await db.query(
+      'SELECT * FROM payments WHERE mp_payment_id = $1 OR id = $1',
+      [paymentId]
+    );
+
+    if (payment.rows.length === 0) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+
+    const paymentRecord = payment.rows[0];
+    const mpPaymentId = paymentRecord.mp_payment_id;
+
+    // Tentar cancelar no Mercado Pago
+    try {
+      await mpPayment.cancel({
+        id: mpPaymentId
+      });
+      console.log('✅ Pagamento cancelado no Mercado Pago:', mpPaymentId);
+    } catch (mpError) {
+      console.warn('⚠️  Erro ao cancelar no MP (pode estar já processado):', mpError.message);
+    }
+
+    // Atualizar no banco
+    await db.query(
+      'UPDATE payments SET status = $1, updated_at = NOW() WHERE mp_payment_id = $2',
+      ['cancelled', mpPaymentId]
+    );
+
+    // Atualizar status do pedido se existir
+    if (paymentRecord.order_id) {
+      await db.query(
+        'UPDATE orders SET payment_status = $1 WHERE id = $2',
+        ['Cancelado', paymentRecord.order_id]
+      );
+    }
+
+    res.json({
+      success: true,
+      message: 'Pagamento cancelado com sucesso',
+      mp_payment_id: mpPaymentId
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao cancelar pagamento:', error.message);
+    res.status(500).json({ error: 'Erro ao cancelar pagamento: ' + error.message });
+  }
+});
+
 module.exports = router;

@@ -26,7 +26,7 @@ router.post('/', async (req, res) => {
 
     const orderId = orderResult.rows[0].id;
 
-    // Insert order items
+    // Insert order items (SEM diminuir estoque ainda!)
     for (const item of items) {
       await db.query(
         `INSERT INTO order_items (order_id, product_id, quantity, price)
@@ -34,11 +34,9 @@ router.post('/', async (req, res) => {
         [orderId, item.id, item.qty, item.price]
       );
 
-      // Update product stock
-      await db.query(
-        `UPDATE products SET stock = stock - $1 WHERE id = $2`,
-        [item.qty, item.id]
-      );
+      // NÃO diminuir estoque aqui - será feito quando:
+      // - PIX: pagamento aprovado (webhook)
+      // - Cartão/Dinheiro: admin der baixa no pedido
     }
 
     res.status(201).json({
@@ -115,6 +113,67 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating order:', error);
     res.status(500).json({ error: 'Failed to update order' });
+  }
+});
+
+// POST confirm stock for non-PIX orders (admin action)
+// Diminui o estoque quando admin dá baixa no pedido (Cartão ou Dinheiro)
+router.post('/:id/confirm-stock', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Buscar o pedido
+    const orderResult = await db.query(
+      'SELECT payment_method FROM orders WHERE id = $1',
+      [id]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Pedido não encontrado' });
+    }
+
+    const paymentMethod = orderResult.rows[0].payment_method;
+
+    // Apenas para Cartão e Dinheiro (não PIX, que já faz automaticamente)
+    if (paymentMethod === 'PIX') {
+      return res.status(400).json({ error: 'PIX já confirma estoque automaticamente quando pagamento é aprovado' });
+    }
+
+    // Buscar todos os itens do pedido
+    const itemsResult = await db.query(
+      'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+      [id]
+    );
+
+    if (itemsResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Nenhum item encontrado no pedido' });
+    }
+
+    // Diminuir estoque para cada produto
+    for (const item of itemsResult.rows) {
+      await db.query(
+        `UPDATE products SET stock = stock - $1 WHERE id = $2`,
+        [item.quantity, item.product_id]
+      );
+    }
+
+    // Marcar que o estoque foi confirmado
+    await db.query(
+      'UPDATE orders SET status = $1 WHERE id = $2',
+      ['Confirmado', id]
+    );
+
+    console.log(`✅ Estoque confirmado para pedido #${id} (${paymentMethod})`);
+
+    res.json({
+      success: true,
+      message: `Estoque confirmado para o pedido #${id}`,
+      order_id: id
+    });
+
+  } catch (error) {
+    console.error('Erro ao confirmar estoque:', error.message);
+    res.status(500).json({ error: 'Erro ao confirmar estoque: ' + error.message });
   }
 });
 

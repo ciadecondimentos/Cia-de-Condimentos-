@@ -291,14 +291,28 @@ router.post('/webhook', async (req, res) => {
         [paymentId]
       );
 
-      // Se tiver order_id, atualizar status do pedido
+      // Se tiver order_id, atualizar status do pedido E CONFIRMAR ESTOQUE
       const payment = dbResult.rows[0];
       if (payment.order_id) {
         await db.query(
           'UPDATE orders SET payment_status = $1 WHERE id = $2',
           ['Confirmado', payment.order_id]
         );
-        console.log(`✅ PIX CONFIRMADO - Pedido #${payment.order_id}`);
+
+        // ✅ NOVO: Diminuir estoque para PIX quando pagamento é aprovado
+        const itemsResult = await db.query(
+          'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+          [payment.order_id]
+        );
+
+        for (const item of itemsResult.rows) {
+          await db.query(
+            `UPDATE products SET stock = stock - $1 WHERE id = $2`,
+            [item.quantity, item.product_id]
+          );
+        }
+
+        console.log(`✅ PIX CONFIRMADO - Pedido #${payment.order_id} - Estoque atualizado`);
       }
     }
 

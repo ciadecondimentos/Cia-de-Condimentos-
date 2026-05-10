@@ -507,36 +507,41 @@ function showMoneyConfirmation() {
     });
 
     var confirmationHtml = 
-      '<div style="text-align: center; padding: 40px 20px;">' +
-        '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 22px; margin-bottom: 24px;">💵 Pagamento em Dinheiro</h3>' +
-        '<p style="color: #666; font-size: 16px; margin-bottom: 8px;">O pagamento será feito na entrega.</p>' +
-        '<p style="color: #999; font-size: 14px; margin-bottom: 32px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
+      '<div style="text-align: center; padding: 60px 30px; background: linear-gradient(135deg, rgba(192, 57, 43, 0.05) 0%, rgba(245, 197, 24, 0.05) 100%); border-radius: 12px; max-width: 500px; margin: 0 auto;">' +
+        '<div style="font-size: 56px; margin-bottom: 20px;">💵</div>' +
+        '<h2 style="color: var(--vermelho); font-family: Playfair Display, serif; font-size: 36px; font-weight: 900; margin-bottom: 12px; letter-spacing: 1px;">Pagamento em Dinheiro</h2>' +
+        '<p style="color: #666; font-size: 15px; margin-bottom: 8px; line-height: 1.6;">O pagamento será feito na entrega.</p>' +
+        '<p style="color: #999; font-size: 13px; margin-bottom: 40px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
         
-        '<div style="background: #faf7f2; border: 2px solid var(--amarelo); padding: 20px; border-radius: 8px; margin-bottom: 32px; text-align: left;">' +
-          '<div style="font-size: 14px; color: #666; margin-bottom: 16px;">💰 <strong>Valor do Pedido</strong></div>' +
-          '<div style="font-size: 28px; font-weight: 900; color: var(--marrom); margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
+        '<div style="background: linear-gradient(135deg, #faf7f2 0%, #fff9f5 100%); border: 3px solid var(--amarelo); padding: 30px; border-radius: 12px; margin-bottom: 40px; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">' +
+          '<div style="font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 12px;">💰 Valor Total</div>' +
+          '<div style="font-size: 44px; font-weight: 900; color: var(--vermelho); margin-bottom: 32px; font-family: Playfair Display, serif; letter-spacing: 1px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
           
-          '<div style="display: flex; gap: 12px; margin-bottom: 24px;">' +
-            '<button onclick="selectPaymentType(\'exact\', ' + total + ')" id="btnExact" style="flex: 1; background: white; border: 2px solid var(--amarelo); color: var(--marrom); padding: 12px; font-weight: 700; cursor: pointer; border-radius: 4px; font-size: 14px; transition: all 0.2s;">✓ Pagar Exato</button>' +
-            '<button onclick="selectPaymentType(\'change\', ' + total + ')" id="btnChange" style="flex: 1; background: white; border: 2px solid #e0d8c8; color: var(--marrom); padding: 12px; font-weight: 700; cursor: pointer; border-radius: 4px; font-size: 14px; transition: all 0.2s;">💵 Com Troco</button>' +
+          '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px;">' +
+            '<button onclick="selectPaymentType(\'exact\', ' + total + ')" id="btnExact" style="flex: 1; background: var(--amarelo); border: 3px solid var(--amarelo); color: var(--marrom); padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; transition: all 0.3s; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">✓ Pagar Exato</button>' +
+            '<button onclick="selectPaymentType(\'change\', ' + total + ')" id="btnChange" style="flex: 1; background: white; border: 3px solid #e0d8c8; color: var(--marrom); padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; transition: all 0.3s; letter-spacing: 1px; text-transform: uppercase;">💵 Com Troco</button>' +
           '</div>' +
           
-          '<div id="changePaymentSection" style="display: none;">' +
-            '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">Quanto você vai pagar?</div>' +
-            '<input type="number" id="paymentAmountInput" placeholder="Digite o valor que vai pagar" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 14px; font-size: 16px; border: 2px solid #e0d8c8; border-radius: 4px; margin-bottom: 16px; box-sizing: border-box;">' +
+          '<div id="changePaymentSection" style="display: none; animation: slideDown 0.3s ease;">' +
+            '<div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 700;">Quanto você vai pagar?</div>' +
+            '<input type="number" id="paymentAmountInput" placeholder="Digite o valor que vai pagar" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 16px; font-size: 16px; border: 2px solid var(--amarelo); border-radius: 8px; margin-bottom: 18px; box-sizing: border-box; font-weight: 600; background: white;">' +
             
-            '<div id="changeDisplay" style="display: none; background: white; padding: 14px; border-radius: 4px; border-left: 4px solid #27ae60; margin-bottom: 16px;">' +
-              '<div style="font-size: 12px; color: #666; margin-bottom: 4px;">Troco</div>' +
-              '<div style="font-size: 24px; font-weight: 900; color: #27ae60;" id="changeValue">R$ 0,00</div>' +
+            '<div id="changeDisplay" style="display: none; background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%); padding: 18px; border-radius: 8px; border-left: 5px solid #27ae60; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);">' +
+              '<div style="font-size: 11px; color: #27ae60; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700;">🪙 Troco</div>' +
+              '<div style="font-size: 32px; font-weight: 900; color: #27ae60; font-family: Playfair Display, serif;" id="changeValue">R$ 0,00</div>' +
             '</div>' +
           '</div>' +
         '</div>' +
         
-        '<div style="display: flex; gap: 16px; justify-content: center;">' +
-          '<button onclick="submitOrderWithMoneyPayment()" style="background: var(--vermelho); color: white; border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Confirmar</button>' +
-          '<button onclick="cancelCardPayment()" style="background: #ccc; color: var(--marrom); border: none; padding: 16px 48px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Cancelar</button>' +
+        '<div style="display: flex; gap: 14px; justify-content: center;">' +
+          '<button onclick="submitOrderWithMoneyPayment()" style="background: var(--vermelho); color: white; border: none; padding: 18px 56px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; transition: all 0.3s; box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3); hover: transform: translateY(-2px);">Confirmar</button>' +
+          '<button onclick="cancelCardPayment()" style="background: #ddd; color: var(--marrom); border: none; padding: 18px 56px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 16px; letter-spacing: 2px; text-transform: uppercase; transition: all 0.3s;">Cancelar</button>' +
         '</div>' +
-      '</div>';
+      '</div>' +
+      
+      '<style>' +
+        '@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }' +
+      '</style>';
     
     var body = document.getElementById('checkoutBody');
     if (body) {
@@ -568,11 +573,15 @@ function selectPaymentType(type, total) {
       btnExact.style.background = 'var(--amarelo)';
       btnExact.style.borderColor = 'var(--amarelo)';
       btnExact.style.color = 'var(--marrom)';
+      btnExact.style.boxShadow = '0 4px 12px rgba(245, 197, 24, 0.3)';
+      btnExact.style.transform = 'scale(1.02)';
     }
     if (btnChange) {
       btnChange.style.background = 'white';
       btnChange.style.borderColor = '#e0d8c8';
       btnChange.style.color = 'var(--marrom)';
+      btnChange.style.boxShadow = 'none';
+      btnChange.style.transform = 'scale(1)';
     }
     if (changeSection) changeSection.style.display = 'none';
   } else {
@@ -581,11 +590,15 @@ function selectPaymentType(type, total) {
       btnChange.style.background = 'var(--vermelho)';
       btnChange.style.borderColor = 'var(--vermelho)';
       btnChange.style.color = 'white';
+      btnChange.style.boxShadow = '0 4px 12px rgba(192, 57, 43, 0.3)';
+      btnChange.style.transform = 'scale(1.02)';
     }
     if (btnExact) {
       btnExact.style.background = 'white';
       btnExact.style.borderColor = '#e0d8c8';
       btnExact.style.color = 'var(--marrom)';
+      btnExact.style.boxShadow = 'none';
+      btnExact.style.transform = 'scale(1)';
     }
     if (changeSection) changeSection.style.display = 'block';
     if (paymentInput) paymentInput.focus();

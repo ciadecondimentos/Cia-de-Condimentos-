@@ -850,6 +850,12 @@ function showPixQrCode(payment, order, total) {
   var body = document.getElementById('checkoutBody');
   if (!body) return;
 
+  // Garantir que o QR code tem o prefixo correto
+  var qrCodeSrc = payment.qr_code_base64;
+  if (qrCodeSrc && !qrCodeSrc.startsWith('data:')) {
+    qrCodeSrc = 'data:image/png;base64,' + qrCodeSrc;
+  }
+
   window.pixPaymentData = {
     paymentId: payment.mp_payment_id,
     orderId: order.id,
@@ -864,7 +870,7 @@ function showPixQrCode(payment, order, total) {
       '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 24px; margin-bottom: 8px;">QR Code PIX</h3>' +
       '<p style="color: #999; font-size: 14px; margin-bottom: 24px;">Escaneie com seu telefone para pagar</p>' +
       '<div style="background: white; padding: 20px; border-radius: 8px; display: inline-block; margin-bottom: 24px;">' +
-        '<img src="' + payment.qr_code_base64 + '" alt="QR Code PIX" style="width: 250px; height: 250px; display: block;">' +
+        '<img src="' + qrCodeSrc + '" alt="QR Code PIX" style="width: 250px; height: 250px; display: block;">' +
       '</div>' +
       '<p style="color: #666; font-size: 16px; margin-bottom: 8px;"><strong>Valor:</strong></p>' +
       '<p style="color: var(--vermelho); font-family: Playfair Display, serif; font-size: 32px; font-weight: 900; margin-bottom: 24px;">R$ ' + total.toFixed(2).replace('.', ',') + '</p>' +

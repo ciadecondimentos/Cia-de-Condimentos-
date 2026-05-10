@@ -956,9 +956,10 @@ function pollPixStatus() {
       
       data.canceled = true; // Parar polling
       
+      // ✅ NOVO: Mostrar UI com botão de enviar para WhatsApp
       setTimeout(function() {
-        redirectToWhatsAppWithOrder(data);
-      }, 1500);
+        showPixConfirmedWithWhatsApp(data);
+      }, 1000);
       
       return;
     }
@@ -1008,6 +1009,34 @@ function showPixExpiredMessage() {
     '</div>';
 
   body.innerHTML = expiredHtml;
+}
+
+function showPixConfirmedWithWhatsApp(data) {
+  var body = document.getElementById('checkoutBody');
+  if (!body) return;
+
+  var confirmedHtml = 
+    '<div style="text-align: center; padding: 40px 20px;">' +
+      '<div style="font-size: 64px; margin-bottom: 20px;">✅</div>' +
+      '<h3 style="color: var(--vermelho); font-family: Playfair Display, serif; font-size: 24px; margin-bottom: 12px;">Pagamento Confirmado!</h3>' +
+      '<p style="color: #666; font-size: 16px; margin-bottom: 24px;">Sua compra foi aprovada com sucesso</p>' +
+      '<div style="background: #fdf8ee; padding: 20px; border-radius: 8px; margin-bottom: 24px; border: 2px solid var(--amarelo);">' +
+        '<p style="font-size: 14px; color: #999; margin-bottom: 8px;">Número do Pedido</p>' +
+        '<p style="font-size: 32px; font-weight: 900; color: var(--vermelho);">#' + data.orderId + '</p>' +
+      '</div>' +
+      '<p style="color: #666; font-size: 14px; margin-bottom: 24px;">Confirme seu pedido pelo WhatsApp</p>' +
+      '<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px;">' +
+        '<button onclick="sendToWhatsAppAgain()" style="width: 100%; background: #25D366; color: white; border: none; padding: 14px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">📱 Enviar para WhatsApp</button>' +
+        '<button onclick="goBackToCart()" style="width: 100%; background: #999; color: white; border: none; padding: 12px; font-weight: 600; cursor: pointer; border-radius: 4px; font-size: 14px;">Voltar ao Catálogo</button>' +
+      '</div>' +
+    '</div>';
+
+  body.innerHTML = confirmedHtml;
+}
+
+function sendToWhatsAppAgain() {
+  if (!window.pixPaymentData) return;
+  redirectToWhatsAppWithOrder(window.pixPaymentData);
 }
 
 function showPixSuccessMessage(orderId) {

@@ -58,6 +58,14 @@ router.get('/:id', async (req, res) => {
     }
     const product = result.rows[0];
     product.images = await getProductImages(product.id);
+    
+    // Adicionar imagem principal (Cloudinary) se existir
+    if (product.image_url) {
+      product.main_image = product.image_url;
+    } else if (product.images && product.images.length > 0) {
+      product.main_image = product.images[0];
+    }
+    
     res.json(product);
   } catch (error) {
     console.error('Error fetching product:', error);

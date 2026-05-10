@@ -14,6 +14,6 @@ CREATE TABLE IF NOT EXISTS payments (
   confirmed_at TIMESTAMPTZ
 );
 
-CREATE INDEX idx_payments_mp_id ON payments(mp_payment_id);
-CREATE INDEX idx_payments_order_id ON payments(order_id);
-CREATE INDEX idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_mp_id ON payments(mp_payment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);

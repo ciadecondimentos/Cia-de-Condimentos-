@@ -465,27 +465,15 @@ function saveProduct() {
     showToast('⚠️ Aviso: Nenhuma imagem selecionada! Recomendamos adicionar imagens ao produto.', 'warning');
   }
   
-  const saveProductData = (images) => {
-    const productData = {
-      name,
-      sku,
-      category,
-      price,
-      stock,
-      active: status,
-      images: images || [],
-      description
-    };
-    
-    console.log('Salvando produto:', productData);
-    
+  // Função para salvar produto no banco
+  const saveProductToDB = (productToSave) => {
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}/products/${id}` : `${API_BASE}/products`;
     
     fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(productData)
+      body: JSON.stringify(productToSave)
     })
     .then(res => {
       if (!res.ok) {
@@ -509,57 +497,130 @@ function saveProduct() {
     });
   };
   
-  // Upload multiple images
+  // Preparar dados do produto
+  const productData = {
+    name,
+    sku,
+    category,
+    price,
+    stock,
+    active: status,
+    description
+  };
+  
+  // ✅ NOVO: Upload com Cloudinary
   if (fileInput && fileInput.files.length > 0) {
-    showToast('📤 Enviando ' + fileInput.files.length + ' imagem(ns)...', 'info');
-    const uploadPromises = [];
-    
-    console.log('Iniciando upload de ' + fileInput.files.length + ' arquivo(s)');
-    
-    for (let i = 0; i < fileInput.files.length; i++) {
-      const file = fileInput.files[i];
-      console.log(`Upload arquivo ${i + 1}:`, file.name);
+    // Se é novo produto, primeiro salvar, depois fazer upload
+    if (!id) {
+      showToast('💾 Salvando produto...', 'info');
       
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      uploadPromises.push(
-        fetch(`${API_BASE}/upload`, {
-          method: 'POST',
-          body: formData
-        })
-        .then(async res => {
-          if (!res.ok) {
-            const text = await res.text();
-            console.error(`Upload file ${i + 1} failed:`, res.status, text);
-            throw new Error(`Upload falhou para "${file.name}": ${res.status}`);
-          }
-          return res.json();
-        })
-        .then(data => {
-          if (data.imageUrl) {
-            console.log(`Upload bem-sucedido arquivo ${i + 1}:`, data.imageUrl);
-            return data.imageUrl;
-          } else {
-            throw new Error(data.error || `Erro no upload de "${file.name}"`);
-          }
-        })
-      );
-    }
-    
-    Promise.all(uploadPromises)
-      .then(imageUrls => {
-        console.log('Todos os uploads concluídos. URLs:', imageUrls);
-        showToast('✅ Imagens enviadas! Salvando produto...', 'success');
-        saveProductData(imageUrls);
+      // Salvar produto primeiro
+      fetch(`${API_BASE}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      })
+      .then(res => res.json())
+      .then(savedProduct => {
+        if (savedProduct.error) {
+          throw new Error(savedProduct.error);
+        }
+        
+        // Agora fazer upload das imagens com o productId
+        const productId = savedProduct.id;
+        console.log('✅ Produto criado com ID:', productId);
+        showToast('📤 Fazendo upload de ' + fileInput.files.length + ' imagem(ns)...', 'info');
+        
+        const uploadPromises = [];
+        
+        for (let i = 0; i < fileInput.files.length; i++) {
+          const file = fileInput.files[i];
+          console.log(`Upload arquivo ${i + 1}:`, file.name);
+          
+          const formData = new FormData();
+          formData.append('image', file);
+          formData.append('productId', productId);
+          
+          uploadPromises.push(
+            fetch(`${API_BASE}/upload/product`, {
+              method: 'POST',
+              body: formData
+            })
+            .then(async res => {
+              if (!res.ok) {
+                const text = await res.text();
+                console.error(`Upload file ${i + 1} failed:`, res.status, text);
+                throw new Error(`Upload falhou para "${file.name}": ${res.status}`);
+              }
+              return res.json();
+            })
+            .then(data => {
+              if (data.image_url) {
+                console.log(`✅ Upload bem-sucedido arquivo ${i + 1}:`, data.image_url);
+                return data.image_url;
+              } else {
+                throw new Error(data.error || `Erro no upload de "${file.name}"`);
+              }
+            })
+          );
+        }
+        
+        Promise.all(uploadPromises)
+          .then(imageUrls => {
+            console.log('✅ Todos os uploads concluídos. URLs:', imageUrls);
+            showToast('✅ Produto criado e imagens enviadas!', 'success');
+            closeProductModal();
+            renderProductsTableAsync();
+          })
+          .catch(error => {
+            console.error('Error uploading images:', error);
+            showToast('⚠️ Produto criado, mas erro no upload de imagens: ' + error.message, 'warning');
+            closeProductModal();
+            renderProductsTableAsync();
+          });
       })
       .catch(error => {
-        console.error('Error uploading images:', error);
-        showToast('❌ Erro no upload: ' + error.message, 'error');
+        console.error('Error creating product:', error);
+        showToast('❌ Erro ao criar produto: ' + error.message, 'error');
       });
+    } else {
+      // Produto existente - apenas fazer upload de novas imagens
+      showToast('📤 Fazendo upload de ' + fileInput.files.length + ' imagem(ns)...', 'info');
+      
+      const uploadPromises = [];
+      
+      for (let i = 0; i < fileInput.files.length; i++) {
+        const file = fileInput.files[i];
+        
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('productId', id);
+        
+        uploadPromises.push(
+          fetch(`${API_BASE}/upload/product`, {
+            method: 'POST',
+            body: formData
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.image_url) return data.image_url;
+            throw new Error(data.error || 'Erro no upload');
+          })
+        );
+      }
+      
+      Promise.all(uploadPromises)
+        .then(() => {
+          showToast('✅ Imagens enviadas!', 'success');
+          saveProductToDB(productData);
+        })
+        .catch(error => {
+          showToast('❌ Erro no upload: ' + error.message, 'error');
+        });
+    }
   } else {
-    console.log('Nenhum arquivo selecionado, salvando sem imagens');
-    saveProductData([]);
+    // Sem imagens - apenas salvar produto
+    saveProductToDB(productData);
   }
 }
 

@@ -13,11 +13,11 @@ const productsRoutes = require('./routes/products');
 const ordersRoutes = require('./routes/orders');
 const paymentsRoutes = require('./routes/payments');
 
-// Garantir que o diretório de uploads existe
-const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// TODO: Implementar uploads com Cloudinary ou S3 depois
+// const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+// }
 
 const app = express();
 app.use(helmet());

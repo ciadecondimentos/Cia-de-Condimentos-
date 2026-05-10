@@ -1015,6 +1015,25 @@ function showPixConfirmedWithWhatsApp(data) {
   var body = document.getElementById('checkoutBody');
   if (!body) return;
 
+  // ✅ NOVO: Salvar dados do pedido em localStorage (por 30 minutos)
+  var storageData = {
+    orderId: data.orderId,
+    customerName: data.customerName,
+    customerPhone: data.customerPhone,
+    customerAddress: data.customerAddress,
+    orderItems: data.orderItems,
+    total: data.total,
+    timestamp: Date.now() // Para rastrear idade dos dados
+  };
+  
+  localStorage.setItem('pixOrderData', JSON.stringify(storageData));
+  
+  // Auto-limpar localStorage após 30 minutos
+  setTimeout(function() {
+    localStorage.removeItem('pixOrderData');
+    console.log('🗑️ Dados do pedido removidos de localStorage (30 min)');
+  }, 30 * 60 * 1000);
+
   var confirmedHtml = 
     '<div style="text-align: center; padding: 40px 20px;">' +
       '<div style="font-size: 64px; margin-bottom: 20px;">✅</div>' +
@@ -1035,8 +1054,27 @@ function showPixConfirmedWithWhatsApp(data) {
 }
 
 function sendToWhatsAppAgain() {
-  if (!window.pixPaymentData) return;
-  redirectToWhatsAppWithOrder(window.pixPaymentData);
+  // ✅ NOVO: Tentar recuperar de localStorage se window.pixPaymentData não existir
+  var data = window.pixPaymentData;
+  
+  if (!data) {
+    var storedData = localStorage.getItem('pixOrderData');
+    if (storedData) {
+      try {
+        data = JSON.parse(storedData);
+        console.log('📱 Usando dados recuperados do localStorage');
+      } catch (e) {
+        console.error('Erro ao recuperar dados do localStorage:', e);
+        showToast('❌ Não foi possível recuperar dados do pedido');
+        return;
+      }
+    } else {
+      showToast('❌ Dados do pedido não encontrados');
+      return;
+    }
+  }
+  
+  redirectToWhatsAppWithOrder(data);
 }
 
 function showPixSuccessMessage(orderId) {
@@ -1086,14 +1124,12 @@ function redirectToWhatsAppWithOrder(data) {
   var whatsappNumber = '5581992555317';
   var whatsappUrl = 'https://wa.me/' + whatsappNumber + '?text=' + encodeURIComponent(message);
   
-  // Redirecionar após 2 segundos
-  setTimeout(function() {
-    window.open(whatsappUrl, '_blank');
-    // Depois de abrir, voltar ao catálogo
-    setTimeout(function() {
-      finishCheckout();
-    }, 1000);
-  }, 2000);
+  // Abrir WhatsApp
+  window.open(whatsappUrl, '_blank');
+  
+  // ✅ NOVO: Limpar localStorage após enviar
+  localStorage.removeItem('pixOrderData');
+  console.log('✅ Pedido enviado para WhatsApp e dados removidos de localStorage');
 }
 
 function cancelPixPayment() {
@@ -1101,6 +1137,9 @@ function cancelPixPayment() {
   
   if (confirm('Tem certeza que deseja cancelar este pedido?')) {
     window.pixPaymentData.canceled = true;
+    
+    // ✅ NOVO: Limpar localStorage ao cancelar
+    localStorage.removeItem('pixOrderData');
     
     // Chamar backend para cancelar pagamento no Mercado Pago
     fetch(API_URL + '/payments/cancel/' + window.pixPaymentData.paymentId, {
@@ -1126,6 +1165,8 @@ function regeneratePixQrCode() {
 }
 
 function goBackToCart() {
+  // ✅ NOVO: Limpar dados do localStorage ao voltar
+  localStorage.removeItem('pixOrderData');
   window.pixPaymentData = null;
   window.showCheckout = false;
   document.getElementById('checkoutBody').innerHTML = '';

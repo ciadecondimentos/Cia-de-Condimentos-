@@ -16,6 +16,6 @@ CREATE TABLE IF NOT EXISTS crm_customers (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_crm_customers_city ON crm_customers(city);
-CREATE INDEX idx_crm_customers_is_vip ON crm_customers(is_vip);
-CREATE INDEX idx_crm_customers_is_inactive ON crm_customers(is_inactive);
+CREATE INDEX IF NOT EXISTS idx_crm_customers_city ON crm_customers(city);
+CREATE INDEX IF NOT EXISTS idx_crm_customers_is_vip ON crm_customers(is_vip);
+CREATE INDEX IF NOT EXISTS idx_crm_customers_is_inactive ON crm_customers(is_inactive);

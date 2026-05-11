@@ -148,8 +148,16 @@ router.post('/customers', async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao criar cliente:', error);
-    res.status(500).json({ error: 'Erro ao criar cliente' });
+    console.error('Erro ao criar cliente:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      fullError: error
+    });
+    res.status(500).json({ 
+      error: 'Erro ao criar cliente',
+      detail: error.message 
+    });
   }
 });
 
@@ -187,8 +195,16 @@ router.put('/customers/:id', async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (error) {
-    console.error('Erro ao atualizar cliente:', error);
-    res.status(500).json({ error: 'Erro ao atualizar cliente' });
+    console.error('Erro ao atualizar cliente:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      fullError: error
+    });
+    res.status(500).json({ 
+      error: 'Erro ao atualizar cliente',
+      detail: error.message 
+    });
   }
 });
 

@@ -249,6 +249,8 @@ async function saveCrmCustomer() {
     ? `${API_BASE}/crm/customers/${customerId}`
     : `${API_BASE}/crm/customers`;
 
+  console.log('Salvando cliente:', { method, url, payload, customerId });
+
   try {
     const response = await fetch(url, {
       method,
@@ -256,14 +258,18 @@ async function saveCrmCustomer() {
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) throw new Error('Erro ao salvar');
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Erro do servidor:', errorData);
+      throw new Error(errorData.detail || errorData.error || 'Erro ao salvar');
+    }
 
     showToast(customerId ? 'Cliente atualizado!' : 'Cliente criado!', 'success');
     closeCrmCustomerModal();
     loadCrmCustomers(crmState.filters);
   } catch (error) {
     console.error('Erro ao salvar cliente:', error);
-    showToast('Erro ao salvar cliente', 'error');
+    showToast(`Erro ao salvar cliente: ${error.message}`, 'error');
   }
 }
 

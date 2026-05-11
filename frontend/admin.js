@@ -34,7 +34,8 @@ function showPage(pageId, buttonElement) {
     'products': 'Produtos',
     'orders': 'Pedidos',
     'customers': 'Clientes',
-    'reports': 'Relatórios'
+    'reports': 'Relatórios',
+    'crm': 'Central de Clientes'
   };
   
   document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';
@@ -48,6 +49,8 @@ function showPage(pageId, buttonElement) {
     renderCustomersTableAsync();
   } else if (pageId === 'dashboard') {
     loadDashboard();
+  } else if (pageId === 'crm') {
+    initializeCrm();
   }
 }
 

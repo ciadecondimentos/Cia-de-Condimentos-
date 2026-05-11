@@ -247,6 +247,48 @@ tr:hover td { background: #faf7f2; }
   </div>
 </div>
 
+<!-- CRM MODALS -->
+<div class="modal-overlay" id="crmCustomerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="crmCustomerModalTitle">Novo Cliente</h3>
+      <button class="close" onclick="closeCrmCustomerModal()">✕</button>
+    </div>
+    <div class="modal-body" id="crmCustomerModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCrmCustomerModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCrmCustomer()">💾 Salvar Cliente</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="crmDetailModal" style="max-height: 95vh; overflow-y: auto;">
+  <div class="modal" style="max-height: 95vh; overflow-y: auto; max-width: 800px;">
+    <div class="modal-header">
+      <h3 id="crmDetailModalTitle">Detalhes do Cliente</h3>
+      <button class="close" onclick="closeCrmDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="crmDetailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCrmDetailModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="crmPurchaseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="crmPurchaseModalTitle">Nova Compra</h3>
+      <button class="close" onclick="closeCrmPurchaseModal()">✕</button>
+    </div>
+    <div class="modal-body" id="crmPurchaseModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCrmPurchaseModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCrmPurchase()">💾 Salvar Compra</button>
+    </div>
+  </div>
+</div>
+
 
 
 <div class="modal-overlay" id="confirmModal">
@@ -288,6 +330,9 @@ tr:hover td { background: #faf7f2; }
   </div>
   <div class="nav-item" onclick="showPage('reports', this)">
     <span class="nav-icon">📈</span> Relatórios
+  </div>
+  <div class="nav-item" onclick="showPage('crm', this)">
+    <span class="nav-icon">👥</span> Central de Clientes
   </div>
   <div class="sidebar-bottom">
     <div class="store-link" onclick="window.open('loja.html','_blank')">
@@ -471,9 +516,46 @@ tr:hover td { background: #faf7f2; }
       </div>
     </div>
 
+    <!-- CENTRAL DE CLIENTES (CRM) -->
+    <div class="page" id="page-crm">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">👥 Central de Clientes</h2>
+        <button class="btn btn-primary" onclick="openAddCrmCustomer()">+ Novo Cliente</button>
+      </div>
+
+      <div class="table-toolbar" style="margin-bottom: 20px;">
+        <div class="search-box">
+          <input type="text" placeholder="Buscar cliente, cidade, telefone..." id="crmSearch" oninput="searchCrmCustomers(this.value)">
+        </div>
+        <select id="crmFilterSelect" onchange="filterCrmCustomers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="all">Todos Clientes</option>
+          <option value="vip">⭐ Clientes VIP</option>
+          <option value="debtors">💔 Devedores</option>
+          <option value="inactive">❌ Inativos</option>
+          <option value="new">🆕 Novos (30 dias)</option>
+        </select>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Contato</th>
+            <th>Situação</th>
+            <th style="text-align: right;">Total Gasto</th>
+            <th style="text-align: right;">Em Aberto</th>
+            <th>Compras</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="crmCustomersTableBody"></tbody>
+      </table>
+    </div>
+
   </div>
 </main>
 
 <script src="admin.js"></script>
+<script src="admin-crm.js"></script>
 </body>
 </html>

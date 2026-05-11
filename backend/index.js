@@ -12,6 +12,7 @@ const productsRoutes = require('./routes/products');
 const ordersRoutes = require('./routes/orders');
 const paymentsRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
+const crmRoutes = require('./routes/crm');
 
 // TODO: Implementar uploads com Cloudinary ou S3 depois
 // const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -135,6 +136,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payments', paymentsRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/crm', crmRoutes);
 
 // Tratamento de erros geral
 app.use((err, req, res, next) => {

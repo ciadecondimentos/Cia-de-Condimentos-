@@ -370,6 +370,18 @@ document.addEventListener('DOMContentLoaded', function() {
   renderProducts();
   updateCartBadge();
   
+  // Cart button in header
+  var openCartBtn = document.getElementById('openCartBtn');
+  if (openCartBtn) {
+    openCartBtn.addEventListener('click', openCart);
+  }
+  
+  // Floating cart button
+  var floatingCartBtn = document.getElementById('floatingCartBtn');
+  if (floatingCartBtn) {
+    floatingCartBtn.addEventListener('click', openCart);
+  }
+  
   // Cart event listeners
   var cartCloseBtn = document.getElementById('cartCloseBtn');
   if (cartCloseBtn) {

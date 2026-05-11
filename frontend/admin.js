@@ -149,27 +149,89 @@ function changeReportPeriod(days, element) {
   loadReportData(days);
 }
 
-function renderSalesChart(period) {
+async function renderSalesChart(period) {
   const salesChart = document.getElementById('salesChart');
-  const days = period === 'week' ? 7 : period === 'month' ? 30 : 365;
-  const labels = Array.from({length: days}, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (days - i - 1));
-    return date.getDate();
-  });
-
-  let html = '';
-  labels.forEach((label, idx) => {
-    const height = (Math.random() * 100 + 20);
-    html += `
-      <div class="bar-group">
-        <div class="bar" data-value="R$ ${(Math.random() * 500).toFixed(2)}" style="height: ${height}px;"></div>
-        <div class="bar-label">${label}</div>
-      </div>
-    `;
-  });
-
-  salesChart.innerHTML = html;
+  
+  try {
+    // Fetch paid orders only
+    const ordersRes = await fetch(`${API_BASE}/orders`);
+    if (!ordersRes.ok) throw new Error('Failed to fetch orders');
+    
+    const orders = await ordersRes.json();
+    const paidOrders = orders.filter(o => o.payment_status === 'Pago');
+    
+    // Determine grouping by period
+    const now = new Date();
+    let groupedData = {};
+    let labels = [];
+    let maxSale = 1;
+    
+    if (period === 'week') {
+      // Group by day for last 7 days
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateKey = date.toISOString().split('T')[0];
+        groupedData[dateKey] = 0;
+        labels.push(date.getDate());
+      }
+    } else if (period === 'month') {
+      // Group by day for last 30 days
+      for (let i = 29; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(date.getDate() - i);
+        const dateKey = date.toISOString().split('T')[0];
+        groupedData[dateKey] = 0;
+        labels.push(date.getDate());
+      }
+    } else if (period === 'year') {
+      // Group by month for last 12 months
+      for (let i = 11; i >= 0; i--) {
+        const date = new Date(now);
+        date.setMonth(date.getMonth() - i);
+        const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+        groupedData[monthKey] = 0;
+        labels.push(date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase());
+      }
+    }
+    
+    // Group orders by period
+    paidOrders.forEach(order => {
+      let key;
+      if (period === 'year') {
+        key = order.created_at.substring(0, 7); // YYYY-MM
+      } else {
+        key = order.created_at.split('T')[0]; // YYYY-MM-DD
+      }
+      
+      if (groupedData.hasOwnProperty(key)) {
+        groupedData[key] += parseFloat(order.total || 0);
+      }
+    });
+    
+    // Get sorted data
+    const sortedKeys = Object.keys(groupedData).sort();
+    const salesData = sortedKeys.map(key => groupedData[key]);
+    maxSale = Math.max(...salesData, 1);
+    
+    // Render bars
+    let html = '';
+    salesData.forEach((sales, idx) => {
+      const height = (sales / maxSale) * 160 + 20;
+      html += `
+        <div class="bar-group" title="R$ ${sales.toFixed(2)}">
+          <div class="bar" data-value="R$ ${sales.toFixed(2)}" style="height: ${height}px; background: linear-gradient(to top, var(--marrom), #d4a574);"></div>
+          <div class="bar-label">${labels[idx]}</div>
+        </div>
+      `;
+    });
+    
+    salesChart.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Error rendering sales chart:', error);
+    salesChart.innerHTML = '<p style="color: #aaa; text-align: center; padding: 40px;">Erro ao carregar dados</p>';
+  }
 }
 
 function renderRecentOrders() {

@@ -174,6 +174,15 @@ function openQuantityModal(product) {
   var nameEl = document.getElementById('quantityProductName');
   if (nameEl) nameEl.textContent = product.name;
   
+  var imageEl = document.getElementById('quantityProductImage');
+  if (imageEl) {
+    if (product.image) {
+      imageEl.innerHTML = '<img src="' + product.image + '" style="width: 100%; height: 100%; object-fit: cover;">';
+    } else {
+      imageEl.textContent = '🌶️';
+    }
+  }
+  
   var priceEl = document.getElementById('quantityProductPrice');
   if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',');
   
@@ -184,7 +193,7 @@ function openQuantityModal(product) {
   
   var modal = document.getElementById('quantityModal');
   if (modal) modal.classList.add('open');
-}
+}}
 
 function closeQuantityModal() {
   var modal = document.getElementById('quantityModal');
@@ -234,12 +243,83 @@ function confirmQuantity() {
     });
   }
   
+  // Animar imagem voando para o carrinho
+  animateProductToCart(selectedProductForQuantity);
+  
+  // Mostrar notificação
+  showNotification(selectedQuantity + 'x ' + selectedProductForQuantity.name + ' adicionado(s) ao carrinho com sucesso');
+  
   updateCartBadge();
   closeQuantityModal();
   closeProductDetail();
+}
+
+function animateProductToCart(product) {
+  // Pegar informações do elemento da imagem
+  var productImage = document.getElementById('quantityProductImage');
+  if (!productImage && product.image) {
+    productImage = document.querySelector('[src*="' + product.image + '"]');
+  }
   
-  // Show confirmation message
-  alert('✓ ' + selectedQuantity + 'x ' + selectedProductForQuantity.name + ' adicionado(s) ao carrinho!');
+  // Usar emoji como fallback
+  var imageSource = productImage ? productImage.src : null;
+  
+  // Criar clone da imagem
+  var clone = document.createElement('div');
+  clone.className = 'flying-image';
+  
+  if (imageSource) {
+    clone.style.backgroundImage = 'url(' + imageSource + ')';
+    clone.style.backgroundSize = 'cover';
+    clone.style.backgroundPosition = 'center';
+  } else {
+    clone.textContent = '🌶️';
+    clone.style.fontSize = '48px';
+    clone.style.display = 'flex';
+    clone.style.alignItems = 'center';
+    clone.style.justifyContent = 'center';
+  }
+  
+  clone.style.width = '80px';
+  clone.style.height = '80px';
+  
+  // Pegar posição inicial
+  var startX = window.innerWidth / 2;
+  var startY = window.innerHeight / 2;
+  clone.style.left = startX + 'px';
+  clone.style.top = startY + 'px';
+  
+  document.body.appendChild(clone);
+  
+  // Pegar posição do botão carrinho
+  var cartBtn = document.getElementById('openCartBtn');
+  var cartRect = cartBtn ? cartBtn.getBoundingClientRect() : { left: window.innerWidth - 100, top: 80, width: 50, height: 40 };
+  
+  var endX = cartRect.left + cartRect.width / 2 - startX;
+  var endY = cartRect.top + cartRect.height / 2 - startY;
+  
+  // Animar
+  clone.style.setProperty('--endX', endX + 'px');
+  clone.style.setProperty('--endY', endY + 'px');
+  clone.style.animation = 'flyToCart 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards';
+  
+  // Remover elemento após animação
+  setTimeout(function() {
+    clone.remove();
+  }, 800);
+}
+
+function showNotification(message) {
+  var toast = document.createElement('div');
+  toast.className = 'toast-notification success';
+  toast.innerHTML = '<span class="toast-icon">✓</span><span>' + message + '</span>';
+  
+  document.body.appendChild(toast);
+  
+  // Remover após animação
+  setTimeout(function() {
+    toast.remove();
+  }, 3000);
 }
 
 function removeFromCart(productId) {

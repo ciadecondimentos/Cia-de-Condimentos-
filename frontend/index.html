@@ -125,6 +125,77 @@
   
   /* Aumentar z-index do modal de quantidade para ficar acima do product detail */
   #quantityModal { z-index: 1300 !important; }
+  
+  /* Animação de produto viajando para o carrinho */
+  @keyframes flyToCart {
+    0% {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--endX), var(--endY)) scale(0.3);
+      opacity: 0.5;
+    }
+  }
+  
+  .flying-image {
+    position: fixed;
+    pointer-events: none;
+    z-index: 2000;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  
+  /* Notificação Toast na parte inferior */
+  .toast-notification {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    padding: 16px 32px;
+    border-radius: 50px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 2001;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideUp 0.4s ease-out, slideDown 0.4s ease-in 2.6s forwards;
+    font-weight: 600;
+    color: var(--marrom);
+    max-width: 90%;
+  }
+  
+  .toast-notification.success {
+    border-left: 4px solid var(--vermelho);
+  }
+  
+  .toast-icon {
+    font-size: 20px;
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-50%) translateY(20px);
+    }
+  }
+  
   .payment-method-icon { font-size: 48px; margin-bottom: 12px; }
   .payment-method-name { font-weight: 900; color: var(--marrom); font-size: 16px; }
 
@@ -176,6 +247,7 @@
     </div>
     <div class="modal-body" style="text-align: center; padding: 40px 28px;">
       <div id="quantityProductName" style="font-size: 18px; font-weight: 700; color: var(--marrom); margin-bottom: 16px;"></div>
+      <div id="quantityProductImage" style="width: 100px; height: 100px; background: #f0e8d0; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 60px; overflow: hidden; margin: 0 auto 20px;"></div>
       <div id="quantityProductPrice" style="font-size: 24px; font-weight: 900; color: var(--vermelho); margin-bottom: 32px;"></div>
       
       <div style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 32px;">

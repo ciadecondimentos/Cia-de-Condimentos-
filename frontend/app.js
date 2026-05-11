@@ -1290,11 +1290,6 @@ function getProducts() {
     }
     return [];
   });
-    } else {
-      showToast('Erro ao carregar produtos. Tente novamente.');
-    }
-    return [];
-  });
 }
 
 function renderProducts() {

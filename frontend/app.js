@@ -464,10 +464,20 @@ function submitCheckout() {
   var frete = 0;
   var total = subtotal + frete;
   
+  // Transform cart items: change 'quantity' to 'qty' for API
+  var itemsForApi = cart.map(function(item) {
+    return {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      qty: item.quantity
+    };
+  });
+  
   // Store checkout data and open payment method modal
   pendingCheckoutData = {
-    customer: { name: name, phone: phone, address: address },
-    items: cart,
+    customer: { name: name, email: '', phone: phone, address: address },
+    items: itemsForApi,
     subtotal: subtotal,
     frete: frete,
     total: total,

@@ -193,7 +193,7 @@ function openQuantityModal(product) {
   
   var modal = document.getElementById('quantityModal');
   if (modal) modal.classList.add('open');
-}}
+}
 
 function closeQuantityModal() {
   var modal = document.getElementById('quantityModal');

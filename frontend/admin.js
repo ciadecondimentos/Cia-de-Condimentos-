@@ -69,6 +69,8 @@ function showPage(pageId, buttonElement) {
     renderCustomersTableAsync();
   } else if (pageId === 'dashboard') {
     loadDashboard();
+  } else if (pageId === 'reports') {
+    loadReportData('7');
   } else if (pageId === 'crm') {
     initializeCrm();
   }
@@ -1074,41 +1076,205 @@ function exportCustomers() {
 }
 
 // ==================== REPORTS ====================
-function loadReportData(days) {
-  const container = document.getElementById('reportStats');
-  
-  const stats = [
-    { label: 'Total Vendido', value: `R$ ${(Math.random() * 10000).toFixed(2)}`, icon: '💰' },
-    { label: 'Total de Pedidos', value: Math.floor(Math.random() * 100), icon: '📦' },
-    { label: 'Ticket Médio', value: `R$ ${(Math.random() * 500).toFixed(2)}`, icon: '📊' }
-  ];
+async function loadReportData(days) {
+  try {
+    // Fetch orders and products
+    const [ordersRes, productsRes] = await Promise.all([
+      fetch(`${API_BASE}/orders`),
+      fetch(`${API_BASE}/products/admin/all`)
+    ]);
 
-  container.innerHTML = stats.map(stat => `
-    <div class="card" style="text-align: center; padding: 20px;">
-      <div style="font-size: 32px; margin-bottom: 8px;">${stat.icon}</div>
-      <div style="color: #aaa; font-size: 12px; margin-bottom: 8px;">${stat.label}</div>
-      <div style="font-weight: 900; font-size: 24px; color: var(--marrom);">${stat.value}</div>
-    </div>
-  `).join('');
+    if (!ordersRes.ok || !productsRes.ok) {
+      showToast('Erro ao carregar dados de relatórios', 'error');
+      return;
+    }
 
-  renderReportChart(days);
+    const orders = await ordersRes.json();
+    const products = await productsRes.json();
+
+    // Create product map for category lookup
+    const productMap = {};
+    products.forEach(p => {
+      productMap[p.id] = p;
+    });
+
+    // Filter orders by period (paid orders only)
+    const now = new Date();
+    const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    const paidOrders = orders.filter(order => {
+      const orderDate = new Date(order.created_at);
+      return orderDate >= cutoffDate && order.payment_status === 'Pago';
+    });
+
+    // Calculate stats
+    const totalSold = paidOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+    const totalOrders = paidOrders.length;
+    const averageTicket = totalOrders > 0 ? totalSold / totalOrders : 0;
+
+    // Update stats display
+    const container = document.getElementById('reportStats');
+    const stats = [
+      { label: 'Total Vendido', value: `R$ ${totalSold.toFixed(2)}`, icon: '💰' },
+      { label: 'Total de Pedidos', value: totalOrders, icon: '📦' },
+      { label: 'Ticket Médio', value: `R$ ${averageTicket.toFixed(2)}`, icon: '📊' }
+    ];
+
+    container.innerHTML = stats.map(stat => `
+      <div class="card" style="text-align: center; padding: 20px;">
+        <div style="font-size: 32px; margin-bottom: 8px;">${stat.icon}</div>
+        <div style="color: #aaa; font-size: 12px; margin-bottom: 8px;">${stat.label}</div>
+        <div style="font-weight: 900; font-size: 24px; color: var(--marrom);">${stat.value}</div>
+      </div>
+    `).join('');
+
+    // Render charts
+    renderReportChart(days, paidOrders);
+    renderCategoryReport(paidOrders, productMap);
+    renderPaymentReport(paidOrders);
+
+  } catch (error) {
+    console.error('Error loading report data:', error);
+    showToast('Erro ao carregar relatórios', 'error');
+  }
 }
 
-function renderReportChart(days) {
+function renderReportChart(days, orders) {
   const chart = document.getElementById('reportChart');
+  const daysInt = parseInt(days);
   
-  let html = '';
-  for (let i = 0; i < parseInt(days); i++) {
-    const height = (Math.random() * 100 + 20);
-    html += `
-      <div class="bar-group">
-        <div class="bar" data-value="R$ ${(Math.random() * 500).toFixed(2)}" style="height: ${height}px;"></div>
-        <div class="bar-label">${i + 1}</div>
-      </div>
-    `;
+  // Group sales by day
+  const salesByDay = {};
+  const now = new Date();
+  
+  for (let i = 0; i < daysInt; i++) {
+    const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateKey = date.toISOString().split('T')[0];
+    salesByDay[dateKey] = 0;
   }
   
+  orders.forEach(order => {
+    const dateKey = order.created_at.split('T')[0];
+    if (salesByDay.hasOwnProperty(dateKey)) {
+      salesByDay[dateKey] += parseFloat(order.total || 0);
+    }
+  });
+  
+  // Sort dates
+  const sortedDates = Object.keys(salesByDay).sort().reverse();
+  const maxSale = Math.max(...Object.values(salesByDay), 1);
+  
+  let html = '';
+  sortedDates.forEach((date, index) => {
+    const sales = salesByDay[date];
+    const height = (sales / maxSale) * 160 + 20; // Scale to chart height
+    const dateObj = new Date(date);
+    const dayNum = daysInt - index;
+    
+    html += `
+      <div class="bar-group" title="R$ ${sales.toFixed(2)}">
+        <div class="bar" data-value="R$ ${sales.toFixed(2)}" style="height: ${height}px; background: linear-gradient(to top, var(--marrom), #d4a574);"></div>
+        <div class="bar-label">${dayNum}</div>
+      </div>
+    `;
+  });
+  
   chart.innerHTML = html;
+}
+
+function renderCategoryReport(orders, productMap) {
+  const container = document.getElementById('categoryReport');
+  
+  // Group sales by category
+  const salesByCategory = {};
+  
+  orders.forEach(order => {
+    if (order.items) {
+      order.items.forEach(item => {
+        const product = productMap[item.product_id];
+        const category = product ? (product.category || 'Sem categoria') : 'Desconhecido';
+        const itemTotal = (item.quantity * item.price);
+        
+        if (!salesByCategory[category]) {
+          salesByCategory[category] = 0;
+        }
+        salesByCategory[category] += itemTotal;
+      });
+    }
+  });
+  
+  // Sort by sales
+  const sortedCategories = Object.entries(salesByCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5); // Top 5
+  
+  if (sortedCategories.length === 0) {
+    container.innerHTML = '<p style="color: #aaa; text-align: center; padding: 20px;">Nenhuma venda neste período</p>';
+    return;
+  }
+  
+  const maxSale = Math.max(...sortedCategories.map(c => c[1]));
+  
+  let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+  sortedCategories.forEach(([category, total]) => {
+    const percentage = (total / maxSale) * 100;
+    html += `
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="flex: 0 0 100px; font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${category}</div>
+        <div style="flex: 1; height: 24px; background: #f0e8d8; border-radius: 4px; overflow: hidden;">
+          <div style="height: 100%; width: ${percentage}%; background: linear-gradient(to right, var(--marrom), #d4a574); transition: width 0.3s;"></div>
+        </div>
+        <div style="flex: 0 0 80px; text-align: right; font-weight: 600; color: var(--marrom);">R$ ${total.toFixed(2)}</div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  
+  container.innerHTML = html;
+}
+
+function renderPaymentReport(orders) {
+  const container = document.getElementById('paymentReport');
+  
+  // Group by payment method
+  const paymentMethods = {};
+  
+  orders.forEach(order => {
+    const method = order.payment_method || 'Desconhecido';
+    if (!paymentMethods[method]) {
+      paymentMethods[method] = { count: 0, total: 0 };
+    }
+    paymentMethods[method].count++;
+    paymentMethods[method].total += parseFloat(order.total || 0);
+  });
+  
+  const methodEmojis = {
+    'PIX': '💳',
+    'Cartão': '💳',
+    'Dinheiro': '💵',
+    'Boleto': '📄',
+    'Desconhecido': '❓'
+  };
+  
+  let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+  Object.entries(paymentMethods).forEach(([method, data]) => {
+    const emoji = methodEmojis[method] || '💰';
+    html += `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0e8d8;">
+        <div>
+          <div style="font-size: 12px; color: #999; margin-bottom: 2px;">${emoji} ${method}</div>
+          <div style="font-size: 11px; color: #bbb;">${data.count} pedido${data.count !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-weight: 600; color: var(--marrom);">R$ ${data.total.toFixed(2)}</div>
+          <div style="font-size: 11px; color: #999;">${((data.total / orders.reduce((s, o) => s + parseFloat(o.total || 0), 0)) * 100).toFixed(0)}%</div>
+        </div>
+      </div>
+    `;
+  });
+  html += '</div>';
+  
+  container.innerHTML = html;
 }
 
 function exportReports() {

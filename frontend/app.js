@@ -251,7 +251,114 @@ function openCheckout() {
     return;
   }
   var modal = document.getElementById('checkoutModal');
-  if (modal) modal.classList.add('open');
+  if (modal) {
+    modal.classList.add('open');
+    renderCheckoutForm();
+  }
+}
+
+function renderCheckoutForm() {
+  var body = document.getElementById('checkoutBody');
+  if (!body) return;
+  
+  var cartSummary = cart.map(function(item) {
+    return '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e0e0e0;">' +
+      '<div>' + item.name + ' (x' + item.quantity + ')</div>' +
+      '<div>R$ ' + (item.price * item.quantity).toFixed(2).replace('.', ',') + '</div>' +
+    '</div>';
+  }).join('');
+  
+  var total = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+  
+  var html = '<form id="checkoutForm" style="display: flex; flex-direction: column; gap: 16px;">' +
+    '<div style="background: #f5f5f5; padding: 16px; border-radius: 4px;">' +
+      '<h4 style="margin: 0 0 12px 0; color: var(--marrom);">Resumo do Pedido:</h4>' +
+      cartSummary +
+      '<div style="display: flex; justify-content: space-between; padding: 12px 0; font-weight: 900; color: var(--marrom); font-size: 18px;">' +
+        '<div>Total:</div>' +
+        '<div>R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div>' +
+      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Nome *</label>' +
+      '<input type="text" id="checkoutName" placeholder="Seu nome completo" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
+    '</div>' +
+    '<div>' +
+      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Email *</label>' +
+      '<input type="email" id="checkoutEmail" placeholder="seu@email.com" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
+    '</div>' +
+    '<div>' +
+      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Telefone *</label>' +
+      '<input type="tel" id="checkoutPhone" placeholder="(11) 99999-9999" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
+    '</div>' +
+    '<div>' +
+      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Endereço *</label>' +
+      '<input type="text" id="checkoutAddress" placeholder="Rua, número, bairro, cidade" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
+    '</div>' +
+    '<div>' +
+      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Método de Pagamento *</label>' +
+      '<select id="checkoutPayment" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
+        '<option value="">Selecione um método</option>' +
+        '<option value="Dinheiro">Dinheiro</option>' +
+        '<option value="Cartão">Cartão de Crédito</option>' +
+        '<option value="PIX">PIX</option>' +
+      '</select>' +
+    '</div>' +
+    '<button type="button" onclick="submitCheckout()" style="background: var(--vermelho); color: white; border: none; padding: 14px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Confirmar Pedido</button>' +
+  '</form>';
+  
+  body.innerHTML = html;
+}
+
+function submitCheckout() {
+  var name = document.getElementById('checkoutName').value.trim();
+  var email = document.getElementById('checkoutEmail').value.trim();
+  var phone = document.getElementById('checkoutPhone').value.trim();
+  var address = document.getElementById('checkoutAddress').value.trim();
+  var payment = document.getElementById('checkoutPayment').value;
+  
+  if (!name || !email || !phone || !address || !payment) {
+    alert('Por favor, preencha todos os campos');
+    return;
+  }
+  
+  var subtotal = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+  var frete = 0; // Default, pode ser customizado
+  var total = subtotal + frete;
+  
+  var order = {
+    customer: { name: name, email: email, phone: phone, address: address },
+    items: cart,
+    subtotal: subtotal,
+    frete: frete,
+    total: total,
+    payment: payment,
+    status: 'Pendente',
+    paymentStatus: 'Aguardando'
+  };
+  
+  // Send to API
+  fetch(API_URL + '/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to create order');
+  })
+  .then(function(data) {
+    alert('Pedido criado com sucesso! ID: ' + data.id);
+    cart = [];
+    updateCartBadge();
+    closeCheckout();
+  })
+  .catch(function(error) {
+    console.error('Error:', error);
+    alert('Erro ao criar pedido. Tente novamente.');
+  });
 }
 
 function closeCheckout() {
@@ -262,4 +369,38 @@ function closeCheckout() {
 document.addEventListener('DOMContentLoaded', function() {
   renderProducts();
   updateCartBadge();
+  
+  // Cart event listeners
+  var cartCloseBtn = document.getElementById('cartCloseBtn');
+  if (cartCloseBtn) {
+    cartCloseBtn.addEventListener('click', closeCart);
+  }
+  
+  var cartOverlay = document.getElementById('cartOverlay');
+  if (cartOverlay) {
+    cartOverlay.addEventListener('click', closeCart);
+  }
+  
+  var checkoutBtn = document.getElementById('checkoutBtn');
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener('click', function() {
+      closeCart();
+      openCheckout();
+    });
+  }
+  
+  var closeCheckoutBtn = document.getElementById('closeCheckoutBtn');
+  if (closeCheckoutBtn) {
+    closeCheckoutBtn.addEventListener('click', closeCheckout);
+  }
+  
+  var checkoutModal = document.getElementById('checkoutModal');
+  if (checkoutModal) {
+    var overlay = checkoutModal;
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) {
+        closeCheckout();
+      }
+    });
+  }
 });

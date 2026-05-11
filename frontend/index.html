@@ -118,6 +118,9 @@
   .payment-method-card { border: 2px solid #e8e0d4; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: white; }
   .payment-method-card:hover { border-color: var(--vermelho); background: #fff9f5; transform: translateY(-2px); }
   .payment-method-card.selected { border-color: var(--vermelho); background: #ffe5e0; }
+  
+  /* Aumentar z-index do modal de quantidade para ficar acima do product detail */
+  #quantityModal { z-index: 1300 !important; }
   .payment-method-icon { font-size: 48px; margin-bottom: 12px; }
   .payment-method-name { font-weight: 900; color: var(--marrom); font-size: 16px; }
 
@@ -175,6 +178,11 @@
         <button onclick="decreaseQuantity()" style="background: var(--amarelo); color: var(--marrom); border: none; width: 50px; height: 50px; font-size: 28px; font-weight: 900; cursor: pointer; border-radius: 8px;">−</button>
         <div id="quantityDisplay" style="font-size: 32px; font-weight: 900; color: var(--marrom); min-width: 60px;">1</div>
         <button onclick="increaseQuantity()" style="background: var(--amarelo); color: var(--marrom); border: none; width: 50px; height: 50px; font-size: 28px; font-weight: 900; cursor: pointer; border-radius: 8px;">+</button>
+      </div>
+      
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+        <div style="font-size: 13px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Valor Total</div>
+        <div id="quantityTotalValue" style="font-size: 28px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
       </div>
       
       <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">

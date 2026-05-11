@@ -180,6 +180,8 @@ function openQuantityModal(product) {
   var qtyDisplay = document.getElementById('quantityDisplay');
   if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
   
+  updateQuantityTotal();
+  
   var modal = document.getElementById('quantityModal');
   if (modal) modal.classList.add('open');
 }
@@ -196,6 +198,7 @@ function increaseQuantity() {
     selectedQuantity++;
     var qtyDisplay = document.getElementById('quantityDisplay');
     if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+    updateQuantityTotal();
   }
 }
 
@@ -204,6 +207,15 @@ function decreaseQuantity() {
     selectedQuantity--;
     var qtyDisplay = document.getElementById('quantityDisplay');
     if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+    updateQuantityTotal();
+  }
+}
+
+function updateQuantityTotal() {
+  if (selectedProductForQuantity) {
+    var total = selectedProductForQuantity.price * selectedQuantity;
+    var totalEl = document.getElementById('quantityTotalValue');
+    if (totalEl) totalEl.textContent = 'R$ ' + total.toFixed(2).replace('.', ',');
   }
 }
 

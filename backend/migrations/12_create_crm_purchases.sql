@@ -14,6 +14,6 @@ CREATE TABLE IF NOT EXISTS crm_purchases (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_crm_purchases_customer_id ON crm_purchases(customer_id);
-CREATE INDEX idx_crm_purchases_purchase_date ON crm_purchases(purchase_date);
-CREATE INDEX idx_crm_purchases_payment_status ON crm_purchases(payment_status);
+CREATE INDEX IF NOT EXISTS idx_crm_purchases_customer_id ON crm_purchases(customer_id);
+CREATE INDEX IF NOT EXISTS idx_crm_purchases_purchase_date ON crm_purchases(purchase_date);
+CREATE INDEX IF NOT EXISTS idx_crm_purchases_payment_status ON crm_purchases(payment_status);

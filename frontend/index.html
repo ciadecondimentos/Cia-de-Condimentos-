@@ -538,7 +538,7 @@ function closePaymentConfirmation() {
 function backToPaymentSelection() {
   // Fecha a confirmação e volta ao menu de escolha de pagamento
   closePaymentConfirmation();
-  choosePaymentMethod();
+  showPaymentMethodsMenu();
 }
 
 function cancelCheckoutProcess() {
@@ -1406,13 +1406,35 @@ function changePaymentMethod() {
     // Limpar dados
     window.pixPaymentData = null;
     
-    // Limpar modal
-    var checkoutBody = document.getElementById('checkoutBody');
-    if (checkoutBody) checkoutBody.innerHTML = '';
-    
-    // Voltar ao menu de pagamento (mantendo dados do cliente)
-    choosePaymentMethod();
+    // ✅ Ir direto para o menu de pagamento sem limpar modal
+    showPaymentMethodsMenu();
   }, 600);
+}
+
+function showPaymentMethodsMenu() {
+  // Função auxiliar que mostra o menu de formas de pagamento
+  // sem tentar ler inputs (reutiliza window.checkoutData)
+  var body = document.getElementById('checkoutBody');
+  if (!body) return;
+
+  body.innerHTML = 
+    '<div style="text-align: center; margin-bottom: 24px;">' +
+      '<h3 style="color: var(--marrom); font-family: Playfair Display, serif; font-size: 20px;">Escolha a Forma de Pagamento</h3>' +
+    '</div>' +
+    '<div class="payment-methods-container">' +
+      '<div class="payment-method-card" onclick="selectPaymentMethod(\'pix\')">' +
+        '<div class="payment-method-icon">🔐</div>' +
+        '<div class="payment-method-name">PIX</div>' +
+      '</div>' +
+      '<div class="payment-method-card" onclick="selectPaymentMethod(\'dinheiro\')">' +
+        '<div class="payment-method-icon">💵</div>' +
+        '<div class="payment-method-name">Dinheiro</div>' +
+      '</div>' +
+      '<div class="payment-method-card" onclick="selectPaymentMethod(\'cartao\')">' +
+        '<div class="payment-method-icon">💳</div>' +
+        '<div class="payment-method-name">Cartão</div>' +
+      '</div>' +
+    '</div>';
 }
 
 function cancelPixPayment() {

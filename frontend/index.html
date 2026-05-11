@@ -9,8 +9,8 @@
   :root {
     --amarelo: #F5C518;
     --amarelo-escuro: #D4A017;
-    --vermelho: #C0392B;
-    --vermelho-escuro: #922B21;
+    --vermelho: #A71A14;
+    --vermelho-escuro: #851410;
     --creme: #FFF8E7;
     --marrom: #3E2723;
   }
@@ -30,7 +30,7 @@
   .cart-btn:hover { background: var(--amarelo-escuro); }
   .cart-badge { position: absolute; top: -8px; right: -8px; background: var(--vermelho); color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: flex; align-items: center; justify-content: center; font-weight: 900; }
 
-  .hero { background: linear-gradient(135deg, var(--vermelho) 0%, var(--vermelho-escuro) 50%, #1a0a00 100%); padding: 80px 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero { background: var(--vermelho); padding: 80px 40px; text-align: center; position: relative; overflow: hidden; }
   .hero::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23F5C518' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E") repeat; }
   .hero-content { position: relative; z-index: 1; }
   .hero h1 { font-family: 'Playfair Display', serif; font-size: 56px; color: var(--amarelo); font-weight: 900; line-height: 1.1; text-shadow: 2px 4px 20px rgba(0,0,0,0.4); }
@@ -507,13 +507,13 @@ function showMoneyConfirmation() {
     });
 
     var confirmationHtml = 
-      '<div style="text-align: center; padding: 60px 30px; background: linear-gradient(135deg, rgba(192, 57, 43, 0.05) 0%, rgba(245, 197, 24, 0.05) 100%); border-radius: 12px; max-width: 500px; margin: 0 auto;">' +
+      '<div style="text-align: center; padding: 60px 30px; background: #faf7f2; border-radius: 12px; max-width: 500px; margin: 0 auto;">' +
         '<div style="font-size: 56px; margin-bottom: 20px;">💵</div>' +
         '<h2 style="color: var(--vermelho); font-family: Playfair Display, serif; font-size: 36px; font-weight: 900; margin-bottom: 12px; letter-spacing: 1px;">Pagamento em Dinheiro</h2>' +
         '<p style="color: #666; font-size: 15px; margin-bottom: 8px; line-height: 1.6;">O pagamento será feito na entrega.</p>' +
         '<p style="color: #999; font-size: 13px; margin-bottom: 40px;">Você receberá contato em breve para confirmar a data e hora.</p>' +
         
-        '<div style="background: linear-gradient(135deg, #faf7f2 0%, #fff9f5 100%); border: 3px solid var(--amarelo); padding: 30px; border-radius: 12px; margin-bottom: 40px; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">' +
+        '<div style="background: #faf7f2; border: 3px solid var(--amarelo); padding: 30px; border-radius: 12px; margin-bottom: 40px; text-align: left; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">' +
           '<div style="font-size: 13px; color: #999; text-transform: uppercase; letter-spacing: 2px; font-weight: 700; margin-bottom: 12px;">💰 Valor Total</div>' +
           '<div style="font-size: 44px; font-weight: 900; color: var(--vermelho); margin-bottom: 32px; font-family: Playfair Display, serif; letter-spacing: 1px;">R$ ' + total.toFixed(2).replace('.', ',') + '</div>' +
           
@@ -526,7 +526,7 @@ function showMoneyConfirmation() {
             '<div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; font-weight: 700;">Quanto você vai pagar?</div>' +
             '<input type="number" id="paymentAmountInput" placeholder="Digite o valor que vai pagar" step="0.01" min="' + total.toFixed(2) + '" onkeyup="calculateChange(' + total + ')" onchange="calculateChange(' + total + ')" style="width: 100%; padding: 16px; font-size: 16px; border: 2px solid var(--amarelo); border-radius: 8px; margin-bottom: 18px; box-sizing: border-box; font-weight: 600; background: white;">' +
             
-            '<div id="changeDisplay" style="display: none; background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%); padding: 18px; border-radius: 8px; border-left: 5px solid #27ae60; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);">' +
+            '<div id="changeDisplay" style="display: none; background: #f0fff4; padding: 18px; border-radius: 8px; border-left: 5px solid #27ae60; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);">' +
               '<div style="font-size: 11px; color: #27ae60; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; font-weight: 700;">🪙 Troco</div>' +
               '<div style="font-size: 32px; font-weight: 900; color: #27ae60; font-family: Playfair Display, serif;" id="changeValue">R$ 0,00</div>' +
             '</div>' +

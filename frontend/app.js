@@ -434,10 +434,6 @@ function renderCheckoutForm() {
       '<input type="text" id="checkoutName" placeholder="Seu nome completo" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
     '</div>' +
     '<div>' +
-      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Email *</label>' +
-      '<input type="email" id="checkoutEmail" placeholder="seu@email.com" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
-    '</div>' +
-    '<div>' +
       '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Telefone *</label>' +
       '<input type="tel" id="checkoutPhone" placeholder="(11) 99999-9999" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
     '</div>' +
@@ -456,11 +452,10 @@ var selectedPaymentMethod = null;
 
 function submitCheckout() {
   var name = document.getElementById('checkoutName').value.trim();
-  var email = document.getElementById('checkoutEmail').value.trim();
   var phone = document.getElementById('checkoutPhone').value.trim();
   var address = document.getElementById('checkoutAddress').value.trim();
   
-  if (!name || !email || !phone || !address) {
+  if (!name || !phone || !address) {
     alert('Por favor, preencha todos os campos');
     return;
   }
@@ -471,7 +466,7 @@ function submitCheckout() {
   
   // Store checkout data and open payment method modal
   pendingCheckoutData = {
-    customer: { name: name, email: email, phone: phone, address: address },
+    customer: { name: name, phone: phone, address: address },
     items: cart,
     subtotal: subtotal,
     frete: frete,

@@ -1303,6 +1303,51 @@ function renderProducts() {
           (p.description || '').toLowerCase().indexOf(currentSearch) !== -1;
       });
     }
+    var html = filtered.map(function(p) {
+      var imageUrl = p.image_url || ((p.images && p.images.length > 0) ? getImageUrl(p.images[0]) : p.image);
+      var imgHtml = imageUrl
+        ? '<img src="' + imageUrl + '" alt="' + p.name + '" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%2250%22 font-size=%2240%22 text-anchor=%22middle%22 x=%2250%22%3E🌶️%3C/text%3E%3C/svg%3E\'" style="width: 100%; height: 100%; object-fit: cover;">'
+        : '<div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 60px;">🌶️</div>';
+      return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer;">' +
+        '<div class="product-img">' + imgHtml + '</div>' +
+        '<div class="product-body">' +
+          '<div class="product-category">' + (p.category || '') + '</div>' +
+          '<div class="product-name">' + p.name + '</div>' +
+          '<div class="product-desc">' + (p.description || '') + '</div>' +
+          '<div class="product-stock">Estoque: ' + p.stock + ' unidades</div>' +
+          '<div class="product-footer">' +
+            '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+            '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
+              (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('productsGrid').innerHTML = html;
+  }).catch(function(err) {
+    console.error('Erro ao renderizar produtos:', err);
+    document.getElementById('productsGrid').innerHTML = '<div style="padding: 60px; text-align: center; color: #888;">Erro ao carregar produtos. Tente recarregar a página.</div>';
+  });
+}
+    } else {
+      showToast('Erro ao carregar produtos: ' + (e.message || 'Tente novamente'));
+    }
+    return [];
+  });
+}
+
+function renderProducts() {
+  getProducts().then(function(products) {
+    var filtered = products.filter(function(p) {
+      return p.active && (currentFilter === 'all' || p.category === currentFilter);
+    });
+    if (currentSearch) {
+      filtered = filtered.filter(function(p) {
+        return p.name.toLowerCase().indexOf(currentSearch) !== -1 ||
+          (p.description || '').toLowerCase().indexOf(currentSearch) !== -1;
+      });
+    }
 
     var grid = document.getElementById('productsGrid');
     if (!grid) return;

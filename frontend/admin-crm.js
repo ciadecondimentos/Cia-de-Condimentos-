@@ -180,7 +180,7 @@ async function openEditCrmCustomer(customerId) {
       <div class="form-row-2">
         <div class="fg">
           <label>Aniversário</label>
-          <input type="date" id="crmBirthday" value="${customer.birthday ? customer.birthday.split('T')[0] : ''}">
+          <input type="date" id="crmBirthday" value="${customer.birthday ? (typeof customer.birthday === 'string' ? customer.birthday : customer.birthday).split('T')[0] : ''}">
         </div>
         <div class="fg">
           <label>Limite de Crédito (R$)</label>
@@ -541,13 +541,13 @@ async function openEditCrmPurchase(customerId, purchaseId) {
         </div>
         <div class="fg">
           <label>Total (R$)</label>
-          <input type="number" id="crmProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${purchase.total_price.toFixed(2)}">
+          <input type="number" id="crmProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${parseFloat(purchase.total_price || 0).toFixed(2)}">
         </div>
       </div>
       <div class="form-row-2">
         <div class="fg">
           <label>Data da Compra *</label>
-          <input type="date" id="crmPurchaseDate" value="${purchase.purchase_date.split('T')[0]}">
+          <input type="date" id="crmPurchaseDate" value="${(typeof purchase.purchase_date === 'string' ? purchase.purchase_date : purchase.purchase_date || '').split('T')[0]}">
         </div>
         <div class="fg">
           <label>Forma de Pagamento</label>

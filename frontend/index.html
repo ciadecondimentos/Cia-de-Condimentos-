@@ -119,6 +119,10 @@
   .payment-method-card:hover { border-color: var(--vermelho); background: #fff9f5; transform: translateY(-2px); }
   .payment-method-card.selected { border-color: var(--vermelho); background: #ffe5e0; }
   
+  /* Payment method cards in modal */
+  #paymentMethodModal .payment-method-card { display: flex; align-items: center; gap: 16px; text-align: left; }
+  #paymentMethodModal .payment-method-card:hover { border-color: var(--vermelho); background: #fff5f5; }
+  
   /* Aumentar z-index do modal de quantidade para ficar acima do product detail */
   #quantityModal { z-index: 1300 !important; }
   .payment-method-icon { font-size: 48px; margin-bottom: 12px; }
@@ -204,20 +208,47 @@
   </div>
 </div>
 
-<!-- Modal de Confirmação de Método de Pagamento — z-index 1300 -->
-<div class="modal-overlay" id="paymentConfirmationModal" style="display: none;">
-  <div class="modal" id="paymentConfirmationInner" style="max-width: 420px;">
+<!-- Modal de Seleção de Método de Pagamento — z-index 1300 -->
+<div class="modal-overlay" id="paymentMethodModal" style="z-index: 1300;">
+  <div class="modal" id="paymentMethodInner" style="max-width: 500px;">
     <div class="modal-header">
-      <h3>Confirmar Método de Pagamento</h3>
-      <button onclick="closePaymentConfirmation()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">&#x2715;</button>
+      <h3>Selecionar Forma de Pagamento</h3>
+      <button onclick="cancelCheckoutProcess()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
     </div>
-    <div class="modal-body" style="text-align: center; padding: 40px 28px;">
-      <div id="paymentConfirmationMessage" style="font-size: 18px; color: var(--marrom); margin-bottom: 32px; font-weight: 600; line-height: 1.6;"></div>
-      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
-        <button onclick="confirmPaymentMethod()" id="confirmPaymentBtn" style="background: var(--vermelho); color: white; border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Confirmar</button>
-        <button onclick="backToPaymentSelection()" style="background: var(--amarelo); color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Mudar</button>
-        <button onclick="cancelCheckoutProcess()" style="background: #ddd; color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Cancelar</button>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="margin-bottom: 32px;">
+        <div style="font-size: 14px; color: #888; margin-bottom: 20px; line-height: 1.6;">
+          Escolha a forma de pagamento para finalizar seu pedido:
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr; gap: 12px;">
+          <div class="payment-method-card" onclick="selectPaymentMethod('Dinheiro')" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white;">
+            <div style="font-size: 40px;">💵</div>
+            <div style="text-align: left; flex: 1;">
+              <div style="font-weight: 700; color: var(--marrom); font-size: 16px;">Dinheiro</div>
+              <div style="font-size: 12px; color: #888;">Pague na entrega</div>
+            </div>
+          </div>
+          
+          <div class="payment-method-card" onclick="selectPaymentMethod('Cartão')" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white;">
+            <div style="font-size: 40px;">💳</div>
+            <div style="text-align: left; flex: 1;">
+              <div style="font-weight: 700; color: var(--marrom); font-size: 16px;">Cartão de Crédito</div>
+              <div style="font-size: 12px; color: #888;">À vista ou parcelado</div>
+            </div>
+          </div>
+          
+          <div class="payment-method-card" onclick="selectPaymentMethod('PIX')" style="display: flex; align-items: center; gap: 16px; padding: 16px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: white;">
+            <div style="font-size: 40px;">📱</div>
+            <div style="text-align: left; flex: 1;">
+              <div style="font-weight: 700; color: var(--marrom); font-size: 16px;">PIX</div>
+              <div style="font-size: 12px; color: #888;">Transação instantânea</div>
+            </div>
+          </div>
+        </div>
       </div>
+      
+      <button onclick="cancelCheckoutProcess()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Cancelar</button>
     </div>
   </div>
 </div>

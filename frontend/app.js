@@ -365,53 +365,85 @@ function renderCheckoutForm() {
       '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Endereço *</label>' +
       '<input type="text" id="checkoutAddress" placeholder="Rua, número, bairro, cidade" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
     '</div>' +
-    '<div>' +
-      '<label style="display: block; margin-bottom: 4px; font-weight: 600; color: var(--marrom);">Método de Pagamento *</label>' +
-      '<select id="checkoutPayment" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 4px; font-size: 14px;" required>' +
-        '<option value="">Selecione um método</option>' +
-        '<option value="Dinheiro">Dinheiro</option>' +
-        '<option value="Cartão">Cartão de Crédito</option>' +
-        '<option value="PIX">PIX</option>' +
-      '</select>' +
-    '</div>' +
-    '<button type="button" onclick="submitCheckout()" style="background: var(--vermelho); color: white; border: none; padding: 14px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px;">Confirmar Pedido</button>' +
+    '<button type="button" onclick="submitCheckout()" style="background: var(--vermelho); color: white; border: none; padding: 14px; font-weight: 900; cursor: pointer; border-radius: 4px; font-size: 16px; letter-spacing: 1px; width: 100%;">Confirmar Pedido</button>' +
   '</form>';
   
   body.innerHTML = html;
 }
+
+var pendingCheckoutData = null;
+var selectedPaymentMethod = null;
 
 function submitCheckout() {
   var name = document.getElementById('checkoutName').value.trim();
   var email = document.getElementById('checkoutEmail').value.trim();
   var phone = document.getElementById('checkoutPhone').value.trim();
   var address = document.getElementById('checkoutAddress').value.trim();
-  var payment = document.getElementById('checkoutPayment').value;
   
-  if (!name || !email || !phone || !address || !payment) {
+  if (!name || !email || !phone || !address) {
     alert('Por favor, preencha todos os campos');
     return;
   }
   
   var subtotal = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
-  var frete = 0; // Default, pode ser customizado
+  var frete = 0;
   var total = subtotal + frete;
   
-  var order = {
+  // Store checkout data and open payment method modal
+  pendingCheckoutData = {
     customer: { name: name, email: email, phone: phone, address: address },
     items: cart,
     subtotal: subtotal,
     frete: frete,
     total: total,
-    payment: payment,
     status: 'Pendente',
     paymentStatus: 'Aguardando'
   };
+  
+  selectedPaymentMethod = null;
+  
+  var checkoutModal = document.getElementById('checkoutModal');
+  if (checkoutModal) checkoutModal.classList.remove('open');
+  
+  var paymentModal = document.getElementById('paymentMethodModal');
+  if (paymentModal) paymentModal.classList.add('open');
+}
+
+function selectPaymentMethod(method) {
+  selectedPaymentMethod = method;
+  
+  // Visual feedback
+  var paymentCards = document.querySelectorAll('.payment-method-card');
+  paymentCards.forEach(function(card) {
+    card.style.borderColor = '#e0e0e0';
+    card.style.background = 'white';
+  });
+  
+  var selectedCard = event.target.closest('.payment-method-card');
+  if (selectedCard) {
+    selectedCard.style.borderColor = 'var(--vermelho)';
+    selectedCard.style.background = '#fff5f5';
+  }
+  
+  // Auto-confirm after selection
+  setTimeout(function() {
+    confirmPaymentMethod();
+  }, 300);
+}
+
+function confirmPaymentMethod() {
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Por favor, selecione um método de pagamento');
+    return;
+  }
+  
+  pendingCheckoutData.payment = selectedPaymentMethod;
   
   // Send to API
   fetch(API_URL + '/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(order)
+    body: JSON.stringify(pendingCheckoutData)
   })
   .then(function(response) {
     if (response.ok) {
@@ -423,7 +455,7 @@ function submitCheckout() {
     alert('Pedido criado com sucesso! ID: ' + data.id);
     cart = [];
     updateCartBadge();
-    closeCheckout();
+    cancelCheckoutProcess();
   })
   .catch(function(error) {
     console.error('Error:', error);
@@ -431,9 +463,26 @@ function submitCheckout() {
   });
 }
 
+function cancelCheckoutProcess() {
+  var checkoutModal = document.getElementById('checkoutModal');
+  var paymentModal = document.getElementById('paymentMethodModal');
+  
+  if (checkoutModal) checkoutModal.classList.remove('open');
+  if (paymentModal) paymentModal.classList.remove('open');
+  
+  pendingCheckoutData = null;
+  selectedPaymentMethod = null;
+}
+
 function closeCheckout() {
   var modal = document.getElementById('checkoutModal');
   if (modal) modal.classList.remove('open');
+  
+  var paymentModal = document.getElementById('paymentMethodModal');
+  if (paymentModal) paymentModal.classList.remove('open');
+  
+  pendingCheckoutData = null;
+  selectedPaymentMethod = null;
 }
 
 document.addEventListener('DOMContentLoaded', function() {

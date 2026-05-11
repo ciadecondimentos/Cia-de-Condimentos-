@@ -20,7 +20,7 @@ const uploadRoutes = require('./routes/upload');
 // }
 
 const app = express();
-app.use(helmet());
+// app.use(helmet()); // Desabilitar helmet pois estava bloqueando scripts inline
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -38,8 +38,12 @@ const mimeTypes = {
   '.tiff': 'image/tiff'
 };
 
-// Servir arquivos estáticos da pasta img
+// Servir arquivos estáticos da pasta frontend (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname, '../frontend')));
+
+// Servir arquivos estáticos da pasta img e frontend
 app.use('/img', express.static(path.join(__dirname, '../img')));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
 // TODO: Servir uploads com Cloudinary ou S3 depois
 // app.use('/uploads', express.static(uploadDir, {

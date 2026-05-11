@@ -121,6 +121,14 @@
   .payment-method-icon { font-size: 48px; margin-bottom: 12px; }
   .payment-method-name { font-weight: 900; color: var(--marrom); font-size: 16px; }
 
+  /* Payment Method Selection */
+  .payment-methods-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+  .payment-method-card { border: 2px solid #e8e0d4; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; background: white; }
+  .payment-method-card:hover { border-color: var(--vermelho); background: #fff9f5; transform: translateY(-2px); }
+  .payment-method-card.selected { border-color: var(--vermelho); background: #ffe5e0; }
+  .payment-method-icon { font-size: 48px; margin-bottom: 12px; }
+  .payment-method-name { font-weight: 900; color: var(--marrom); font-size: 16px; }
+
   /* Floating Cart Button — FAB */
   .floating-cart-btn { position: fixed; bottom: 30px; right: 30px; width: 70px; height: 70px; border-radius: 50%; background: var(--vermelho); border: none; color: white; font-size: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1100; box-shadow: 0 8px 24px rgba(0,0,0,0.25); transition: all 0.3s; }
   .floating-cart-btn:hover { transform: scale(1.1); box-shadow: 0 12px 32px rgba(0,0,0,0.35); }
@@ -269,6 +277,9 @@
   <p>&#xa9; 2026 Todos os direitos reservados</p>
 </footer>
 
-<script src="app.js"></script>
-</body>
+</head>
+<body>
+
+<div id="toast" class="toast"></div>
+
 </html>

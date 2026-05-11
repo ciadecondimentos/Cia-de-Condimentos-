@@ -1286,6 +1286,11 @@ function getProducts() {
     if (e.name === 'AbortError') {
       showToast('Servidor demorando. Verifique sua conex\u00E3o.');
     } else {
+      showToast('Erro ao carregar produtos: ' + (e.message || 'Tente novamente'));
+    }
+    return [];
+  });
+    } else {
       showToast('Erro ao carregar produtos. Tente novamente.');
     }
     return [];

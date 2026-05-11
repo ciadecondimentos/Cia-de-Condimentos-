@@ -179,6 +179,23 @@
   </div>
 </div>
 
+<!-- Modal de Confirmação de Método de Pagamento — z-index 1300 -->
+<div class="modal-overlay" id="paymentConfirmationModal" style="display: none;">
+  <div class="modal" id="paymentConfirmationInner" style="max-width: 420px;">
+    <div class="modal-header">
+      <h3>Confirmar Método de Pagamento</h3>
+      <button onclick="closePaymentConfirmation()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">&#x2715;</button>
+    </div>
+    <div class="modal-body" style="text-align: center; padding: 40px 28px;">
+      <div id="paymentConfirmationMessage" style="font-size: 18px; color: var(--marrom); margin-bottom: 32px; font-weight: 600; line-height: 1.6;"></div>
+      <div style="display: flex; gap: 14px; justify-content: center;">
+        <button onclick="confirmPaymentMethod()" id="confirmPaymentBtn" style="background: var(--vermelho); color: white; border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Confirmar</button>
+        <button onclick="closePaymentConfirmation()" style="background: #ddd; color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <header>
   <div class="header-top">&#x2726; FRETE GR&#xC1;TIS A PARTIR DE R$ 50 &#x2726;</div>
   <div class="header-main">
@@ -283,6 +300,14 @@ document.addEventListener('DOMContentLoaded', function() {
   if (checkoutModal) {
     checkoutModal.addEventListener('click', function(e) {
       if (e.target === this) closeCheckout();
+    });
+  }
+
+  // Fechar modal de confirmação de pagamento
+  var paymentConfirmationModal = document.getElementById('paymentConfirmationModal');
+  if (paymentConfirmationModal) {
+    paymentConfirmationModal.addEventListener('click', function(e) {
+      if (e.target === this) closePaymentConfirmation();
     });
   }
 
@@ -486,6 +511,33 @@ function choosePaymentMethod() {
 }
 
 function selectPaymentMethod(method) {
+  var messages = {
+    'pix': '💳 Você deseja pagar com PIX? O código QR será gerado e você terá 3 minutos para confirmar o pagamento.',
+    'cartao': '💳 Você deseja pagar com cartão de crédito? Será enviado um link de redirecionamento seguro.',
+    'dinheiro': '💵 Você deseja pagar em dinheiro? O pagamento será feito na entrega.'
+  };
+  
+  window.pendingPaymentMethod = method;
+  
+  var messageEl = document.getElementById('paymentConfirmationMessage');
+  if (messageEl) {
+    messageEl.textContent = messages[method] || 'Confirmar este método de pagamento?';
+  }
+  
+  var modal = document.getElementById('paymentConfirmationModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closePaymentConfirmation() {
+  var modal = document.getElementById('paymentConfirmationModal');
+  if (modal) modal.style.display = 'none';
+  window.pendingPaymentMethod = null;
+}
+
+function confirmPaymentMethod() {
+  var method = window.pendingPaymentMethod;
+  closePaymentConfirmation();
+  
   if (method === 'cartao') {
     showCardConfirmation();
   } else if (method === 'pix') {

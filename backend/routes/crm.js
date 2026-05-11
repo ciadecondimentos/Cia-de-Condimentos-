@@ -129,23 +129,31 @@ router.get('/customers/:id', async (req, res) => {
 // POST: Criar novo cliente
 router.post('/customers', async (req, res) => {
   try {
+    console.log('POST /customers - recebido:', req.body);
+    
     const {
       full_name, phone, whatsapp, address, neighborhood, city,
-      observations, is_vip, birthday, credit_limit
+      observations, is_vip, birthday, credit_limit, is_inactive
     } = req.body;
 
     if (!full_name) {
       return res.status(400).json({ error: 'Nome completo é obrigatório' });
     }
 
+    console.log('Criando cliente com dados:', { 
+      full_name, phone, whatsapp, address, neighborhood, city, 
+      observations, is_vip, birthday, credit_limit, is_inactive 
+    });
+
     const result = await db.query(
       `INSERT INTO crm_customers 
-       (full_name, phone, whatsapp, address, neighborhood, city, observations, is_vip, birthday, credit_limit) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       (full_name, phone, whatsapp, address, neighborhood, city, observations, is_vip, birthday, credit_limit, is_inactive) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
-      [full_name, phone, whatsapp, address, neighborhood, city, observations, is_vip || false, birthday || null, credit_limit || 0]
+      [full_name, phone, whatsapp || null, address || null, neighborhood || null, city || null, observations || null, is_vip || false, birthday || null, credit_limit || 0, is_inactive || false]
     );
 
+    console.log('Cliente criado com sucesso:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao criar cliente:', {
@@ -164,6 +172,8 @@ router.post('/customers', async (req, res) => {
 // PUT: Atualizar cliente
 router.put('/customers/:id', async (req, res) => {
   try {
+    console.log('PUT /customers/:id - id:', req.params.id, '- recebido:', req.body);
+    
     const { id } = req.params;
     const {
       full_name, phone, whatsapp, address, neighborhood, city,
@@ -193,6 +203,7 @@ router.put('/customers/:id', async (req, res) => {
       return res.status(404).json({ error: 'Cliente não encontrado' });
     }
 
+    console.log('Cliente atualizado com sucesso:', result.rows[0]);
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao atualizar cliente:', {

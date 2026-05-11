@@ -9,6 +9,21 @@ function toggleSidebar() {
   sidebar.classList.toggle('open');
 }
 
+function closeSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar.classList.contains('open')) {
+    sidebar.classList.remove('open');
+  }
+}
+
+// Close sidebar when clicking overlay
+document.addEventListener('DOMContentLoaded', function() {
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', closeSidebar);
+  }
+});
+
 // ==================== PAGE NAVIGATION ====================
 function showPage(pageId, buttonElement) {
   // Hide all pages
@@ -39,6 +54,11 @@ function showPage(pageId, buttonElement) {
   };
   
   document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';
+  
+  // Close sidebar on mobile after navigation
+  if (window.innerWidth <= 767) {
+    closeSidebar();
+  }
   
   // Load data for the page
   if (pageId === 'products') {
@@ -258,7 +278,7 @@ function renderProductsTable(products) {
     
     return `
     <tr>
-      <td>
+      <td data-label="Produto">
         <div class="prod-cell">
           <div class="prod-thumb">${imgHtml}</div>
           <div>
@@ -267,12 +287,12 @@ function renderProductsTable(products) {
           </div>
         </div>
       </td>
-      <td>${prod.sku || 'N/A'}</td>
-      <td>${prod.category || 'N/A'}</td>
-      <td>R$ ${parseFloat(prod.price || 0).toFixed(2)}</td>
-      <td>${prod.stock || 0} unid.</td>
-      <td><span class="tag ${prod.active ? 'tag-active' : 'tag-inactive'}">${prod.active ? 'Ativo' : 'Inativo'}</span></td>
-      <td>
+      <td data-label="SKU">${prod.sku || 'N/A'}</td>
+      <td data-label="Categoria">${prod.category || 'N/A'}</td>
+      <td data-label="Preço">R$ ${parseFloat(prod.price || 0).toFixed(2)}</td>
+      <td data-label="Estoque">${prod.stock || 0} unid.</td>
+      <td data-label="Status"><span class="tag ${prod.active ? 'tag-active' : 'tag-inactive'}">${prod.active ? 'Ativo' : 'Inativo'}</span></td>
+      <td data-label="Ações">
         <div class="actions-cell">
           <button class="btn btn-sm btn-ghost" onclick="editProduct(${prod.id})">✏️</button>
           <button class="btn btn-sm btn-ghost" onclick="deleteProduct(${prod.id})">🗑️</button>
@@ -788,14 +808,14 @@ function renderOrdersTable(orders) {
     const paymentStatus = order.payment_status || 'Pendente';
     return `
       <tr>
-        <td>#${String(order.id).padStart(3, '0')}</td>
-        <td>${order.customer_name || 'N/A'}</td>
-        <td>${orderDate}</td>
-        <td>R$ ${parseFloat(order.total || 0).toFixed(2)}</td>
-        <td>${order.payment_method || 'N/A'}</td>
-        <td><span class="status-pill ps-${paymentStatus.toLowerCase().replace(' ', '')}">${paymentStatus}</span></td>
-        <td><span class="status-pill s-${status.toLowerCase()}">${status}</span></td>
-        <td>
+        <td data-label="Pedido">#${String(order.id).padStart(3, '0')}</td>
+        <td data-label="Cliente">${order.customer_name || 'N/A'}</td>
+        <td data-label="Data">${orderDate}</td>
+        <td data-label="Total">R$ ${parseFloat(order.total || 0).toFixed(2)}</td>
+        <td data-label="Pagamento">${order.payment_method || 'N/A'}</td>
+        <td data-label="Status Pgto"><span class="status-pill ps-${paymentStatus.toLowerCase().replace(' ', '')}">${paymentStatus}</span></td>
+        <td data-label="Status Pedido"><span class="status-pill s-${status.toLowerCase()}">${status}</span></td>
+        <td data-label="Ações">
           <button class="btn btn-sm btn-ghost" onclick="openOrderModal(${order.id})">👁️</button>
           <button class="btn btn-sm btn-ghost" onclick="deleteOrder(${order.id})">🗑️</button>
         </td>

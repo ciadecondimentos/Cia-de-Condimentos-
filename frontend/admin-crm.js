@@ -44,7 +44,7 @@ function renderCrmCustomersTable() {
       
       return `
         <tr>
-          <td>
+          <td data-label="Cliente">
             <div class="prod-cell">
               <div style="font-weight: 700; color: ${customer.is_vip ? 'var(--vermelho)' : 'var(--marrom)'};">
                 ${customer.full_name}
@@ -53,14 +53,14 @@ function renderCrmCustomersTable() {
               <div style="font-size: 11px; color: #aaa;">${customer.city || 'N/A'}</div>
             </div>
           </td>
-          <td>${customer.phone || customer.whatsapp || 'N/A'}</td>
-          <td style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
+          <td data-label="Contato">${customer.phone || customer.whatsapp || 'N/A'}</td>
+          <td data-label="Situação" style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
             ${isDebtor ? '💔 Devedor' : '✓ Adimplente'}
           </td>
-          <td style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-          <td style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
-          <td>${customer.stats?.total_purchases || 0} compras</td>
-          <td>
+          <td data-label="Total Gasto" style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
+          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+          <td data-label="Compras">${customer.stats?.total_purchases || 0} compras</td>
+          <td data-label="Ações">
             <button class="btn btn-sm btn-ghost" onclick="openCrmCustomerDetail(${customer.id})" title="Ver detalhes">👁️</button>
             <button class="btn btn-sm btn-ghost" onclick="openEditCrmCustomer(${customer.id})" title="Editar">✏️</button>
             <button class="btn btn-sm btn-danger" onclick="deleteCrmCustomer(${customer.id})" title="Deletar" style="padding: 6px 10px;">🗑️</button>

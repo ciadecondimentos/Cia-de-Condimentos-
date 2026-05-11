@@ -1,0 +1,315 @@
+<!-- 
+  TESTE DE RESPONSIVIDADE - ADMIN PANEL
+  
+  Este arquivo é apenas para referência e testes visuais.
+  
+  Para testar responsividade:
+  
+  1. Abrir frontend/admin.html no navegador
+  2. Abrir Developer Tools (F12)
+  3. Ativar Device Toolbar (Ctrl+Shift+M)
+  4. Testar em diferentes breakpoints:
+  
+  MOBILE SMALL (320px - 480px):
+  - Galaxy S5, SE, iPhone 5/SE
+  - Menu hamburger deve aparecer
+  - Sidebar deve ser drawer
+  - Tabelas em card-style
+  
+  MOBILE (480px - 767px):
+  - iPhone 12, Samsung S10
+  - Topbar em coluna
+  - Conteúdo full-width
+  - Formulários com 1 coluna
+  
+  TABLET (768px - 1023px):
+  - iPad, iPad Mini
+  - Sidebar 280px fixo (não drawer)
+  - Stats grid: 2 colunas
+  - Dashboard grid: 2 colunas
+  
+  DESKTOP (1024px+):
+  - Laptop, Monitor
+  - Layout normal
+  - Todos elementos desktop
+  
+  ELEMENTOS A VALIDAR EM MOBILE:
+  
+  Dashboard:
+  ✓ Stats cards em 1 coluna
+  ✓ Cards em 1 coluna
+  ✓ Bar chart visível
+  ✓ Menu funciona
+  
+  Produtos:
+  ✓ Search box full-width
+  ✓ Tabela em card-style
+  ✓ Cada linha é um card
+  ✓ Labels aparecem
+  ✓ Botões clicáveis (44px+)
+  
+  Pedidos:
+  ✓ Tabela em card-style
+  ✓ Status pills compactos
+  ✓ Modais funcionam
+  
+  CRM:
+  ✓ Tabela em card-style
+  ✓ Botões de ação visíveis
+  ✓ Formulários responsivos
+  
+  Geral:
+  ✓ Sem scroll horizontal
+  ✓ Menu se fecha ao navegar
+  ✓ Overlay funciona
+  ✓ Toast notificações visíveis
+  ✓ Font size 16px em inputs
+-->
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Responsividade - Admin</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h1 { color: #333; }
+    h2 { color: #666; margin-top: 30px; }
+    
+    .breakpoint {
+      background: #e8f4f8;
+      padding: 15px;
+      margin: 15px 0;
+      border-left: 4px solid #2196F3;
+      border-radius: 4px;
+    }
+    
+    .checklist {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .checklist li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .checklist li::before {
+      content: "☐ ";
+      margin-right: 8px;
+    }
+    
+    .test-link {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background: #2196F3;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .test-link:hover {
+      background: #1976D2;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🧪 Teste de Responsividade - Painel Admin</h1>
+  <p>Use este guia para validar a responsividade da interface em diferentes tamanhos de tela.</p>
+
+  <div class="test-link">
+    <a href="admin.html" style="color: white; text-decoration: none;">→ Abrir Admin Panel</a>
+  </div>
+
+  <h2>📱 Breakpoints para Testar</h2>
+
+  <div class="breakpoint">
+    <strong>Mobile Small: 320px - 480px</strong>
+    <p>Dispositivos: Galaxy S5, iPhone SE, iPhone 5</p>
+    <ul class="checklist">
+      <li>Menu hamburger visível (☰)</li>
+      <li>Sidebar como drawer (hidden by default)</li>
+      <li>Topbar em 2 linhas</li>
+      <li>Stats cards em 1 coluna</li>
+      <li>Tabelas em card-style</li>
+      <li>Botões full-width</li>
+      <li>Sem scroll horizontal</li>
+      <li>Font size inputs: 16px</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Mobile: 480px - 767px</strong>
+    <p>Dispositivos: iPhone 12, Samsung S10, Moto G</p>
+    <ul class="checklist">
+      <li>Menu hamburger still visible</li>
+      <li>Sidebar drawer ainda escondido</li>
+      <li>Conteúdo padding: 12px</li>
+      <li>Forms com 1 coluna</li>
+      <li>Modais bottom-sheet</li>
+      <li>Tabelas card-style mantidas</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Tablet: 768px - 1023px</strong>
+    <p>Dispositivos: iPad, iPad Mini, Tablets Android</p>
+    <ul class="checklist">
+      <li>Sidebar visível (fixed 280px)</li>
+      <li>Menu hamburger hidden</li>
+      <li>Stats grid: 2 colunas</li>
+      <li>Dashboard grid: 2 colunas</li>
+      <li>Tabelas normal ou card-style</li>
+      <li>Content padding: 32px</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Desktop: 1024px+</strong>
+    <p>Dispositivos: Laptops, Monitors</p>
+    <ul class="checklist">
+      <li>Sidebar 280px fixo à esquerda</li>
+      <li>Stats grid: 4 colunas</li>
+      <li>Dashboard grid: 2 colunas</li>
+      <li>Tabelas completas</li>
+      <li>Layout desktop normal</li>
+      <li>Todas features visíveis</li>
+    </ul>
+  </div>
+
+  <h2>🎯 Funcionalidades a Validar</h2>
+
+  <div class="breakpoint">
+    <strong>Menu e Navegação</strong>
+    <ul class="checklist">
+      <li>Botão hamburger abre/fecha sidebar em mobile</li>
+      <li>Overlay semi-transparente aparece</li>
+      <li>Clicar no overlay fecha sidebar</li>
+      <li>Selecionar página fecha sidebar automaticamente</li>
+      <li>Página ativa é destaque no menu</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Dashboard</strong>
+    <ul class="checklist">
+      <li>Stats cards responsivos</li>
+      <li>Cards em grid adaptivo</li>
+      <li>Bar chart visível e escalado</li>
+      <li>Period tabs funcionam</li>
+      <li>Dados carregam corretamente</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Tabelas (Produtos, Pedidos, CRM)</strong>
+    <ul class="checklist">
+      <li>Search box funciona em mobile</li>
+      <li>Filters (selects) full-width em mobile</li>
+      <li>Em mobile: tabela convertida para cards</li>
+      <li>Labels (data-label) aparecem</li>
+      <li>Botões ação clicáveis (44px+)</li>
+      <li>Sem scroll horizontal</li>
+      <li>Botão "Novo" full-width em mobile</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Formulários</strong>
+    <ul class="checklist">
+      <li>Inputs full-width em mobile</li>
+      <li>Selects full-width em mobile</li>
+      <li>Textareas full-width em mobile</li>
+      <li>Font-size inputs: 16px (anti-zoom)</li>
+      <li>Min-height inputs: 44px</li>
+      <li>Botões full-width em mobile</li>
+      <li>Form-row-2 → 1 col em mobile</li>
+      <li>Form-row-3 → 1 col em mobile</li>
+    </ul>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Modais</strong>
+    <ul class="checklist">
+      <li>Desktop: modal centered</li>
+      <li>Mobile: modal bottom-sheet</li>
+      <li>Botão close funciona</li>
+      <li>Overlay fecha modal</li>
+      <li>Conteúdo scrollável se necessário</li>
+      <li>Buttons empilhados em mobile</li>
+    </ul>
+  </div>
+
+  <h2>📊 Exemplo de Testes</h2>
+
+  <div class="breakpoint">
+    <strong>Teste 1: Galaxy S5 (360×640)</strong>
+    <p>
+      1. Abrir admin.html em DevTools<br>
+      2. Selecionar Galaxy S5<br>
+      3. Verificar se menu hamburger aparece<br>
+      4. Clicar hamburger → sidebar deve aparecer<br>
+      5. Clicar overlay → sidebar deve desaparecer<br>
+      6. Navegar para Produtos → sidebar fecha<br>
+      7. Verificar tabela em card-style<br>
+      8. Tentar preencher formulário → fácil?<br>
+      9. Verificar scroll (não deve haver horizontal)
+    </p>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Teste 2: iPhone 12 (390×844)</strong>
+    <p>
+      1. Testar em portait e landscape<br>
+      2. Verificar dashboard stats (1 coluna)<br>
+      3. Testar cards e charts<br>
+      4. Abrir um modal → deve ser bottom-sheet<br>
+      5. Preencher e submit formulário<br>
+      6. Verificar toast notification
+    </p>
+  </div>
+
+  <div class="breakpoint">
+    <strong>Teste 3: iPad (768×1024)</strong>
+    <p>
+      1. Sidebar deve estar visível (não drawer)<br>
+      2. Stats grid: 2 colunas<br>
+      3. Dashboard: 2 colunas<br>
+      4. Tabelas com mais espaço<br>
+      5. Modais centered (não bottom-sheet)
+    </p>
+  </div>
+
+  <h2>✅ Conclusão</h2>
+  <p>
+    Se todos os testes passarem, o painel administrativo está 100% responsivo!<br>
+    <strong>Status esperado:</strong> ✅ TOTALMENTE FUNCIONAL EM MOBILE
+  </p>
+
+  <p style="margin-top: 40px; color: #999; font-size: 12px;">
+    Documentação de Teste - Painel Admin Responsivo<br>
+    Cia de Condimentos - 11 de maio de 2026
+  </p>
+</div>
+
+</body>
+</html>

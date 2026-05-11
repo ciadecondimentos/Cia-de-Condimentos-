@@ -497,28 +497,92 @@ function submitCheckout() {
 function selectPaymentMethod(method) {
   selectedPaymentMethod = method;
   
-  // Visual feedback
-  var paymentCards = document.querySelectorAll('.payment-method-card');
-  paymentCards.forEach(function(card) {
-    card.style.borderColor = '#e0e0e0';
-    card.style.background = 'white';
-  });
+  // Update amounts in confirmation modals
+  var totalAmount = 'R$ ' + pendingCheckoutData.total.toFixed(2).replace('.', ',');
   
-  var selectedCard = event.target.closest('.payment-method-card');
-  if (selectedCard) {
-    selectedCard.style.borderColor = 'var(--vermelho)';
-    selectedCard.style.background = '#fff5f5';
+  var moneyAmount = document.getElementById('moneyTotalAmount');
+  if (moneyAmount) moneyAmount.textContent = totalAmount;
+  
+  var cardAmount = document.getElementById('cardTotalAmount');
+  if (cardAmount) cardAmount.textContent = totalAmount;
+  
+  var pixAmount = document.getElementById('pixTotalAmount');
+  if (pixAmount) pixAmount.textContent = totalAmount;
+  
+  // Hide payment method modal and show appropriate confirmation modal
+  var paymentModal = document.getElementById('paymentMethodModal');
+  if (paymentModal) paymentModal.classList.remove('open');
+  
+  if (method === 'Dinheiro') {
+    var moneyModal = document.getElementById('moneyConfirmModal');
+    if (moneyModal) moneyModal.classList.add('open');
+  } else if (method === 'Cartão') {
+    var cardModal = document.getElementById('cardConfirmModal');
+    if (cardModal) cardModal.classList.add('open');
+  } else if (method === 'PIX') {
+    var pixModal = document.getElementById('pixConfirmModal');
+    if (pixModal) pixModal.classList.add('open');
   }
-  
-  // Auto-confirm after selection
-  setTimeout(function() {
-    confirmPaymentMethod();
-  }, 300);
 }
 
-function confirmPaymentMethod() {
+function goBackToPaymentMethod() {
+  // Close all confirmation modals
+  var moneyModal = document.getElementById('moneyConfirmModal');
+  var cardModal = document.getElementById('cardConfirmModal');
+  var pixModal = document.getElementById('pixConfirmModal');
+  var pixQrModal = document.getElementById('pixQrModal');
+  
+  if (moneyModal) moneyModal.classList.remove('open');
+  if (cardModal) cardModal.classList.remove('open');
+  if (pixModal) pixModal.classList.remove('open');
+  if (pixQrModal) pixQrModal.classList.remove('open');
+  
+  // Re-open payment method selection
+  var paymentModal = document.getElementById('paymentMethodModal');
+  if (paymentModal) paymentModal.classList.add('open');
+  
+  selectedPaymentMethod = null;
+}
+
+function confirmMoneyPayment(type) {
   if (!selectedPaymentMethod || !pendingCheckoutData) {
-    alert('Por favor, selecione um método de pagamento');
+    alert('Erro ao processar pagamento');
+    return;
+  }
+  
+  pendingCheckoutData.payment = selectedPaymentMethod;
+  pendingCheckoutData.paymentType = type; // 'exact' ou 'change'
+  
+  // Send to API
+  fetch(API_URL + '/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pendingCheckoutData)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to create order');
+  })
+  .then(function(data) {
+    var message = type === 'exact' 
+      ? 'Pedido criado! ID: ' + data.id + '\n\nPagamento exato na entrega.'
+      : 'Pedido criado! ID: ' + data.id + '\n\nO entregador está preparado para dar troco.';
+    alert(message);
+    cart = [];
+    updateCartBadge();
+    cancelCheckoutProcess();
+  })
+  .catch(function(error) {
+    console.error('Error:', error);
+    alert('Erro ao criar pedido. Tente novamente.');
+  });
+}
+
+function confirmCardPayment() {
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Erro ao processar pagamento');
     return;
   }
   
@@ -537,7 +601,62 @@ function confirmPaymentMethod() {
     throw new Error('Failed to create order');
   })
   .then(function(data) {
-    alert('Pedido criado com sucesso! ID: ' + data.id);
+    alert('Pagamento processado com sucesso!\n\nPedido ID: ' + data.id + '\n\nObrigado pela compra!');
+    cart = [];
+    updateCartBadge();
+    cancelCheckoutProcess();
+  })
+  .catch(function(error) {
+    console.error('Error:', error);
+    alert('Erro ao processar o pagamento. Tente novamente.');
+  });
+}
+
+function confirmPixPayment() {
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Erro ao processar pagamento');
+    return;
+  }
+  
+  // Close confirmation modal
+  var pixConfirmModal = document.getElementById('pixConfirmModal');
+  if (pixConfirmModal) pixConfirmModal.classList.remove('open');
+  
+  // Show QR Code modal
+  var pixQrModal = document.getElementById('pixQrModal');
+  if (pixQrModal) pixQrModal.classList.add('open');
+  
+  // Simulate QR Code generation (in production, this would come from backend)
+  var qrCodeDiv = document.getElementById('pixQrCode');
+  if (qrCodeDiv) {
+    // Create a simple placeholder QR code representation
+    qrCodeDiv.innerHTML = '<div style="width: 100%; height: 100%; background: linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0), linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0); background-size: 20px 20px; background-position: 0 0, 10px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 60px;">📱</div>';
+  }
+}
+
+function closePix() {
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Erro ao processar pagamento');
+    return;
+  }
+  
+  selectedPaymentMethod = null;
+  pendingCheckoutData.payment = 'PIX';
+  
+  // Send to API
+  fetch(API_URL + '/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pendingCheckoutData)
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Failed to create order');
+  })
+  .then(function(data) {
+    alert('Pedido confirmado!\n\nID do Pedido: ' + data.id + '\n\nAguardando confirmação do pagamento PIX...');
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();

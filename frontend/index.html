@@ -325,6 +325,134 @@
   </div>
 </div>
 
+<!-- Modal de Confirmação de Dinheiro — z-index 1310 -->
+<div class="modal-overlay" id="moneyConfirmModal" style="z-index: 1310;">
+  <div class="modal" id="moneyConfirmInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>💵 Pagamento em Dinheiro</h3>
+      <button onclick="goBackToPaymentMethod()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Valor Total</div>
+        <div id="moneyTotalAmount" style="font-size: 32px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
+      </div>
+      
+      <div style="margin-bottom: 24px;">
+        <div style="font-size: 14px; color: #666; margin-bottom: 16px;">Escolha como deseja pagar:</div>
+        
+        <div style="display: grid; gap: 12px;">
+          <button onclick="confirmMoneyPayment('exact')" style="width: 100%; background: var(--amarelo); color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
+            💰 Pagamento Exato
+          </button>
+          <button onclick="confirmMoneyPayment('change')" style="width: 100%; background: white; color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
+            🔄 Com Troco
+          </button>
+        </div>
+      </div>
+      
+      <button onclick="goBackToPaymentMethod()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Cartão — z-index 1310 -->
+<div class="modal-overlay" id="cardConfirmModal" style="z-index: 1310;">
+  <div class="modal" id="cardConfirmInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>💳 Cartão de Crédito</h3>
+      <button onclick="goBackToPaymentMethod()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Valor Total</div>
+        <div id="cardTotalAmount" style="font-size: 32px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
+      </div>
+      
+      <div style="background: #f9f3e0; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; border-left: 4px solid var(--amarelo);">
+        <div style="font-size: 13px; color: var(--marrom); line-height: 1.6;">
+          <strong>Informações do Cartão:</strong><br>
+          • Será processado imediatamente<br>
+          • Pode ser à vista ou parcelado<br>
+          • Seguro e criptografado
+        </div>
+      </div>
+      
+      <button onclick="confirmCardPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+        ✓ Confirmar Pagamento
+      </button>
+      
+      <button onclick="goBackToPaymentMethod()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de PIX — z-index 1310 -->
+<div class="modal-overlay" id="pixConfirmModal" style="z-index: 1310;">
+  <div class="modal" id="pixConfirmInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>📱 PIX - Transação Instantânea</h3>
+      <button onclick="goBackToPaymentMethod()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Valor Total</div>
+        <div id="pixTotalAmount" style="font-size: 32px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
+      </div>
+      
+      <div style="background: #f0f8ff; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; border-left: 4px solid #4285F4;">
+        <div style="font-size: 13px; color: var(--marrom); line-height: 1.6;">
+          <strong>Como funciona:</strong><br>
+          • Ao confirmar, você receberá o QR Code<br>
+          • Escaneie com seu banco ou app PIX<br>
+          • Transação 100% segura e instantânea
+        </div>
+      </div>
+      
+      <button onclick="confirmPixPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+        ✓ Gerar QR Code
+      </button>
+      
+      <button onclick="goBackToPaymentMethod()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de QR Code PIX — z-index 1320 -->
+<div class="modal-overlay" id="pixQrModal" style="z-index: 1320;">
+  <div class="modal" id="pixQrInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>📱 Escaneie o QR Code</h3>
+      <button onclick="closePix()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: white; border: 2px solid var(--amarelo); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <div id="pixQrCode" style="width: 240px; height: 240px; background: #f0e8d0; border-radius: 8px; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #666;">
+          Gerando QR Code...
+        </div>
+      </div>
+      
+      <div style="background: #f9f3e0; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; border-left: 4px solid var(--amarelo);">
+        <div style="font-size: 13px; color: var(--marrom); line-height: 1.6;">
+          <strong>Instruções:</strong><br>
+          1️⃣ Abra seu app PIX<br>
+          2️⃣ Selecione "Escanear QR Code"<br>
+          3️⃣ Aponte para o código acima<br>
+          4️⃣ Confirme a transação
+        </div>
+      </div>
+      
+      <div style="font-size: 12px; color: #999; margin-bottom: 20px;">
+        Seu pedido será confirmado após o pagamento ser processado.
+      </div>
+      
+      <button onclick="closePix()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
+        ✓ Entendi, Já Escanei
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Detalhes do Produto — z-index 1150 -->
 <div class="modal-overlay" id="productDetailModal">
   <div class="modal" id="productDetailInner" style="max-width: 680px;">

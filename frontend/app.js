@@ -11,6 +11,8 @@ const BACKEND_BASE = (window.location.hostname === 'localhost' || window.locatio
 let cart = [];
 let currentFilter = 'all';
 let currentSearch = '';
+let selectedProductForQuantity = null;
+let selectedQuantity = 1;
 
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';
@@ -152,8 +154,7 @@ function closeProductDetail() {
 
 function addToCartFromDetail() {
   if (window.currentProductDetail) {
-    addToCart(window.currentProductDetail.id);
-    closeProductDetail();
+    openQuantityModal(window.currentProductDetail);
   }
 }
 
@@ -162,14 +163,71 @@ function addToCart(productId) {
     var product = products.find(function(p) { return p.id === productId; });
     if (!product) return;
     
-    var existing = cart.find(function(item) { return item.id === productId; });
-    if (existing) {
-      existing.quantity += 1;
-    } else {
-      cart.push({ id: productId, name: product.name, price: product.price, quantity: 1 });
-    }
-    updateCartBadge();
+    openQuantityModal(product);
   });
+}
+
+function openQuantityModal(product) {
+  selectedProductForQuantity = product;
+  selectedQuantity = 1;
+  
+  var nameEl = document.getElementById('quantityProductName');
+  if (nameEl) nameEl.textContent = product.name;
+  
+  var priceEl = document.getElementById('quantityProductPrice');
+  if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',');
+  
+  var qtyDisplay = document.getElementById('quantityDisplay');
+  if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+  
+  var modal = document.getElementById('quantityModal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeQuantityModal() {
+  var modal = document.getElementById('quantityModal');
+  if (modal) modal.classList.remove('open');
+  selectedProductForQuantity = null;
+  selectedQuantity = 1;
+}
+
+function increaseQuantity() {
+  if (selectedProductForQuantity && selectedQuantity < selectedProductForQuantity.stock) {
+    selectedQuantity++;
+    var qtyDisplay = document.getElementById('quantityDisplay');
+    if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+  }
+}
+
+function decreaseQuantity() {
+  if (selectedQuantity > 1) {
+    selectedQuantity--;
+    var qtyDisplay = document.getElementById('quantityDisplay');
+    if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;
+  }
+}
+
+function confirmQuantity() {
+  if (!selectedProductForQuantity) return;
+  
+  var existing = cart.find(function(item) { return item.id === selectedProductForQuantity.id; });
+  if (existing) {
+    existing.quantity += selectedQuantity;
+  } else {
+    cart.push({ 
+      id: selectedProductForQuantity.id, 
+      name: selectedProductForQuantity.name, 
+      price: selectedProductForQuantity.price, 
+      quantity: selectedQuantity 
+    });
+  }
+  
+  updateCartBadge();
+  closeQuantityModal();
+  closeProductDetail();
+  
+  // Show confirmation message
+  alert('✓ ' + selectedQuantity + 'x ' + selectedProductForQuantity.name + ' adicionado(s) ao carrinho!');
 }
 
 function removeFromCart(productId) {

@@ -188,9 +188,10 @@
     </div>
     <div class="modal-body" style="text-align: center; padding: 40px 28px;">
       <div id="paymentConfirmationMessage" style="font-size: 18px; color: var(--marrom); margin-bottom: 32px; font-weight: 600; line-height: 1.6;"></div>
-      <div style="display: flex; gap: 14px; justify-content: center;">
+      <div style="display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;">
         <button onclick="confirmPaymentMethod()" id="confirmPaymentBtn" style="background: var(--vermelho); color: white; border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Confirmar</button>
-        <button onclick="closePaymentConfirmation()" style="background: #ddd; color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Cancelar</button>
+        <button onclick="backToPaymentSelection()" style="background: var(--amarelo); color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Mudar</button>
+        <button onclick="cancelCheckoutProcess()" style="background: #ddd; color: var(--marrom); border: none; padding: 14px 40px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px;">Cancelar</button>
       </div>
     </div>
   </div>
@@ -532,6 +533,37 @@ function closePaymentConfirmation() {
   var modal = document.getElementById('paymentConfirmationModal');
   if (modal) modal.style.display = 'none';
   window.pendingPaymentMethod = null;
+}
+
+function backToPaymentSelection() {
+  // Fecha a confirmação e volta ao menu de escolha de pagamento
+  closePaymentConfirmation();
+  choosePaymentMethod();
+}
+
+function cancelCheckoutProcess() {
+  // Fecha a confirmação, limpa dados e volta ao carrinho
+  closePaymentConfirmation();
+  
+  // Limpar dados do checkout
+  window.checkoutData = null;
+  window.pendingPaymentMethod = null;
+  
+  // Fechar modal de checkout
+  var checkoutModal = document.getElementById('checkoutModal');
+  if (checkoutModal) {
+    checkoutModal.classList.remove('open');
+    checkoutModal.style.display = 'none';
+  }
+  
+  var checkoutBody = document.getElementById('checkoutBody');
+  if (checkoutBody) checkoutBody.innerHTML = '';
+  
+  // Mostrar toast
+  showToast('❌ Pedido cancelado');
+  
+  // Abrir carrinho
+  openCart();
 }
 
 function confirmPaymentMethod() {

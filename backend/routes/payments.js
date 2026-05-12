@@ -449,4 +449,76 @@ router.post('/update', async (req, res) => {
   }
 });
 
+// POST /payments/confirm-test/:paymentId - Confirmar pagamento em modo teste (SANDBOX)
+// ⚠️  APENAS PARA DESENVOLVIMENTO - NÃO USE EM PRODUÇÃO
+router.post('/confirm-test/:paymentId', async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+
+    if (!paymentId) {
+      return res.status(400).json({ error: 'paymentId é obrigatório' });
+    }
+
+    console.log('🔧 [TESTE] Confirmando pagamento:', paymentId);
+
+    // Buscar pagamento
+    const paymentResult = await db.query(
+      'SELECT * FROM payments WHERE mp_payment_id = $1 OR id = $1',
+      [paymentId]
+    );
+
+    if (paymentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+
+    const payment = paymentResult.rows[0];
+    const mpPaymentId = payment.mp_payment_id;
+
+    // ✅ ATUALIZAR PARA APPROVED
+    const updateResult = await db.query(
+      'UPDATE payments SET status = $1, confirmed_at = NOW(), updated_at = NOW() WHERE mp_payment_id = $2 RETURNING *',
+      ['approved', mpPaymentId]
+    );
+
+    if (updateResult.rows.length === 0) {
+      return res.status(500).json({ error: 'Erro ao atualizar pagamento' });
+    }
+
+    const updatedPayment = updateResult.rows[0];
+
+    // Se tiver order_id, atualizar status do pedido
+    if (updatedPayment.order_id) {
+      await db.query(
+        'UPDATE orders SET payment_status = $1, status = $2, updated_at = NOW() WHERE id = $3',
+        ['Confirmado', 'Confirmado', updatedPayment.order_id]
+      );
+
+      // Diminuir estoque
+      const itemsResult = await db.query(
+        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+        [updatedPayment.order_id]
+      );
+
+      for (const item of itemsResult.rows) {
+        await db.query(
+          'UPDATE products SET stock = stock - $1 WHERE id = $2',
+          [item.quantity, item.product_id]
+        );
+      }
+
+      console.log(`✅ [TESTE] PIX CONFIRMADO - Pedido #${updatedPayment.order_id}`);
+    }
+
+    res.json({
+      success: true,
+      message: '✅ Pagamento confirmado em modo teste',
+      payment: updatedPayment
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao confirmar pagamento de teste:', error.message);
+    res.status(500).json({ error: 'Erro: ' + error.message });
+  }
+});
+
 module.exports = router;

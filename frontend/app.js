@@ -930,9 +930,15 @@ function createWaitingForPaymentModal() {
         '<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
           '<small style="color: #666;">💡 <strong>Dica:</strong> Você pode voltar à tela de pagamento para copiar o código PIX se necessário.</small>' +
         '</div>' +
-        '<button onclick="goBackToPixPayment()" style="background: var(--marrom); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; margin-top: 12px;">' +
-          '← Voltar ao PIX' +
-        '</button>' +
+        '<div style="display: flex; gap: 8px; margin-top: 16px;">' +
+          '<button onclick="goBackToPixPayment()" style="flex: 1; background: var(--marrom); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
+            '← Voltar ao PIX' +
+          '</button>' +
+          '<button onclick="testConfirmPayment()" style="flex: 1; background: #27a745; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
+            '🧪 Testar Confirmação' +
+          '</button>' +
+        '</div>' +
+      '</div>' +
       '</div>' +
     '</div>' +
   '</div>';
@@ -1029,6 +1035,45 @@ function closePaymentConfirmedModal() {
   if (productsView) {
     productsView.classList.add('active');
   }
+}
+
+function testConfirmPayment() {
+  if (!paymentPollingData || !paymentPollingData.mp_payment_id) {
+    alert('❌ Erro: dados de pagamento não disponíveis');
+    return;
+  }
+  
+  console.log('🧪 Testando confirmação de pagamento:', paymentPollingData.mp_payment_id);
+  
+  fetch(API_URL + '/payments/confirm-test/' + paymentPollingData.mp_payment_id, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    return response.json().then(function(error) {
+      throw new Error(error.error || 'Erro ao confirmar pagamento');
+    });
+  })
+  .then(function(data) {
+    console.log('✅ Pagamento confirmado em teste:', data);
+    alert('✅ Pagamento confirmado com sucesso em modo teste!');
+    
+    // Parar polling para testar o resultado manual
+    stopPaymentPolling();
+    
+    // Mostrar modal de confirmação
+    showPaymentConfirmedModal({
+      order_id: paymentPollingData.order_id,
+      amount: paymentPollingData.amount
+    });
+  })
+  .catch(function(error) {
+    console.error('❌ Erro ao confirmar:', error);
+    alert('❌ Erro: ' + error.message);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', function() {

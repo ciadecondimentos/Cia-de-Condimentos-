@@ -618,7 +618,9 @@ function confirmPixPayment() {
     return;
   }
   
-  // Close confirmation modal
+  pendingCheckoutData.payment = selectedPaymentMethod;
+  
+  // Close all modals
   var pixConfirmModal = document.getElementById('pixConfirmModal');
   if (pixConfirmModal) pixConfirmModal.classList.remove('open');
   
@@ -626,22 +628,23 @@ function confirmPixPayment() {
   var pixQrModal = document.getElementById('pixQrModal');
   if (pixQrModal) pixQrModal.classList.add('open');
   
-  // Simulate QR Code generation (in production, this would come from backend)
+  // Generate QR code representation
   var qrCodeDiv = document.getElementById('pixQrCode');
   if (qrCodeDiv) {
-    // Create a simple placeholder QR code representation
     qrCodeDiv.innerHTML = '<div style="width: 100%; height: 100%; background: linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0), linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0); background-size: 20px 20px; background-position: 0 0, 10px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 60px;">📱</div>';
   }
 }
 
 function closePix() {
-  if (!selectedPaymentMethod || !pendingCheckoutData) {
+  if (!pendingCheckoutData) {
     alert('Erro ao processar pagamento');
     return;
   }
   
-  selectedPaymentMethod = null;
+  // Set payment method to PIX
   pendingCheckoutData.payment = 'PIX';
+  
+  console.log('Enviando pedido PIX:', JSON.stringify(pendingCheckoutData, null, 2));
   
   // Send to API
   fetch(API_URL + '/orders', {
@@ -650,20 +653,25 @@ function closePix() {
     body: JSON.stringify(pendingCheckoutData)
   })
   .then(function(response) {
+    console.log('Response status:', response.status);
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Failed to create order');
+    // Se não for ok, tenta ler o erro
+    return response.json().then(function(data) {
+      throw new Error(JSON.stringify(data));
+    });
   })
   .then(function(data) {
+    console.log('Order created:', data);
     alert('Pedido confirmado!\n\nID do Pedido: ' + data.id + '\n\nAguardando confirmação do pagamento PIX...');
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();
   })
   .catch(function(error) {
-    console.error('Error:', error);
-    alert('Erro ao criar pedido. Tente novamente.');
+    console.error('Error creating order:', error);
+    alert('Erro ao criar pedido:\n' + error.message + '\n\nTente novamente.');
   });
 }
 

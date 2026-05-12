@@ -630,114 +630,76 @@ function confirmPixPayment() {
     return;
   }
   
-  pendingCheckoutData.payment = selectedPaymentMethod;
-  
-  // Close all modals
+  // Close confirmation modal
   var pixConfirmModal = document.getElementById('pixConfirmModal');
   if (pixConfirmModal) pixConfirmModal.classList.remove('open');
   
-  // Show QR Code modal
+  // Show loading state in QR modal
   var pixQrModal = document.getElementById('pixQrModal');
   if (pixQrModal) pixQrModal.classList.add('open');
   
-  // Generate PIX code (realistic format: static+dictEntryId format)
-  var pixCode = generatePixCode(pendingCheckoutData.total);
-  window.currentPixCode = pixCode;
+  var pixQrCode = document.getElementById('pixQrCode');
+  var pixCode = document.getElementById('pixCode');
+  if (pixQrCode) pixQrCode.innerHTML = '⏳ Gerando QR Code...';
+  if (pixCode) pixCode.textContent = 'Carregando...';
   
-  // Display PIX code
-  var pixCodeElement = document.getElementById('pixCode');
-  if (pixCodeElement) {
-    pixCodeElement.textContent = pixCode;
-  }
-  
-  // Generate QR Code representation (using canvas)
-  generateQRCode(pixCode);
-}
-
-function generatePixCode(amount) {
-  // Format: 00 (version) + 14 (payload indicator) + random data
-  // This creates a realistic-looking PIX code
-  const timestamp = Date.now().toString().slice(-8);
-  const random = Math.random().toString(36).substring(2, 15);
-  const amountStr = amount.toFixed(2).replace('.', '');
-  
-  // Simplified PIX code format (for demonstration)
-  // Real PIX uses EMV QR, but we'll use a recognizable format
-  const pixCode = '00020126360014br.gov.bcb.pix' +
-    '0136' + timestamp + random.substring(0, 32) +
-    '520400005303986540510.00' +
-    '5802BR5913CIA CONDIMENTOS6009SAO PAULO62' +
-    '4d0' + amountStr.padStart(10, '0') +
-    '63041D3D';
-  
-  return pixCode;
-}
-
-function generateQRCode(pixCode) {
-  var qrCodeDiv = document.getElementById('pixQrCode');
-  if (!qrCodeDiv) return;
-  
-  // If QRCode library is available, use it
-  if (typeof QRCode !== 'undefined') {
-    qrCodeDiv.innerHTML = '';
-    new QRCode(qrCodeDiv, {
-      text: pixCode,
-      width: 240,
-      height: 240,
-      colorDark: '#000000',
-      colorLight: '#ffffff'
-    });
-  } else {
-    // Fallback: Create a more realistic looking QR code placeholder using canvas
-    createCanvasQRCodePlaceholder(qrCodeDiv, pixCode);
-  }
-}
-
-function createCanvasQRCodePlaceholder(container, pixCode) {
-  // Create a canvas and draw a pattern that looks like a QR code
-  container.innerHTML = '';
-  
-  const canvas = document.createElement('canvas');
-  canvas.width = 240;
-  canvas.height = 240;
-  const ctx = canvas.getContext('2d');
-  
-  // White background
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, 240, 240);
-  
-  // Draw QR-like pattern
-  ctx.fillStyle = '#000000';
-  const moduleSize = 10;
-  
-  // Pseudo-random pattern based on PIX code
-  let pixIndex = 0;
-  for (let y = 0; y < 24; y++) {
-    for (let x = 0; x < 24; x++) {
-      const char = pixCode.charCodeAt(pixIndex % pixCode.length);
-      if (char % 2 === 0) {
-        ctx.fillRect(x * moduleSize, y * moduleSize, moduleSize, moduleSize);
-      }
-      pixIndex++;
+  // Call backend to generate real PIX from Mercado Pago
+  fetch(API_URL + '/payments/pix', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      orderId: null, // Will be set after order creation
+      amount: pendingCheckoutData.total,
+      description: 'Pagamento - Cia de Condimentos',
+      payerEmail: pendingCheckoutData.customer.email || 'cliente@condimentos.com',
+      payerPhone: pendingCheckoutData.customer.phone
+    })
+  })
+  .then(function(response) {
+    console.log('PIX Response status:', response.status);
+    if (!response.ok) {
+      return response.json().then(function(error) {
+        throw new Error(error.error || 'Erro ao gerar PIX');
+      });
     }
-  }
-  
-  // Add three position markers (corners)
-  drawPositionMarker(ctx, 0, 0);
-  drawPositionMarker(ctx, 230, 0);
-  drawPositionMarker(ctx, 0, 230);
-  
-  container.appendChild(canvas);
-}
-
-function drawPositionMarker(ctx, x, y) {
-  // Draw 7x7 position marker used in QR codes
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(x, y, 7, 7);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(x + 1, y + 1, 5, 5);
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(x + 2, y + 2, 3, 3);
+    return response.json();
+  })
+  .then(function(pixData) {
+    console.log('PIX Data received:', pixData);
+    
+    // Store PIX data
+    window.currentPixData = {
+      mp_payment_id: pixData.mp_payment_id,
+      qr_code: pixData.qr_code,
+      qr_code_base64: pixData.qr_code_base64,
+      status: pixData.status,
+      amount: pixData.amount
+    };
+    
+    // Display QR code image
+    if (pixQrCode) {
+      if (pixData.qr_code_base64) {
+        pixQrCode.innerHTML = '<img src="' + pixData.qr_code_base64 + '" style="width: 100%; height: 100%; border-radius: 8px;">';
+      } else {
+        pixQrCode.innerHTML = '❌ Erro ao carregar QR Code';
+      }
+    }
+    
+    // Display PIX code
+    if (pixCode) {
+      pixCode.textContent = pixData.qr_code || 'Código não disponível';
+    }
+    
+    window.currentPixCode = pixData.qr_code;
+    
+    console.log('✅ PIX gerado com sucesso:', pixData.mp_payment_id);
+  })
+  .catch(function(error) {
+    console.error('Erro ao gerar PIX:', error);
+    if (pixQrCode) pixQrCode.innerHTML = '❌ Erro ao gerar QR Code: ' + error.message;
+    if (pixCode) pixCode.textContent = 'Erro: ' + error.message;
+    alert('Erro ao gerar PIX:\n' + error.message);
+  });
 }
 
 function copyPixCode() {
@@ -764,42 +726,58 @@ function copyPixCode() {
 }
 
 function closePix() {
-  if (!pendingCheckoutData) {
-    alert('Erro ao processar pagamento');
+  if (!pendingCheckoutData || !window.currentPixData) {
+    alert('Erro ao processar pagamento PIX');
     return;
   }
   
-  // Set payment method to PIX
+  // Set payment method and MP payment ID
   pendingCheckoutData.payment = 'PIX';
+  pendingCheckoutData.mp_payment_id = window.currentPixData.mp_payment_id;
   
-  console.log('Enviando pedido PIX:', JSON.stringify(pendingCheckoutData, null, 2));
+  console.log('Criando pedido com PIX:', JSON.stringify(pendingCheckoutData, null, 2));
   
-  // Send to API
+  // Create order
   fetch(API_URL + '/orders', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(pendingCheckoutData)
   })
   .then(function(response) {
-    console.log('Response status:', response.status);
+    console.log('Order Response status:', response.status);
     if (response.ok) {
       return response.json();
     }
-    // Se não for ok, tenta ler o erro
     return response.json().then(function(data) {
       throw new Error(JSON.stringify(data));
     });
   })
-  .then(function(data) {
-    console.log('Order created:', data);
-    alert('Pedido confirmado!\n\nID do Pedido: ' + data.id + '\n\nAguardando confirmação do pagamento PIX...');
+  .then(function(orderData) {
+    console.log('Pedido criado com sucesso:', orderData);
+    
+    // Update payment record with order ID
+    if (orderData.id && window.currentPixData.mp_payment_id) {
+      fetch(API_URL + '/payments/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mp_payment_id: window.currentPixData.mp_payment_id,
+          order_id: orderData.id,
+          status: window.currentPixData.status
+        })
+      }).catch(function(err) {
+        console.warn('Aviso: não foi possível atualizar payment record:', err);
+      });
+    }
+    
+    alert('✅ Pedido confirmado!\n\nID: ' + orderData.id + '\n\n📱 QR Code enviado para você!\n\nAguardando confirmação do pagamento PIX...');
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();
   })
   .catch(function(error) {
-    console.error('Error creating order:', error);
-    alert('Erro ao criar pedido:\n' + error.message + '\n\nTente novamente.');
+    console.error('Erro ao criar pedido:', error);
+    alert('❌ Erro ao criar pedido:\n' + error.message);
   });
 }
 

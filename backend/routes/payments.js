@@ -415,4 +415,38 @@ router.post('/cancel/:paymentId', async (req, res) => {
   }
 });
 
+// POST /payments/update - Atualizar payment com order_id
+router.post('/update', async (req, res) => {
+  const { mp_payment_id, order_id, status } = req.body;
+
+  try {
+    if (!mp_payment_id) {
+      return res.status(400).json({ error: 'mp_payment_id é obrigatório' });
+    }
+
+    console.log('📝 Atualizando payment:', { mp_payment_id, order_id, status });
+
+    // Atualizar payment com order_id
+    const result = await db.query(
+      'UPDATE payments SET order_id = COALESCE($1, order_id), status = COALESCE($2, status), updated_at = NOW() WHERE mp_payment_id = $3 RETURNING *',
+      [order_id || null, status || null, mp_payment_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Pagamento não encontrado' });
+    }
+
+    console.log('✅ Payment atualizado:', mp_payment_id);
+
+    res.json({
+      success: true,
+      payment: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao atualizar payment:', error.message);
+    res.status(500).json({ error: 'Erro ao atualizar payment: ' + error.message });
+  }
+});
+
 module.exports = router;

@@ -1231,13 +1231,6 @@ function closePaymentConfirmedModal() {
   updateCartBadge();
   cancelCheckoutProcess();
 }
-  
-  // Voltar para home
-  var productsView = document.getElementById('productsView');
-  if (productsView) {
-    productsView.classList.add('active');
-  }
-}
 
 function testConfirmPayment() {
   if (!paymentPollingData || !paymentPollingData.mp_payment_id) {

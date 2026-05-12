@@ -679,7 +679,7 @@ function confirmPixPayment() {
     // Display QR code image
     if (pixQrCode) {
       if (pixData.qr_code_base64) {
-        pixQrCode.innerHTML = '<img src="' + pixData.qr_code_base64 + '" style="width: 100%; height: 100%; border-radius: 8px;">';
+        pixQrCode.innerHTML = '<img src="data:image/png;base64,' + pixData.qr_code_base64 + '" style="width: 100%; height: 100%; border-radius: 8px;">';
       } else {
         pixQrCode.innerHTML = '❌ Erro ao carregar QR Code';
       }

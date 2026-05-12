@@ -34,6 +34,46 @@ async function createPaymentMP(paymentData) {
   }
 }
 
+// Função para consultar pagamento com retry e backoff exponencial
+async function getPaymentMPWithRetry(paymentId, maxRetries = 3, initialDelay = 500) {
+  let lastError;
+  let delay = initialDelay;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Tentativa ${attempt}/${maxRetries} - Consultando MP para pagamento ${paymentId}`);
+      const result = await mpPayment.get({
+        id: paymentId
+      });
+      
+      if (result && result.id) {
+        console.log(`✅ Consulta bem-sucedida (tentativa ${attempt}): Status = ${result.status}`);
+        return result;
+      }
+      
+      throw new Error('Resposta vazia do MP');
+    } catch (error) {
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        console.warn(`⚠️  Tentativa ${attempt} falhou. Aguardando ${delay}ms antes de retry...`);
+        console.warn(`   Erro: ${error.message}`);
+        
+        // Aguardar antes de tentar novamente
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        // Aumentar delay exponencialmente: 500ms -> 1000ms -> 2000ms
+        delay = Math.min(delay * 2, 5000);
+      } else {
+        console.error(`❌ Todas as ${maxRetries} tentativas falharam para ${paymentId}`);
+        console.error(`   Último erro: ${error.message}`);
+      }
+    }
+  }
+  
+  throw new Error(`Falha ao consultar MP após ${maxRetries} tentativas: ${lastError.message}`);
+}
+
 async function getPaymentMP(paymentId) {
   try {
     const result = await mpPayment.get({
@@ -142,8 +182,11 @@ router.post('/pix', async (req, res) => {
 // GET /payments/status/:paymentId - Consultar status do pagamento
 router.get('/status/:paymentId', async (req, res) => {
   const { paymentId } = req.params;
+  const startTime = Date.now();
 
   try {
+    console.log(`\n⏱️  [POLLING] Verificando status do pagamento: ${paymentId}`);
+    
     // Buscar no banco
     const dbResult = await db.query(
       'SELECT * FROM payments WHERE mp_payment_id = $1',
@@ -151,83 +194,106 @@ router.get('/status/:paymentId', async (req, res) => {
     );
 
     if (dbResult.rows.length === 0) {
+      console.warn(`⚠️  Pagamento ${paymentId} não encontrado no banco`);
       return res.status(404).json({ error: 'Pagamento não encontrado' });
     }
 
     const payment = dbResult.rows[0];
+    console.log(`📋 Status atual no banco: ${payment.status} | Order: ${payment.order_id || 'N/A'}`);
 
-    // Consultar no Mercado Pago para atualizar status
+    // Consultar no Mercado Pago para atualizar status (com retry)
+    let mpPaymentResult;
+    let consulted = false;
+    
     try {
-      const mpPaymentResult = await getPaymentMP(paymentId);
-
-      // Atualizar status no banco
-      if (mpPaymentResult.status !== payment.status) {
-        await db.query(
-          'UPDATE payments SET status = $1, updated_at = NOW() WHERE mp_payment_id = $2',
-          [mpPaymentResult.status, paymentId]
-        );
-
-        if (mpPaymentResult.status === 'approved') {
-          await db.query(
-            'UPDATE payments SET confirmed_at = NOW() WHERE mp_payment_id = $1',
-            [paymentId]
-          );
-
-          // Se tiver order_id, atualizar status do pedido
-          if (payment.order_id) {
-            // Atualizar payment_status
-            await db.query(
-              'UPDATE orders SET payment_status = $1 WHERE id = $2',
-              ['Confirmado', payment.order_id]
-            );
-
-            // ✅ NOVO: Também atualizar status do pedido para "Confirmado"
-            await db.query(
-              'UPDATE orders SET status = $1 WHERE id = $2',
-              ['Confirmado', payment.order_id]
-            );
-
-            // ✅ NOVO: Diminuir estoque se ainda não foi feito
-            const itemsResult = await db.query(
-              'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-              [payment.order_id]
-            );
-
-            for (const item of itemsResult.rows) {
-              await db.query(
-                `UPDATE products SET stock = stock - $1 WHERE id = $2`,
-                [item.quantity, item.product_id]
-              );
-            }
-
-            console.log(`✅ PIX CONFIRMADO (polling) - Pedido #${payment.order_id}`);
-          }
-        }
-      }
-
-      console.log(`📊 Status atualizado - ID: ${paymentId} - Status: ${mpPaymentResult.status}`);
-
-      return res.json({
-        id: payment.id,
-        mp_payment_id: mpPaymentResult.id,
-        status: mpPaymentResult.status,
-        amount: mpPaymentResult.transaction_amount,
-        order_id: payment.order_id
-      });
+      mpPaymentResult = await getPaymentMPWithRetry(paymentId, 3, 500);
+      consulted = true;
+      console.log(`🔄 Status consultado no MP: ${mpPaymentResult.status}`);
     } catch (mpError) {
-      console.warn('⚠️  Não conseguiu consultar MP, retornando dados do banco');
-      return res.json({
-        id: payment.id,
-        mp_payment_id: payment.mp_payment_id,
+      console.warn(`⚠️  Falha ao consultar MP (usando dados do banco): ${mpError.message}`);
+      // Usar dados do banco como fallback
+      mpPaymentResult = {
+        id: payment.mp_payment_id,
         status: payment.status,
-        amount: payment.amount,
-        order_id: payment.order_id
-      });
+        transaction_amount: payment.amount
+      };
     }
 
+    // Atualizar status no banco se mudou
+    if (consulted && mpPaymentResult.status !== payment.status) {
+      console.log(`🔄 Status mudou: ${payment.status} → ${mpPaymentResult.status}`);
+      
+      await db.query(
+        'UPDATE payments SET status = $1, updated_at = NOW() WHERE mp_payment_id = $2',
+        [mpPaymentResult.status, paymentId]
+      );
+
+      if (mpPaymentResult.status === 'approved') {
+        await db.query(
+          'UPDATE payments SET confirmed_at = NOW() WHERE mp_payment_id = $1',
+          [paymentId]
+        );
+
+        // Se tiver order_id, atualizar status do pedido
+        if (payment.order_id) {
+          await db.query(
+            'UPDATE orders SET payment_status = $1 WHERE id = $2',
+            ['Confirmado', payment.order_id]
+          );
+
+          await db.query(
+            'UPDATE orders SET status = $1 WHERE id = $2',
+            ['Confirmado', payment.order_id]
+          );
+
+          // Diminuir estoque
+          const itemsResult = await db.query(
+            'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+            [payment.order_id]
+          );
+
+          for (const item of itemsResult.rows) {
+            await db.query(
+              `UPDATE products SET stock = stock - $1 WHERE id = $2`,
+              [item.quantity, item.product_id]
+            );
+          }
+
+          const duration = Date.now() - startTime;
+          console.log(`✅ PIX CONFIRMADO (polling - ${duration}ms) - Pedido #${payment.order_id}`);
+        }
+      }
+    } else if (consulted) {
+      console.log(`ℹ️  Status permanece: ${mpPaymentResult.status}`);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`📊 Resposta: Status = ${mpPaymentResult.status} | Tempo = ${duration}ms | Fonte = ${consulted ? 'MP' : 'Banco'}`);
+
+    return res.json({
+      id: payment.id,
+      mp_payment_id: mpPaymentResult.id,
+      status: mpPaymentResult.status,
+      amount: mpPaymentResult.transaction_amount,
+      order_id: payment.order_id,
+      _debug: {
+        consulted_mp: consulted,
+        duration_ms: duration,
+        timestamp: new Date().toISOString()
+      }
+    });
+
   } catch (error) {
-    console.error('❌ Erro ao consultar status:', error.message);
-    res.status(500).json({ error: 'Erro ao consultar status' });
+    const duration = Date.now() - startTime;
+    console.error(`❌ Erro ao consultar status (${duration}ms):`, error.message);
+    res.status(500).json({ 
+      error: 'Erro ao consultar status',
+      details: error.message,
+      _debug: {
+        duration_ms: duration,
+        timestamp: new Date().toISOString()
+      }
+    });
   }
 });
 

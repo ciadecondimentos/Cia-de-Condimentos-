@@ -18,6 +18,10 @@ let selectedQuantity = 1;
 let paymentPollingInterval = null;
 let paymentPollingData = null;
 let paymentPollingTimeout = null;
+let paymentPollingAttempts = 0;
+let paymentPollingFailures = 0;
+let paymentPollingStartTime = null;
+let paymentPollingInterval_ms = 2000; // Começa a cada 2s, pode aumentar com backoff
 
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';
@@ -828,24 +832,35 @@ function startPaymentPolling() {
     return;
   }
   
-  console.log('⏱️  Iniciando polling de pagamento:', paymentPollingData.mp_payment_id);
+  // Reset das variáveis
+  paymentPollingAttempts = 0;
+  paymentPollingFailures = 0;
+  paymentPollingStartTime = Date.now();
+  paymentPollingInterval_ms = 2000; // Começar a cada 2 segundos
+  
+  console.log('⏱️  INICIANDO POLLING DE PAGAMENTO PIX');
+  console.log('   ID do pagamento:', paymentPollingData.mp_payment_id);
+  console.log('   ID do pedido:', paymentPollingData.order_id);
+  console.log('   Valor:', 'R$ ' + paymentPollingData.amount.toFixed(2).replace('.', ','));
+  console.log('   Intervalo inicial:', paymentPollingInterval_ms + 'ms');
   
   // Limpar polling anterior se existir
   stopPaymentPolling();
   
-  // Iniciar novo polling a cada 2 segundos (mais rápido)
+  // Fazer primeira verificação imediatamente
+  checkPaymentStatus();
+  
+  // Iniciar novo polling com intervalo adaptativo
   paymentPollingInterval = setInterval(function() {
     checkPaymentStatus();
-  }, 2000);
+  }, paymentPollingInterval_ms);
   
   // Timeout de 30 minutos
   paymentPollingTimeout = setTimeout(function() {
-    console.warn('⚠️  Timeout de polling alcançado (30 minutos)');
+    console.warn('⚠️  TIMEOUT: Polling alcançou 30 minutos sem confirmação');
     stopPaymentPolling();
+    alert('⏱️  Tempo limite atingido. Se você já pagou, o pagamento será processado em breve.\nVerifique sua bandeja de entrada para atualizações.');
   }, 30 * 60 * 1000);
-  
-  // Fazer primeira verificação imediatamente
-  checkPaymentStatus();
 }
 
 function stopPaymentPolling() {
@@ -859,46 +874,105 @@ function stopPaymentPolling() {
     paymentPollingTimeout = null;
   }
   
-  console.log('✓ Polling de pagamento interrompido');
+  if (paymentPollingStartTime) {
+    const duration = Math.round((Date.now() - paymentPollingStartTime) / 1000);
+    console.log('✓ Polling interrompido - Duração:', duration + 's', '- Tentativas:', paymentPollingAttempts);
+  } else {
+    console.log('✓ Polling de pagamento interrompido');
+  }
 }
 
 function checkPaymentStatus() {
   if (!paymentPollingData) return;
   
+  paymentPollingAttempts++;
+  const attemptNumber = paymentPollingAttempts;
+  const elapsed = Math.round((Date.now() - paymentPollingStartTime) / 1000);
+  
+  console.log(`\n📊 [POLLING] Tentativa #${attemptNumber} (${elapsed}s decorridos) - Intervalo: ${paymentPollingInterval_ms}ms`);
+  
   // 1️⃣ Verificar status no Mercado Pago
   fetch(API_URL + '/payments/status/' + paymentPollingData.mp_payment_id, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
+    timeout: 10000 // 10 segundos de timeout
   })
   .then(function(response) {
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Erro ao verificar status');
+    throw new Error('Status: ' + response.status);
   })
   .then(function(paymentData) {
-    console.log('📊 Status do pagamento (MP):', paymentData.status);
+    console.log('✅ Resposta recebida - Status:', paymentData.status);
+    
+    // Reset de falhas ao receber resposta bem-sucedida
+    paymentPollingFailures = 0;
+    paymentPollingInterval_ms = 2000; // Voltar ao intervalo normal
     
     // Se pagamento foi aprovado
     if (paymentData.status === 'approved') {
-      console.log('✅ PAGAMENTO APROVADO (Mercado Pago)! Pedido:', paymentData.order_id);
+      console.log('✅ ✅ ✅ PAGAMENTO APROVADO! Mostrando confirmação...');
       stopPaymentPolling();
       showPaymentConfirmedModal(paymentData);
       return;
     }
     
-    // 2️⃣ Se ainda está pendente, verificar o banco local para ver se foi confirmado por outro meio
-    if (paymentData.order_id && paymentData.status === 'pending') {
-      checkOrderStatus(paymentData.order_id);
+    // Se ainda está pendente, log informativo
+    if (paymentData.status === 'pending') {
+      console.log('⏳ Pagamento ainda pendente - aguardando confirmação...');
+      
+      // Também verificar o banco local
+      if (paymentData.order_id) {
+        checkOrderStatus(paymentData.order_id);
+      }
+    }
+    
+    // Outros status
+    if (paymentData.status === 'rejected') {
+      console.warn('❌ Pagamento rejeitado');
+      stopPaymentPolling();
+      alert('❌ Pagamento foi rejeitado. Tente novamente ou use outro método de pagamento.');
+      return;
+    }
+    
+    if (paymentData.status === 'cancelled') {
+      console.warn('⛔ Pagamento cancelado');
+      stopPaymentPolling();
+      alert('⛔ Pagamento foi cancelado.');
+      return;
     }
   })
   .catch(function(error) {
-    console.error('❌ Erro ao verificar status:', error);
+    paymentPollingFailures++;
+    console.warn(`❌ Erro ao verificar status (Falha #${paymentPollingFailures}):`, error.message);
+    
+    // Aumentar intervalo após falhas (backoff exponencial)
+    if (paymentPollingFailures >= 3) {
+      // Após 3 falhas, aumentar intervalo progressivamente
+      paymentPollingInterval_ms = Math.min(paymentPollingInterval_ms * 1.5, 10000);
+      console.warn(`⚠️  Aumentando intervalo para ${paymentPollingInterval_ms}ms (falhas: ${paymentPollingFailures})`);
+      
+      // Atualizar intervalo do setInterval
+      if (paymentPollingInterval) {
+        clearInterval(paymentPollingInterval);
+        paymentPollingInterval = setInterval(function() {
+          checkPaymentStatus();
+        }, paymentPollingInterval_ms);
+      }
+    }
+    
+    // Se muitas falhas, mostrar aviso
+    if (paymentPollingFailures === 5) {
+      console.warn('⚠️  Múltiplas falhas ao conectar. Verifique sua conexão...');
+    }
   });
 }
 
 function checkOrderStatus(orderId) {
   // Verificar se o pedido foi confirmado localmente (por outro sistema, admin, etc)
+  console.log('   📋 Verificando status local do pedido #' + orderId + '...');
+  
   fetch(API_URL + '/orders/' + orderId, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' }
@@ -907,24 +981,24 @@ function checkOrderStatus(orderId) {
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Erro ao verificar pedido');
+    throw new Error('Erro HTTP ' + response.status);
   })
   .then(function(orderData) {
-    console.log('📋 Status do pedido:', orderData.status, '| Payment:', orderData.payment_status);
+    console.log('      Status do pedido:', orderData.status, '| Payment status:', orderData.payment_status);
     
     // Se o pedido foi confirmado (status = 'Confirmado'), mostrar sucesso
     if (orderData.status === 'Confirmado' || orderData.payment_status === 'Confirmado') {
-      console.log('✅ PAGAMENTO CONFIRMADO (Banco Local)! Pedido:', orderId);
+      console.log('✅ ✅ PAGAMENTO CONFIRMADO (Banco Local)! Pedido #' + orderId);
       stopPaymentPolling();
       showPaymentConfirmedModal({
         order_id: orderId,
-        amount: orderData.total || paymentPollingData.amount
+        amount: orderData.total || (paymentPollingData ? paymentPollingData.amount : 0)
       });
     }
   })
   .catch(function(error) {
     // Silenciosamente ignora erro - é apenas verificação adicional
-    console.debug('ℹ️  Verificação de pedido não disponível');
+    console.debug('      ℹ️  Verificação de pedido não disponível:', error.message);
   });
 }
 
@@ -985,8 +1059,11 @@ function createWaitingForPaymentModal() {
 }
 
 function showPaymentConfirmedModal(paymentData) {
+  console.log('🎉 Mostrando modal de confirmação de pagamento...');
+  
   // Criar modal se não existir
   if (!document.getElementById('paymentConfirmedModal')) {
+    console.log('   Criando nova modal de confirmação...');
     createPaymentConfirmedModal();
   }
   
@@ -994,23 +1071,44 @@ function showPaymentConfirmedModal(paymentData) {
   var orderId = document.getElementById('confirmedOrderId');
   var amount = document.getElementById('confirmedAmount');
   
-  if (orderId) orderId.textContent = paymentData.order_id || 'N/A';
-  if (amount) amount.textContent = 'R$ ' + (paymentData.amount || 0).toFixed(2).replace('.', ',');
+  if (orderId) {
+    orderId.textContent = paymentData.order_id || 'N/A';
+    console.log('   ID do pedido:', paymentData.order_id || 'N/A');
+  }
   
-  // Fechar modal de espera
+  if (amount) {
+    const amountFormatted = 'R$ ' + (paymentData.amount || 0).toFixed(2).replace('.', ',');
+    amount.textContent = amountFormatted;
+    console.log('   Valor:', amountFormatted);
+  }
+  
+  // Fechar modais anteriores
   var waitingModal = document.getElementById('waitingForPaymentModal');
-  if (waitingModal) waitingModal.classList.remove('open');
+  if (waitingModal) {
+    console.log('   Fechando modal de espera...');
+    waitingModal.classList.remove('open');
+  }
+  
+  var pixQrModal = document.getElementById('pixQrModal');
+  if (pixQrModal) {
+    console.log('   Fechando modal de QR Code...');
+    pixQrModal.classList.remove('open');
+  }
   
   // Mostrar modal de confirmação
   if (modal) {
+    console.log('   Exibindo modal de confirmação...');
     modal.classList.add('open');
     
-    // Auto-fechar após 5 segundos
+    // Auto-fechar após 5 segundos (usuário pode clicar antes)
     setTimeout(function() {
-      if (modal.classList.contains('open')) {
+      if (modal && modal.classList.contains('open')) {
+        console.log('   Auto-fechando modal após 5 segundos...');
         closePaymentConfirmedModal();
       }
     }, 5000);
+  } else {
+    console.error('❌ Elemento da modal não encontrado!');
   }
 }
 

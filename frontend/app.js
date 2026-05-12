@@ -833,10 +833,10 @@ function startPaymentPolling() {
   // Limpar polling anterior se existir
   stopPaymentPolling();
   
-  // Iniciar novo polling a cada 3 segundos
+  // Iniciar novo polling a cada 2 segundos (mais rápido)
   paymentPollingInterval = setInterval(function() {
     checkPaymentStatus();
-  }, 3000);
+  }, 2000);
   
   // Timeout de 30 minutos
   paymentPollingTimeout = setTimeout(function() {
@@ -865,6 +865,7 @@ function stopPaymentPolling() {
 function checkPaymentStatus() {
   if (!paymentPollingData) return;
   
+  // 1️⃣ Verificar status no Mercado Pago
   fetch(API_URL + '/payments/status/' + paymentPollingData.mp_payment_id, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' }
@@ -876,17 +877,54 @@ function checkPaymentStatus() {
     throw new Error('Erro ao verificar status');
   })
   .then(function(paymentData) {
-    console.log('📊 Status do pagamento:', paymentData.status);
+    console.log('📊 Status do pagamento (MP):', paymentData.status);
     
     // Se pagamento foi aprovado
     if (paymentData.status === 'approved') {
-      console.log('✅ PAGAMENTO APROVADO! Pedido:', paymentData.order_id);
+      console.log('✅ PAGAMENTO APROVADO (Mercado Pago)! Pedido:', paymentData.order_id);
       stopPaymentPolling();
       showPaymentConfirmedModal(paymentData);
+      return;
+    }
+    
+    // 2️⃣ Se ainda está pendente, verificar o banco local para ver se foi confirmado por outro meio
+    if (paymentData.order_id && paymentData.status === 'pending') {
+      checkOrderStatus(paymentData.order_id);
     }
   })
   .catch(function(error) {
     console.error('❌ Erro ao verificar status:', error);
+  });
+}
+
+function checkOrderStatus(orderId) {
+  // Verificar se o pedido foi confirmado localmente (por outro sistema, admin, etc)
+  fetch(API_URL + '/orders/' + orderId, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Erro ao verificar pedido');
+  })
+  .then(function(orderData) {
+    console.log('📋 Status do pedido:', orderData.status, '| Payment:', orderData.payment_status);
+    
+    // Se o pedido foi confirmado (status = 'Confirmado'), mostrar sucesso
+    if (orderData.status === 'Confirmado' || orderData.payment_status === 'Confirmado') {
+      console.log('✅ PAGAMENTO CONFIRMADO (Banco Local)! Pedido:', orderId);
+      stopPaymentPolling();
+      showPaymentConfirmedModal({
+        order_id: orderId,
+        amount: orderData.total || paymentPollingData.amount
+      });
+    }
+  })
+  .catch(function(error) {
+    // Silenciosamente ignora erro - é apenas verificação adicional
+    console.debug('ℹ️  Verificação de pedido não disponível');
   });
 }
 

@@ -797,14 +797,57 @@ function closePix() {
     // Mostrar tela de espera
     showWaitingForPaymentModal();
     
-    cart = [];
+    // NÃO limpar o carrinho aqui - apenas após confirmação
     updateCartBadge();
-    cancelCheckoutProcess();
   })
   .catch(function(error) {
     console.error('Erro ao criar pedido:', error);
     alert('❌ Erro ao criar pedido:\n' + error.message);
   });
+}
+
+function cancelPixPayment() {
+  // Mostrar confirmação
+  if (!confirm('⚠️  Deseja realmente cancelar este pagamento PIX?\n\nSeu carrinho será mantido.')) {
+    return;
+  }
+  
+  console.log('🚫 Cancelando pagamento PIX...');
+  
+  // Parar o polling se estiver ativo
+  stopPaymentPolling();
+  
+  // Cancelar pagamento no backend (opcional)
+  if (window.currentPixData && window.currentPixData.mp_payment_id) {
+    fetch(API_URL + '/payments/cancel/' + window.currentPixData.mp_payment_id, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(function(err) {
+      console.warn('⚠️  Erro ao cancelar no backend:', err.message);
+    });
+  }
+  
+  // Limpar dados de polling mas NÃO limpar carrinho
+  paymentPollingData = null;
+  window.currentPixData = null;
+  window.currentPixCode = null;
+  
+  // Fechar todas as modais
+  var pixQrModal = document.getElementById('pixQrModal');
+  var waitingModal = document.getElementById('waitingForPaymentModal');
+  var pixConfirmModal = document.getElementById('pixConfirmModal');
+  
+  if (pixQrModal) pixQrModal.classList.remove('open');
+  if (waitingModal) waitingModal.classList.remove('open');
+  if (pixConfirmModal) pixConfirmModal.classList.remove('open');
+  
+  // Voltar para seleção de forma de pagamento
+  var paymentModal = document.getElementById('paymentMethodModal');
+  if (paymentModal) {
+    paymentModal.classList.add('open');
+  }
+  
+  console.log('✓ Pagamento cancelado - Carrinho mantido com ' + cart.length + ' itens');
 }
 
 function cancelCheckoutProcess() {
@@ -1113,6 +1156,8 @@ function showPaymentConfirmedModal(paymentData) {
   if (modal) {
     console.log('   Exibindo modal de confirmação...');
     modal.classList.add('open');
+    // Garantir que apareça com display block
+    modal.style.display = 'flex';
     
     // Auto-fechar após 5 segundos (usuário pode clicar antes)
     setTimeout(function() {
@@ -1178,7 +1223,14 @@ function closePaymentConfirmedModal() {
   var modal = document.getElementById('paymentConfirmedModal');
   if (modal) {
     modal.classList.remove('open');
+    modal.style.display = 'none';
   }
+  
+  // ✅ AGORA SIM, limpar carrinho e resetar dados após confirmação
+  cart = [];
+  updateCartBadge();
+  cancelCheckoutProcess();
+}
   
   // Voltar para home
   var productsView = document.getElementById('productsView');

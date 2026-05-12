@@ -652,6 +652,8 @@ function confirmPixPayment() {
   if (pixQrCode) pixQrCode.innerHTML = '⏳ Gerando QR Code...';
   if (pixCode) pixCode.textContent = 'Carregando...';
   
+  console.log('📝 Iniciando fluxo PIX com criação automática de pedido...');
+  
   // Call backend to generate real PIX from Mercado Pago
   fetch(API_URL + '/payments/pix', {
     method: 'POST',
@@ -702,12 +704,68 @@ function confirmPixPayment() {
     window.currentPixCode = pixData.qr_code;
     
     console.log('✅ PIX gerado com sucesso:', pixData.mp_payment_id);
+    console.log('📋 Criando pedido automaticamente...');
+    
+    // ✅ NOVO: Criar pedido AUTOMATICAMENTE após gerar QR
+    pendingCheckoutData.payment = 'PIX';
+    pendingCheckoutData.mp_payment_id = window.currentPixData.mp_payment_id;
+    
+    return fetch(API_URL + '/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingCheckoutData)
+    });
+  })
+  .then(function(response) {
+    console.log('Order Response status:', response.status);
+    if (response.ok) {
+      return response.json();
+    }
+    return response.json().then(function(data) {
+      throw new Error(JSON.stringify(data));
+    });
+  })
+  .then(function(orderData) {
+    console.log('✅ Pedido criado automaticamente:', orderData);
+    
+    // Update payment record with order ID
+    if (orderData.id && window.currentPixData.mp_payment_id) {
+      fetch(API_URL + '/payments/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mp_payment_id: window.currentPixData.mp_payment_id,
+          order_id: orderData.id,
+          status: window.currentPixData.status
+        })
+      }).catch(function(err) {
+        console.warn('Aviso: não foi possível atualizar payment record:', err);
+      });
+    }
+    
+    // Armazenar dados para polling
+    const paymentAmount = parseFloat(window.currentPixData.amount) || parseFloat(pendingCheckoutData.total) || 0;
+    
+    paymentPollingData = {
+      mp_payment_id: window.currentPixData.mp_payment_id,
+      order_id: orderData.id,
+      amount: paymentAmount
+    };
+    
+    console.log('💾 Dados de polling armazenados:', paymentPollingData);
+    console.log('⏱️  Iniciando polling automático...');
+    
+    // ✅ NOVO: Iniciar polling AUTOMATICAMENTE
+    startPaymentPolling();
+    
+    // Mostrar tela de espera
+    showWaitingForPaymentModal();
   })
   .catch(function(error) {
-    console.error('Erro ao gerar PIX:', error);
-    if (pixQrCode) pixQrCode.innerHTML = '❌ Erro ao gerar QR Code: ' + error.message;
+    console.error('Erro no fluxo PIX:', error);
+    if (pixQrCode) pixQrCode.innerHTML = '❌ Erro ao processar: ' + error.message;
     if (pixCode) pixCode.textContent = 'Erro: ' + error.message;
-    alert('Erro ao gerar PIX:\n' + error.message);
+    alert('Erro ao processar PIX:\n' + error.message);
   });
 }
 

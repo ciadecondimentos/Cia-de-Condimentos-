@@ -780,11 +780,16 @@ function closePix() {
     }
     
     // Armazenar dados para polling
+    // Garantir que amount é número válido
+    const paymentAmount = parseFloat(window.currentPixData.amount) || parseFloat(pendingCheckoutData.total) || 0;
+    
     paymentPollingData = {
       mp_payment_id: window.currentPixData.mp_payment_id,
       order_id: orderData.id,
-      amount: window.currentPixData.amount
+      amount: paymentAmount
     };
+    
+    console.log('💾 Dados de polling armazenados:', paymentPollingData);
     
     // Iniciar polling de confirmação
     startPaymentPolling();
@@ -841,7 +846,14 @@ function startPaymentPolling() {
   console.log('⏱️  INICIANDO POLLING DE PAGAMENTO PIX');
   console.log('   ID do pagamento:', paymentPollingData.mp_payment_id);
   console.log('   ID do pedido:', paymentPollingData.order_id);
-  console.log('   Valor:', 'R$ ' + paymentPollingData.amount.toFixed(2).replace('.', ','));
+  
+  // Log seguro do valor (em caso de amount não estar definido)
+  if (paymentPollingData.amount && typeof paymentPollingData.amount === 'number') {
+    console.log('   Valor:', 'R$ ' + paymentPollingData.amount.toFixed(2).replace('.', ','));
+  } else {
+    console.log('   Valor: Não definido');
+  }
+  
   console.log('   Intervalo inicial:', paymentPollingInterval_ms + 'ms');
   
   // Limpar polling anterior se existir
@@ -1077,7 +1089,9 @@ function showPaymentConfirmedModal(paymentData) {
   }
   
   if (amount) {
-    const amountFormatted = 'R$ ' + (paymentData.amount || 0).toFixed(2).replace('.', ',');
+    // Garantir que amount é número válido
+    const amountValue = parseFloat(paymentData.amount) || 0;
+    const amountFormatted = 'R$ ' + amountValue.toFixed(2).replace('.', ',');
     amount.textContent = amountFormatted;
     console.log('   Valor:', amountFormatted);
   }

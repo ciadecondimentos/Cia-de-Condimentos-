@@ -640,11 +640,127 @@ function confirmPixPayment() {
   var pixQrModal = document.getElementById('pixQrModal');
   if (pixQrModal) pixQrModal.classList.add('open');
   
-  // Generate QR code representation
-  var qrCodeDiv = document.getElementById('pixQrCode');
-  if (qrCodeDiv) {
-    qrCodeDiv.innerHTML = '<div style="width: 100%; height: 100%; background: linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0), linear-gradient(45deg, #f0e8d0 25%, transparent 25%, transparent 75%, #f0e8d0 75%, #f0e8d0); background-size: 20px 20px; background-position: 0 0, 10px 10px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 60px;">📱</div>';
+  // Generate PIX code (realistic format: static+dictEntryId format)
+  var pixCode = generatePixCode(pendingCheckoutData.total);
+  window.currentPixCode = pixCode;
+  
+  // Display PIX code
+  var pixCodeElement = document.getElementById('pixCode');
+  if (pixCodeElement) {
+    pixCodeElement.textContent = pixCode;
   }
+  
+  // Generate QR Code representation (using canvas)
+  generateQRCode(pixCode);
+}
+
+function generatePixCode(amount) {
+  // Format: 00 (version) + 14 (payload indicator) + random data
+  // This creates a realistic-looking PIX code
+  const timestamp = Date.now().toString().slice(-8);
+  const random = Math.random().toString(36).substring(2, 15);
+  const amountStr = amount.toFixed(2).replace('.', '');
+  
+  // Simplified PIX code format (for demonstration)
+  // Real PIX uses EMV QR, but we'll use a recognizable format
+  const pixCode = '00020126360014br.gov.bcb.pix' +
+    '0136' + timestamp + random.substring(0, 32) +
+    '520400005303986540510.00' +
+    '5802BR5913CIA CONDIMENTOS6009SAO PAULO62' +
+    '4d0' + amountStr.padStart(10, '0') +
+    '63041D3D';
+  
+  return pixCode;
+}
+
+function generateQRCode(pixCode) {
+  var qrCodeDiv = document.getElementById('pixQrCode');
+  if (!qrCodeDiv) return;
+  
+  // If QRCode library is available, use it
+  if (typeof QRCode !== 'undefined') {
+    qrCodeDiv.innerHTML = '';
+    new QRCode(qrCodeDiv, {
+      text: pixCode,
+      width: 240,
+      height: 240,
+      colorDark: '#000000',
+      colorLight: '#ffffff'
+    });
+  } else {
+    // Fallback: Create a more realistic looking QR code placeholder using canvas
+    createCanvasQRCodePlaceholder(qrCodeDiv, pixCode);
+  }
+}
+
+function createCanvasQRCodePlaceholder(container, pixCode) {
+  // Create a canvas and draw a pattern that looks like a QR code
+  container.innerHTML = '';
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = 240;
+  canvas.height = 240;
+  const ctx = canvas.getContext('2d');
+  
+  // White background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 240, 240);
+  
+  // Draw QR-like pattern
+  ctx.fillStyle = '#000000';
+  const moduleSize = 10;
+  
+  // Pseudo-random pattern based on PIX code
+  let pixIndex = 0;
+  for (let y = 0; y < 24; y++) {
+    for (let x = 0; x < 24; x++) {
+      const char = pixCode.charCodeAt(pixIndex % pixCode.length);
+      if (char % 2 === 0) {
+        ctx.fillRect(x * moduleSize, y * moduleSize, moduleSize, moduleSize);
+      }
+      pixIndex++;
+    }
+  }
+  
+  // Add three position markers (corners)
+  drawPositionMarker(ctx, 0, 0);
+  drawPositionMarker(ctx, 230, 0);
+  drawPositionMarker(ctx, 0, 230);
+  
+  container.appendChild(canvas);
+}
+
+function drawPositionMarker(ctx, x, y) {
+  // Draw 7x7 position marker used in QR codes
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(x, y, 7, 7);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x + 1, y + 1, 5, 5);
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(x + 2, y + 2, 3, 3);
+}
+
+function copyPixCode() {
+  var pixCode = window.currentPixCode;
+  if (!pixCode) {
+    alert('Código PIX não disponível');
+    return;
+  }
+  
+  // Copy to clipboard
+  navigator.clipboard.writeText(pixCode).then(function() {
+    alert('✓ Código PIX copiado para a área de transferência!');
+  }).catch(function(error) {
+    console.error('Erro ao copiar:', error);
+    // Fallback for older browsers
+    var textarea = document.createElement('textarea');
+    textarea.value = pixCode;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    alert('✓ Código PIX copiado para a área de transferência!');
+  });
 }
 
 function closePix() {

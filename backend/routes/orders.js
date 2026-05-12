@@ -16,12 +16,27 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Name, phone and address are required' });
     }
 
-    // Create order (email and cpf are optional)
+    // Validate items exist in database
+    for (const item of items) {
+      if (!item.id || !item.qty || !item.price) {
+        return res.status(400).json({ error: 'Each item must have id, qty, and price' });
+      }
+      
+      const productExists = await db.query('SELECT id FROM products WHERE id = $1', [item.id]);
+      if (productExists.rows.length === 0) {
+        return res.status(400).json({ error: 'Product with id ' + item.id + ' not found' });
+      }
+    }
+
+    // Create order (email is optional, send a default if not provided)
+    const customerEmail = customer.email && customer.email.trim() ? customer.email : 'nao-informado@compra.local';
+    const customerCpf = customer.cpf || null;
+
     const orderResult = await db.query(
       `INSERT INTO orders (customer_name, customer_email, customer_phone, customer_cpf, customer_address, subtotal, frete, total, payment_method, status, payment_status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING id, customer_name, customer_email, customer_phone, customer_cpf, customer_address, subtotal, frete, total, payment_method, status, payment_status, created_at`,
-      [name, customer.email || '', phone, customer.cpf || '', address, subtotal, frete, total, payment, status, paymentStatus]
+      [name, customerEmail, phone, customerCpf, address, subtotal, frete, total, payment, status, paymentStatus]
     );
 
     const orderId = orderResult.rows[0].id;
@@ -45,7 +60,7 @@ router.post('/', async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    res.status(500).json({ error: 'Failed to create order', details: error.message });
   }
 });
 

@@ -14,6 +14,11 @@ let currentSearch = '';
 let selectedProductForQuantity = null;
 let selectedQuantity = 1;
 
+// Variáveis para polling de pagamento
+let paymentPollingInterval = null;
+let paymentPollingData = null;
+let paymentPollingTimeout = null;
+
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
@@ -725,126 +730,7 @@ function copyPixCode() {
   });
 }
 
-var paymentPollingInterval = null;
-var paymentPollingData = null;
-
-function startPaymentPolling(mpPaymentId) {
-  // Stop any existing polling
-  if (paymentPollingInterval) {
-    clearInterval(paymentPollingInterval);
-  }
-  
-  paymentPollingData = { mpPaymentId: mpPaymentId, startTime: Date.now() };
-  
-  // Check every 3 seconds, stop after 30 minutes
-  paymentPollingInterval = setInterval(function() {
-    if (!paymentPollingData) {
-      clearInterval(paymentPollingInterval);
-      return;
-    }
-    
-    var elapsedSeconds = (Date.now() - paymentPollingData.startTime) / 1000;
-    if (elapsedSeconds > 1800) { // 30 minutes timeout
-      clearInterval(paymentPollingInterval);
-      console.log('⏱️ Polling timeout - usuário pode verificar status manualmente');
-      return;
-    }
-    
-    // Poll status
-    fetch(API_URL + '/payments/status/' + mpPaymentId)
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        console.log('💳 Status do pagamento:', data.status);
-        
-        if (data.status === 'approved') {
-          clearInterval(paymentPollingInterval);
-          showPaymentConfirmedModal(data);
-        }
-      })
-      .catch(function(error) {
-        console.warn('Erro ao verificar status:', error);
-      });
-  }, 3000); // Poll every 3 seconds
-}
-
-function stopPaymentPolling() {
-  if (paymentPollingInterval) {
-    clearInterval(paymentPollingInterval);
-    paymentPollingInterval = null;
-  }
-  paymentPollingData = null;
-}
-
-function showPaymentConfirmedModal(paymentData) {
-  var pixModal = document.getElementById('pixModal');
-  if (!pixModal) return;
-  
-  var content = pixModal.querySelector('.modal-content');
-  if (!content) return;
-  
-  // Create confirmation view
-  var confirmedHTML = `
-    <div style="text-align: center; padding: 40px 20px;">
-      <div style="animation: bounce 0.6s ease-in-out; margin-bottom: 20px;">
-        <span style="font-size: 80px;">✅</span>
-      </div>
-      <h2 style="color: #27ae60; font-size: 28px; margin: 20px 0;">Pagamento Confirmado!</h2>
-      <p style="color: #555; font-size: 16px; margin: 15px 0;">Seu pedido foi processado com sucesso.</p>
-      <div style="background: #f0f8f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p style="color: #27ae60; font-weight: bold; margin: 5px 0;">Pedido #${paymentData.order_id}</p>
-        <p style="color: #666; margin: 5px 0;">Valor: R$ ${(paymentData.amount / 100).toFixed(2).replace('.', ',')}</p>
-      </div>
-      <p style="color: #999; font-size: 14px; margin-top: 20px;">Você receberá um email com os detalhes do pedido</p>
-      <button onclick="closePix()" style="
-        background: #27ae60;
-        color: white;
-        border: none;
-        padding: 12px 40px;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-        margin-top: 30px;
-      ">Voltar para a Loja</button>
-    </div>
-    <style>
-      @keyframes bounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-      }
-    </style>
-  `;
-  
-  content.innerHTML = confirmedHTML;
-  
-  // Auto close after 5 seconds
-  setTimeout(function() {
-    if (pixModal.classList.contains('open')) {
-      pixModal.classList.remove('open');
-      cancelCheckoutProcess();
-      cart = [];
-      updateCartBadge();
-    }
-  }, 5000);
-}
-
 function closePix() {
-  // If just closing without payment
-  if (!window.currentPixData || !window.currentPixData.mp_payment_id) {
-    stopPaymentPolling();
-    var pixModal = document.getElementById('pixModal');
-    if (pixModal) pixModal.classList.remove('open');
-    return;
-  }
-  
-  // If we're in confirmation screen, close modal and clear
-  if (paymentPollingData) {
-    stopPaymentPolling();
-    var pixModal = document.getElementById('pixModal');
-    if (pixModal) pixModal.classList.remove('open');
-    cancelCheckoutProcess();
-    return;
-  }
-  
   if (!pendingCheckoutData || !window.currentPixData) {
     alert('Erro ao processar pagamento PIX');
     return;
@@ -889,41 +775,26 @@ function closePix() {
       });
     }
     
-    // Clear cart
+    // Armazenar dados para polling
+    paymentPollingData = {
+      mp_payment_id: window.currentPixData.mp_payment_id,
+      order_id: orderData.id,
+      amount: window.currentPixData.amount
+    };
+    
+    // Iniciar polling de confirmação
+    startPaymentPolling();
+    
+    // Mostrar tela de espera
+    showWaitingForPaymentModal();
+    
     cart = [];
     updateCartBadge();
-    
-    // Start polling for payment confirmation
-    startPaymentPolling(window.currentPixData.mp_payment_id);
-    
-    // Hide the modal content and show waiting message
-    var pixModal = document.getElementById('pixModal');
-    if (pixModal) {
-      var content = pixModal.querySelector('.modal-content');
-      if (content) {
-        content.innerHTML = `
-          <div style="text-align: center; padding: 40px 20px;">
-            <div style="animation: spin 2s linear infinite; margin-bottom: 20px;">
-              <span style="font-size: 60px;">⏳</span>
-            </div>
-            <h2 style="color: #333; margin: 20px 0;">Aguardando confirmação...</h2>
-            <p style="color: #666; margin: 15px 0;">Pedido #${orderData.id}</p>
-            <p style="color: #999; font-size: 14px;">Estamos monitorando seu pagamento PIX em tempo real</p>
-          </div>
-          <style>
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
-            }
-          </style>
-        `;
-      }
-    }
+    cancelCheckoutProcess();
   })
   .catch(function(error) {
     console.error('Erro ao criar pedido:', error);
     alert('❌ Erro ao criar pedido:\n' + error.message);
-    stopPaymentPolling();
   });
 }
 
@@ -947,6 +818,217 @@ function closeCheckout() {
   
   pendingCheckoutData = null;
   selectedPaymentMethod = null;
+}
+
+// ==================== FUNÇÕES DE POLLING DE PAGAMENTO ====================
+
+function startPaymentPolling() {
+  if (!paymentPollingData) {
+    console.warn('⚠️  Dados de polling não disponíveis');
+    return;
+  }
+  
+  console.log('⏱️  Iniciando polling de pagamento:', paymentPollingData.mp_payment_id);
+  
+  // Limpar polling anterior se existir
+  stopPaymentPolling();
+  
+  // Iniciar novo polling a cada 3 segundos
+  paymentPollingInterval = setInterval(function() {
+    checkPaymentStatus();
+  }, 3000);
+  
+  // Timeout de 30 minutos
+  paymentPollingTimeout = setTimeout(function() {
+    console.warn('⚠️  Timeout de polling alcançado (30 minutos)');
+    stopPaymentPolling();
+  }, 30 * 60 * 1000);
+  
+  // Fazer primeira verificação imediatamente
+  checkPaymentStatus();
+}
+
+function stopPaymentPolling() {
+  if (paymentPollingInterval) {
+    clearInterval(paymentPollingInterval);
+    paymentPollingInterval = null;
+  }
+  
+  if (paymentPollingTimeout) {
+    clearTimeout(paymentPollingTimeout);
+    paymentPollingTimeout = null;
+  }
+  
+  console.log('✓ Polling de pagamento interrompido');
+}
+
+function checkPaymentStatus() {
+  if (!paymentPollingData) return;
+  
+  fetch(API_URL + '/payments/status/' + paymentPollingData.mp_payment_id, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  })
+  .then(function(response) {
+    if (response.ok) {
+      return response.json();
+    }
+    throw new Error('Erro ao verificar status');
+  })
+  .then(function(paymentData) {
+    console.log('📊 Status do pagamento:', paymentData.status);
+    
+    // Se pagamento foi aprovado
+    if (paymentData.status === 'approved') {
+      console.log('✅ PAGAMENTO APROVADO! Pedido:', paymentData.order_id);
+      stopPaymentPolling();
+      showPaymentConfirmedModal(paymentData);
+    }
+  })
+  .catch(function(error) {
+    console.error('❌ Erro ao verificar status:', error);
+  });
+}
+
+function showWaitingForPaymentModal() {
+  // Fechar PIX modal
+  var pixQrModal = document.getElementById('pixQrModal');
+  if (pixQrModal) {
+    pixQrModal.classList.remove('open');
+  }
+  
+  // Mostrar modal de espera
+  var waitingModal = document.getElementById('waitingForPaymentModal');
+  if (!waitingModal) {
+    // Criar modal se não existir
+    createWaitingForPaymentModal();
+    waitingModal = document.getElementById('waitingForPaymentModal');
+  }
+  
+  if (waitingModal) {
+    waitingModal.classList.add('open');
+  }
+}
+
+function createWaitingForPaymentModal() {
+  // Verificar se já existe
+  if (document.getElementById('waitingForPaymentModal')) {
+    return;
+  }
+  
+  var html = '<div id="waitingForPaymentModal" class="modal" style="display: none;">' +
+    '<div class="modal-overlay"></div>' +
+    '<div class="modal-content" style="position: relative; z-index: 11; max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
+      '<div style="background: linear-gradient(135deg, var(--verde) 0%, #27a745 100%); color: white; padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
+        '<div style="font-size: 60px; margin-bottom: 16px; animation: spin 2s linear infinite;">⏳</div>' +
+        '<h2 style="margin: 0; font-size: 24px; font-weight: 900;">Aguardando Confirmação</h2>' +
+        '<p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.95;">Seu pagamento PIX foi criado com sucesso</p>' +
+      '</div>' +
+      '<div style="padding: 24px; text-align: center; background: white;">' +
+        '<p style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Estamos verificando seu pagamento...</p>' +
+        '<p style="margin: 0 0 16px 0; font-size: 14px; color: #666;">Pode levar alguns segundos após você escanear o QR Code ou usar o código PIX.</p>' +
+        '<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
+          '<small style="color: #666;">💡 <strong>Dica:</strong> Você pode voltar à tela de pagamento para copiar o código PIX se necessário.</small>' +
+        '</div>' +
+        '<button onclick="goBackToPixPayment()" style="background: var(--marrom); color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; margin-top: 12px;">' +
+          '← Voltar ao PIX' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function showPaymentConfirmedModal(paymentData) {
+  // Criar modal se não existir
+  if (!document.getElementById('paymentConfirmedModal')) {
+    createPaymentConfirmedModal();
+  }
+  
+  var modal = document.getElementById('paymentConfirmedModal');
+  var orderId = document.getElementById('confirmedOrderId');
+  var amount = document.getElementById('confirmedAmount');
+  
+  if (orderId) orderId.textContent = paymentData.order_id || 'N/A';
+  if (amount) amount.textContent = 'R$ ' + (paymentData.amount || 0).toFixed(2).replace('.', ',');
+  
+  // Fechar modal de espera
+  var waitingModal = document.getElementById('waitingForPaymentModal');
+  if (waitingModal) waitingModal.classList.remove('open');
+  
+  // Mostrar modal de confirmação
+  if (modal) {
+    modal.classList.add('open');
+    
+    // Auto-fechar após 5 segundos
+    setTimeout(function() {
+      if (modal.classList.contains('open')) {
+        closePaymentConfirmedModal();
+      }
+    }, 5000);
+  }
+}
+
+function createPaymentConfirmedModal() {
+  if (document.getElementById('paymentConfirmedModal')) {
+    return;
+  }
+  
+  var html = '<div id="paymentConfirmedModal" class="modal" style="display: none;">' +
+    '<div class="modal-overlay"></div>' +
+    '<div class="modal-content" style="position: relative; z-index: 11; max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
+      '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
+        '<div style="font-size: 80px; margin-bottom: 16px; animation: bounce 0.6s ease-in-out;">✅</div>' +
+        '<h1 style="margin: 0; font-size: 28px; font-weight: 900;">Pagamento Confirmado!</h1>' +
+        '<p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.95;">Seu PIX foi processado com sucesso</p>' +
+      '</div>' +
+      '<div style="padding: 32px 24px; text-align: center; background: white;">' +
+        '<div style="margin-bottom: 24px;">' +
+          '<p style="margin: 0 0 8px 0; font-size: 14px; color: #666; font-weight: 600;">NÚMERO DO PEDIDO</p>' +
+          '<p style="margin: 0; font-size: 28px; font-weight: 900; color: var(--marrom);" id="confirmedOrderId">-</p>' +
+        '</div>' +
+        '<div style="margin-bottom: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px;">' +
+          '<p style="margin: 0 0 8px 0; font-size: 14px; color: #666;">Valor Pago:</p>' +
+          '<p style="margin: 0; font-size: 24px; font-weight: 900; color: var(--verde);" id="confirmedAmount">R$ 0,00</p>' +
+        '</div>' +
+        '<p style="margin: 0 0 16px 0; font-size: 14px; color: #666;">' +
+          '✓ Pagamento recebido com sucesso<br>' +
+          '✓ Seu pedido está sendo preparado<br>' +
+          '✓ Você receberá atualizações em breve' +
+        '</p>' +
+        '<div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
+          '<small style="color: #2e7d32;">🎉 Obrigado pela sua compra na Cia de Condimentos!</small>' +
+        '</div>' +
+        '<button onclick="closePaymentConfirmedModal()" style="background: var(--verde); color: white; border: none; padding: 14px 32px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 16px; margin-top: 16px; width: 100%; letter-spacing: 0.5px;">' +
+          'Fechar' +
+        '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+  
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function goBackToPixPayment() {
+  var waitingModal = document.getElementById('waitingForPaymentModal');
+  var pixQrModal = document.getElementById('pixQrModal');
+  
+  if (waitingModal) waitingModal.classList.remove('open');
+  if (pixQrModal) pixQrModal.classList.add('open');
+}
+
+function closePaymentConfirmedModal() {
+  var modal = document.getElementById('paymentConfirmedModal');
+  if (modal) {
+    modal.classList.remove('open');
+  }
+  
+  // Voltar para home
+  var productsView = document.getElementById('productsView');
+  if (productsView) {
+    productsView.classList.add('active');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

@@ -444,11 +444,11 @@
 </div>
 
 <!-- Modal de QR Code PIX — z-index 1320 -->
-<div class="modal-overlay" id="pixQrModal" style="z-index: 1320;">
+<div class="modal-overlay" id="pixQrModal" style="z-index: 1320;" data-locked="false">
   <div class="modal" id="pixQrInner" style="max-width: 480px;">
     <div class="modal-header">
       <h3>📱 Escaneie o QR Code</h3>
-      <button onclick="closePix()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+      <button id="pixQrCloseBtn" onclick="closePixQrModal()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
     </div>
     <div class="modal-body" style="padding: 40px 28px; text-align: center;">
       <div style="background: white; border: 2px solid var(--amarelo); border-radius: 12px; padding: 20px; margin-bottom: 24px;">

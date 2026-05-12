@@ -855,6 +855,9 @@ function closePix() {
     // Mostrar tela de espera
     showWaitingForPaymentModal();
     
+    // ✅ TRAVAR MODAL para evitar fechar acidentalmente
+    lockPixQrModal();
+    
     // NÃO limpar o carrinho aqui - apenas após confirmação
     updateCartBadge();
   })
@@ -863,6 +866,59 @@ function closePix() {
     alert('❌ Erro ao criar pedido:\n' + error.message);
   });
 }
+
+// ✅ NOVA: Função para fechar o modal de QR (com verificação de travamento)
+function closePixQrModal() {
+  var pixQrModal = document.getElementById('pixQrModal');
+  if (pixQrModal && pixQrModal.getAttribute('data-locked') === 'false') {
+    console.log('🔓 Fechando modal de QR (não travado)');
+    pixQrModal.classList.remove('open');
+    cancelCheckoutProcess();
+  } else {
+    console.warn('🔒 Modal de QR está travado. Use o botão Cancelar para sair.');
+  }
+}
+
+// ✅ NOVA: Função para TRAVAR o modal durante o polling
+function lockPixQrModal() {
+  var pixQrModal = document.getElementById('pixQrModal');
+  var closeBtn = document.getElementById('pixQrCloseBtn');
+  if (pixQrModal) {
+    pixQrModal.setAttribute('data-locked', 'true');
+    console.log('🔒 Modal de QR TRAVADO - Cliente não pode sair sem cancelar ou pagar');
+  }
+  if (closeBtn) {
+    closeBtn.style.display = 'none'; // Ocultar botão X
+  }
+}
+
+// ✅ NOVA: Função para DESTRAVRAR o modal após cancelar ou confirmar
+function unlockPixQrModal() {
+  var pixQrModal = document.getElementById('pixQrModal');
+  var closeBtn = document.getElementById('pixQrCloseBtn');
+  if (pixQrModal) {
+    pixQrModal.setAttribute('data-locked', 'false');
+    console.log('🔓 Modal de QR DESTRAVADO');
+  }
+  if (closeBtn) {
+    closeBtn.style.display = 'block'; // Mostrar botão X novamente
+  }
+}
+
+// ✅ NOVA: Bloquear cliques fora do modal quando travado
+document.addEventListener('DOMContentLoaded', function() {
+  var pixQrModal = document.getElementById('pixQrModal');
+  if (pixQrModal) {
+    pixQrModal.addEventListener('click', function(e) {
+      // Se clicou no overlay (fora do modal)
+      if (e.target === this && this.getAttribute('data-locked') === 'true') {
+        e.stopPropagation();
+        console.warn('🔒 Clique bloqueado - Modal está travado');
+        return false;
+      }
+    });
+  }
+});
 
 function cancelPixPayment() {
   // Mostrar confirmação
@@ -895,7 +951,10 @@ function cancelPixPayment() {
   var waitingModal = document.getElementById('waitingForPaymentModal');
   var pixConfirmModal = document.getElementById('pixConfirmModal');
   
-  if (pixQrModal) pixQrModal.classList.remove('open');
+  if (pixQrModal) {
+    pixQrModal.classList.remove('open');
+    unlockPixQrModal(); // ✅ Destravando o modal
+  }
   if (waitingModal) waitingModal.classList.remove('open');
   if (pixConfirmModal) pixConfirmModal.classList.remove('open');
   
@@ -1208,6 +1267,7 @@ function showPaymentConfirmedModal(paymentData) {
   if (pixQrModal) {
     console.log('   Fechando modal de QR Code...');
     pixQrModal.classList.remove('open');
+    unlockPixQrModal(); // ✅ Destravando o modal após confirmação
   }
   
   // Mostrar modal de confirmação

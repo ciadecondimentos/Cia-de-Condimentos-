@@ -551,7 +551,9 @@ function confirmMoneyPayment(type) {
   }
   
   pendingCheckoutData.payment = selectedPaymentMethod;
-  pendingCheckoutData.paymentType = type; // 'exact' ou 'change'
+  pendingCheckoutData.paymentType = type;
+  
+  console.log('Enviando pedido Dinheiro:', JSON.stringify(pendingCheckoutData, null, 2));
   
   // Send to API
   fetch(API_URL + '/orders', {
@@ -560,12 +562,16 @@ function confirmMoneyPayment(type) {
     body: JSON.stringify(pendingCheckoutData)
   })
   .then(function(response) {
+    console.log('Response status:', response.status);
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Failed to create order');
+    return response.json().then(function(data) {
+      throw new Error(JSON.stringify(data));
+    });
   })
   .then(function(data) {
+    console.log('Order created:', data);
     var message = type === 'exact' 
       ? 'Pedido criado! ID: ' + data.id + '\n\nPagamento exato na entrega.'
       : 'Pedido criado! ID: ' + data.id + '\n\nO entregador está preparado para dar troco.';
@@ -575,8 +581,8 @@ function confirmMoneyPayment(type) {
     cancelCheckoutProcess();
   })
   .catch(function(error) {
-    console.error('Error:', error);
-    alert('Erro ao criar pedido. Tente novamente.');
+    console.error('Error creating order:', error);
+    alert('Erro ao criar pedido:\n' + error.message);
   });
 }
 
@@ -588,6 +594,8 @@ function confirmCardPayment() {
   
   pendingCheckoutData.payment = selectedPaymentMethod;
   
+  console.log('Enviando pedido Cartão:', JSON.stringify(pendingCheckoutData, null, 2));
+  
   // Send to API
   fetch(API_URL + '/orders', {
     method: 'POST',
@@ -595,20 +603,24 @@ function confirmCardPayment() {
     body: JSON.stringify(pendingCheckoutData)
   })
   .then(function(response) {
+    console.log('Response status:', response.status);
     if (response.ok) {
       return response.json();
     }
-    throw new Error('Failed to create order');
+    return response.json().then(function(data) {
+      throw new Error(JSON.stringify(data));
+    });
   })
   .then(function(data) {
+    console.log('Order created:', data);
     alert('Pagamento processado com sucesso!\n\nPedido ID: ' + data.id + '\n\nObrigado pela compra!');
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();
   })
   .catch(function(error) {
-    console.error('Error:', error);
-    alert('Erro ao processar o pagamento. Tente novamente.');
+    console.error('Error creating order:', error);
+    alert('Erro ao processar o pagamento:\n' + error.message);
   });
 }
 

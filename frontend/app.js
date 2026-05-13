@@ -1202,7 +1202,7 @@ function createWaitingForPaymentModal() {
   
   var html = '<div id="waitingForPaymentModal" class="modal" style="display: none;">' +
     '<div class="modal-overlay"></div>' +
-    '<div class="modal-content" style="position: relative; z-index: 11; max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
+    '<div class="modal-content" style="max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
       '<div style="background: linear-gradient(135deg, var(--verde) 0%, #27a745 100%); color: white; padding: 32px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
         '<div style="font-size: 60px; margin-bottom: 16px; animation: spin 2s linear infinite;">⏳</div>' +
         '<h2 style="margin: 0; font-size: 24px; font-weight: 900;">Aguardando Confirmação</h2>' +
@@ -1296,7 +1296,7 @@ function createPaymentConfirmedModal() {
   
   var html = '<div id="paymentConfirmedModal" class="modal" style="display: none;">' +
     '<div class="modal-overlay"></div>' +
-    '<div class="modal-content" style="position: relative; z-index: 11; max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
+    '<div class="modal-content" style="max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
       '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
         '<div style="font-size: 80px; margin-bottom: 16px; animation: bounce 0.6s ease-in-out;">✅</div>' +
         '<h1 style="margin: 0; font-size: 28px; font-weight: 900;">Pagamento Confirmado!</h1>' +

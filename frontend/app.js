@@ -588,6 +588,12 @@ function confirmMoneyPayment(type) {
       console.log('💵 O entregador está preparado para dar troco');
     }
     
+    // Fechar modal de pagamento em dinheiro
+    var moneyConfirmModal = document.getElementById('moneyConfirmModal');
+    if (moneyConfirmModal) {
+      moneyConfirmModal.classList.remove('open');
+    }
+    
     // Mostrar modal de confirmação
     showPaymentConfirmedModal({
       order_id: data.id,

@@ -758,8 +758,8 @@ function confirmPixPayment() {
     // ✅ NOVO: Iniciar polling AUTOMATICAMENTE
     startPaymentPolling();
     
-    // Mostrar tela de espera
-    showWaitingForPaymentModal();
+    // ✅ Modal de QR Code permanece aberto enquanto polling acontece
+    // showWaitingForPaymentModal(); // REMOVIDO: mantém o modal de PIX visível
   })
   .catch(function(error) {
     console.error('Erro no fluxo PIX:', error);

@@ -581,10 +581,12 @@ function confirmMoneyPayment(type) {
   })
   .then(function(data) {
     console.log('Order created:', data);
-    var message = type === 'exact' 
-      ? 'Pedido criado! ID: ' + data.id + '\n\nPagamento exato na entrega.'
-      : 'Pedido criado! ID: ' + data.id + '\n\nO entregador está preparado para dar troco.';
-    alert(message);
+    console.log('✅ Pedido criado com sucesso! ID: ' + data.id);
+    if (type === 'exact') {
+      console.log('💰 Pagamento exato na entrega');
+    } else {
+      console.log('💵 O entregador está preparado para dar troco');
+    }
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();
@@ -622,7 +624,7 @@ function confirmCardPayment() {
   })
   .then(function(data) {
     console.log('Order created:', data);
-    alert('Pagamento processado com sucesso!\n\nPedido ID: ' + data.id + '\n\nObrigado pela compra!');
+    console.log('✅ Pagamento com cartão processado com sucesso! Pedido ID: ' + data.id);
     cart = [];
     updateCartBadge();
     cancelCheckoutProcess();

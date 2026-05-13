@@ -634,6 +634,12 @@ function confirmCardPayment() {
     console.log('Order created:', data);
     console.log('✅ Pagamento com cartão processado com sucesso! Pedido ID: ' + data.id);
     
+    // Fechar modal de pagamento com cartão
+    var cardPaymentModal = document.getElementById('cardPaymentModal');
+    if (cardPaymentModal) {
+      cardPaymentModal.classList.remove('open');
+    }
+    
     // Mostrar modal de confirmação
     showPaymentConfirmedModal({
       order_id: data.id,

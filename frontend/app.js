@@ -1834,6 +1834,78 @@ function sendOrderToWhatsApp() {
   alert('✅ WhatsApp aberto! A mensagem do seu pedido foi preparada e pode ser enviada.');
 }
 
+// ==================== MAIN SEARCH BAR ====================
+function handleMainSearch(searchTerm) {
+  const resultsContainer = document.getElementById('mainSearchResults');
+  if (!resultsContainer) return;
+  
+  const term = searchTerm.toLowerCase().trim();
+  
+  // Se vazio, limpar resultados
+  if (!term) {
+    resultsContainer.classList.remove('active');
+    resultsContainer.innerHTML = '';
+    return;
+  }
+  
+  getProducts().then(function(products) {
+    // Filtrar produtos ativos que correspondem à busca
+    const filtered = products.filter(function(p) {
+      return p.active && (
+        p.name.toLowerCase().indexOf(term) !== -1 ||
+        (p.description || '').toLowerCase().indexOf(term) !== -1 ||
+        (p.category || '').toLowerCase().indexOf(term) !== -1
+      );
+    }).slice(0, 8); // Limitar a 8 resultados
+    
+    if (filtered.length === 0) {
+      resultsContainer.innerHTML = '<div class="search-results-empty">Nenhum produto encontrado para "' + searchTerm + '"</div>';
+      resultsContainer.classList.add('active');
+      return;
+    }
+    
+    // Renderizar resultados
+    const html = filtered.map(function(p) {
+      const imageUrl = p.image_url || ((p.images && p.images.length > 0) ? getImageUrl(p.images[0]) : p.image);
+      const imgHtml = imageUrl
+        ? '<img src="' + imageUrl + '" alt="' + p.name + '">'
+        : '<div style="font-size: 20px;">🌶️</div>';
+      
+      return '<div class="search-result-item" onclick="closeMainSearch(); openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
+        '<div class="search-result-img">' + imgHtml + '</div>' +
+        '<div class="search-result-info">' +
+          '<div class="search-result-name">' + p.name + '</div>' +
+          '<div class="search-result-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    
+    resultsContainer.innerHTML = html;
+    resultsContainer.classList.add('active');
+  });
+}
+
+function closeMainSearch() {
+  const resultsContainer = document.getElementById('mainSearchResults');
+  if (resultsContainer) {
+    resultsContainer.classList.remove('active');
+  }
+  const input = document.getElementById('mainSearchInput');
+  if (input) {
+    input.value = '';
+  }
+}
+
+// Fechar resultados da busca quando clicar fora
+document.addEventListener('click', function(event) {
+  const searchWrapper = document.querySelector('.search-wrapper');
+  const resultsContainer = document.getElementById('mainSearchResults');
+  
+  if (searchWrapper && resultsContainer && !searchWrapper.contains(event.target)) {
+    resultsContainer.classList.remove('active');
+  }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   renderProducts();
   updateCartBadge();

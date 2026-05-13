@@ -1624,6 +1624,8 @@ function showPaymentConfirmedModal(paymentData) {
     modal.classList.add('open');
     // Garantir que apareça com display block
     modal.style.display = 'flex';
+    // Desabilitar scroll da página
+    document.body.style.overflow = 'hidden';
   } else {
     console.error('❌ Elemento da modal não encontrado!');
   }
@@ -1634,10 +1636,10 @@ function createPaymentConfirmedModal() {
     return;
   }
   
-  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 2000; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 16px;">' +
-    '<div class="modal-overlay" style="position: absolute; inset: 0; z-index: 1999; background: rgba(0,0,0,0.7); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
-    '<div class="modal-content payment-confirmed-content" style="max-width: 90%; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 2001; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden;">' +
-      '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 24px 20px; text-align: center; border-radius: 16px 16px 0 0; flex-shrink: 0;">' +
+  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 9999; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 0;">' +
+    '<div class="modal-overlay" style="position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.8); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
+    '<div class="modal-content payment-confirmed-content" style="width: 100%; height: 100%; max-height: 100vh; border-radius: 0; box-shadow: none; z-index: 9999; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden; max-width: 100%;">' +
+      '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 24px 20px; text-align: center; border-radius: 0; flex-shrink: 0;">' +
         '<div style="font-size: 64px; margin-bottom: 12px; animation: bounce 0.6s ease-in-out; line-height: 1;">✅</div>' +
         '<h1 style="margin: 0; font-size: 26px; font-weight: 900; line-height: 1.2;">Pagamento<br>Confirmado!</h1>' +
         '<p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95; font-weight: 600;" id="paymentMethodText">Seu PIX foi processado com sucesso</p>' +
@@ -1662,7 +1664,7 @@ function createPaymentConfirmedModal() {
           '<p style="margin: 0; color: #2e7d32; font-size: 12px; font-weight: 600;">🎉 Obrigado pela sua compra!</p>' +
         '</div>' +
       '</div>' +
-      '<div class="payment-confirmed-footer" style="padding: 12px 16px; background: #fafafa; border-top: 1px solid #e0e0e0; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; border-radius: 0 0 16px 16px;">' +
+      '<div class="payment-confirmed-footer" style="padding: 12px 16px; background: #fafafa; border-top: 1px solid #e0e0e0; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; border-radius: 0;">' +
         '<button onclick="sendOrderToWhatsApp()" style="background: #25d366; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; width: 100%; transition: background 0.2s;">' +
           '💬 WhatsApp' +
         '</button>' +
@@ -1691,6 +1693,9 @@ function closePaymentConfirmedModal() {
     modal.classList.remove('open');
     modal.style.display = 'none';
   }
+  
+  // Ativar scroll da página
+  document.body.style.overflow = 'auto';
   
   // ✅ AGORA SIM, limpar carrinho e resetar dados após confirmação
   cart = [];

@@ -381,6 +381,73 @@
   </div>
 </div>
 
+<!-- Modal de Confirmação - Pagamento Exato — z-index 1320 -->
+<div class="modal-overlay" id="exactMoneyConfirmModal" style="z-index: 1320;">
+  <div class="modal" id="exactMoneyConfirmInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>💰 Pagamento Exato</h3>
+      <button onclick="backToMoneyOptions()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Valor Total</div>
+        <div id="exactMoneyTotalAmount" style="font-size: 32px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
+      </div>
+
+      <div style="background: #f9f3e0; border-radius: 8px; padding: 16px; margin-bottom: 24px; text-align: left; border-left: 4px solid var(--amarelo);">
+        <div style="font-size: 13px; color: var(--marrom); line-height: 1.6;">
+          <strong>Cliente pagará:</strong><br>
+          O valor exato da compra na entrega.
+        </div>
+      </div>
+
+      <button onclick="confirmExactMoneyPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+        ✓ Confirmar Pagamento
+      </button>
+
+      <button onclick="backToMoneyOptions()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação - Com Troco — z-index 1320 -->
+<div class="modal-overlay" id="changeMoneyModal" style="z-index: 1320;">
+  <div class="modal" id="changeMoneyInner" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3>🔄 Pagar com Troco</h3>
+      <button onclick="backToMoneyOptions()" style="background:none;border:none;color:white;font-size:24px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 40px 28px; text-align: center;">
+      <div style="background: #fdf8ee; border-radius: 8px; padding: 20px; margin-bottom: 28px;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Valor Total da Compra</div>
+        <div id="changeMoneyTotalAmount" style="font-size: 32px; font-weight: 900; color: var(--vermelho);">R$ 0,00</div>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-size: 13px; color: #666; margin-bottom: 8px; text-align: left; font-weight: 600;">Digite o valor que você irá pagar:</label>
+        <input 
+          type="number" 
+          id="changeMoneyPaidAmount" 
+          placeholder="Ex: 50.00"
+          style="width: 100%; padding: 14px; border: 2px solid var(--amarelo); border-radius: 8px; font-size: 16px; box-sizing: border-box;"
+          oninput="calculateChange()"
+        />
+      </div>
+
+      <div style="background: #f0f8ff; border-radius: 8px; padding: 16px; margin-bottom: 24px; border-left: 4px solid #4285F4;">
+        <div style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px;">Troco</div>
+        <div id="changeMoneyChangeAmount" style="font-size: 28px; font-weight: 900; color: #4285F4;">R$ 0,00</div>
+      </div>
+
+      <button onclick="confirmChangeMoneyPayment()" id="confirmChangeBtn" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px; opacity: 0.5;" disabled>
+        ✓ Confirmar
+      </button>
+
+      <button onclick="backToMoneyOptions()" style="width: 100%; background: #e0e0e0; color: var(--marrom); border: none; padding: 12px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">Voltar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal de Confirmação de Cartão — z-index 1310 -->
 <div class="modal-overlay" id="cardConfirmModal" style="z-index: 1310;">
   <div class="modal" id="cardConfirmInner" style="max-width: 480px;">

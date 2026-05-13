@@ -3,6 +3,9 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
   ? 'http://localhost:3000/api'
   : 'https://cia-de-condimentos.onrender.com/api';
 
+// Global variable to track current report period
+let currentReportPeriod = '7';
+
 // ==================== SIDEBAR TOGGLE ====================
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
@@ -115,7 +118,8 @@ function fetchDashboardStats() {
     .then(res => res.json())
     .then(orders => {
       document.getElementById('dash-orders').textContent = orders.length;
-      const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+      // APENAS PEDIDOS PAGOS - dados reais para receita
+      const totalRevenue = orders.filter(o => o.payment_status === 'Pago').reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
       document.getElementById('dash-revenue').textContent = `R$ ${parseFloat(totalRevenue).toFixed(2)}`;
       const pending = orders.filter(o => o.status === 'Pendente').length;
       document.getElementById('dash-pending').textContent = pending;
@@ -144,6 +148,7 @@ function changePeriod(period, element) {
 }
 
 function changeReportPeriod(days, element) {
+  currentReportPeriod = days;
   document.querySelectorAll('.period-tab').forEach(tab => tab.classList.remove('active'));
   element.classList.add('active');
   loadReportData(days);
@@ -901,6 +906,7 @@ function openOrderModal(orderId) {
     .then(order => {
       const orderDate = new Date(order.created_at).toLocaleDateString('pt-BR');
       const status = order.status || 'Pendente';
+      const paymentMethod = order.payment || order.payment_method || 'Não informado';
       
       body.innerHTML = `
         <input type="hidden" id="currentOrderId" value="${orderId}">
@@ -954,6 +960,16 @@ function openOrderModal(orderId) {
         </div>
 
         <div class="control-group">
+          <label>Forma de Pagamento:</label>
+          <select id="paymentMethod">
+            <option ${paymentMethod === 'Dinheiro' ? 'selected' : ''}>Dinheiro</option>
+            <option ${paymentMethod === 'Cartão' ? 'selected' : ''}>Cartão</option>
+            <option ${paymentMethod === 'PIX' ? 'selected' : ''}>PIX</option>
+            <option ${paymentMethod === 'Não informado' ? 'selected' : ''}>Não informado</option>
+          </select>
+        </div>
+
+        <div class="control-group">
           <label>Status do Pagamento:</label>
           <select id="paymentStatus">
             <option ${order.payment_status === 'Pendente' ? 'selected' : ''}>Pendente</option>
@@ -979,6 +995,7 @@ function saveOrderStatus() {
   const orderId = document.getElementById('currentOrderId')?.value;
   const orderStatus = document.getElementById('orderStatus')?.value;
   const paymentStatus = document.getElementById('paymentStatus')?.value;
+  const paymentMethod = document.getElementById('paymentMethod')?.value;
   
   if (!orderId) {
     showToast('Erro: ID do pedido não encontrado', 'error');
@@ -988,7 +1005,11 @@ function saveOrderStatus() {
   fetch(`${API_BASE}/orders/${orderId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: orderStatus, payment_status: paymentStatus })
+    body: JSON.stringify({ 
+      status: orderStatus, 
+      payment_status: paymentStatus,
+      payment: paymentMethod 
+    })
   })
   .then(res => res.json())
   .then(data => {
@@ -998,6 +1019,7 @@ function saveOrderStatus() {
       showToast('Pedido atualizado com sucesso!');
       closeOrderModal();
       renderOrdersTableAsync();
+      loadDashboard(); // Atualizar receita total quando status do pagamento muda
     }
   })
   .catch(error => {
@@ -1025,8 +1047,100 @@ function deleteOrder(id) {
   });
 }
 
+function deleteAllOrders() {
+  showConfirm('⚠️ ATENÇÃO! Você deseja DELETAR TODOS os pedidos? Esta ação não pode ser desfeita!', () => {
+    fetch(`${API_BASE}/orders/delete/all`, { method: 'DELETE' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showToast('Erro ao deletar pedidos: ' + data.error, 'error');
+        } else {
+          showToast(`✅ ${data.deleted || 0} pedidos deletados com sucesso!`);
+          renderOrdersTableAsync();
+          loadDashboard();
+        }
+      })
+      .catch(err => {
+        console.error('Error deleting all orders:', err);
+        showToast('Erro ao deletar pedidos', 'error');
+      });
+  });
+}
+
 function exportOrders() {
-  showToast('Pedidos exportados como CSV!');
+  // Buscar dados reais do servidor
+  const search = document.getElementById('orderSearch')?.value || '';
+  const statusFilter = document.getElementById('orderStatusFilter')?.value || '';
+  
+  fetch(`${API_BASE}/orders`)
+    .then(res => res.json())
+    .then(orders => {
+      if (!orders || orders.length === 0) {
+        showToast('Nenhum pedido para exportar', 'warning');
+        return;
+      }
+
+      // Aplicar mesmos filtros da tela
+      const filtered = orders.filter(o => 
+        (o.customer_name?.toLowerCase().includes(search.toLowerCase()) || String(o.id).includes(search)) &&
+        (!statusFilter || o.status === statusFilter)
+      );
+
+      if (filtered.length === 0) {
+        showToast('Nenhum pedido corresponde aos filtros aplicados', 'warning');
+        return;
+      }
+
+      // Cabeçalhos CSV com dados reais
+      const headers = ['Pedido', 'Cliente', 'Email', 'Telefone', 'Data', 'Total', 'Forma de Pagamento', 'Status Pagamento', 'Status Pedido'];
+      
+      // Linhas do CSV - dados reais do banco
+      const rows = filtered.map(order => {
+        const orderDate = new Date(order.created_at).toLocaleDateString('pt-BR');
+        const orderNumber = String(order.id).padStart(3, '0');
+        const status = order.status || 'Pendente';
+        const paymentStatus = order.payment_status || 'Pendente';
+        const paymentMethod = order.payment_method || 'N/A';
+        const total = parseFloat(order.total || 0).toFixed(2);
+        
+        return [
+          orderNumber,
+          order.customer_name || 'N/A',
+          order.customer_email || 'N/A',
+          order.customer_phone || 'N/A',
+          orderDate,
+          total,
+          paymentMethod,
+          paymentStatus,
+          status
+        ];
+      });
+
+      // Criar conteúdo CSV com dados reais
+      let csvContent = headers.join(',') + '\n';
+      rows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`.trim()).join(',') + '\n';
+      });
+
+      // Download do arquivo
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Pedidos_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`✅ ${filtered.length} pedido(s) exportado(s) com dados reais!`);
+    })
+    .catch(error => {
+      console.error('Error exporting orders:', error);
+      showToast('❌ Erro ao exportar pedidos do banco de dados', 'error');
+    });
 }
 
 // CUSTOMERS REMOVED - Clientes não precisam fazer cadastro/login para comprar
@@ -1134,7 +1248,60 @@ function deleteCustomer(id) {
 }
 
 function exportCustomers() {
-  showToast('Clientes exportados como CSV!');
+  fetch(`${API_BASE}/auth/admin/customers`)
+    .then(res => res.json())
+    .then(customers => {
+      if (!customers || customers.length === 0) {
+        showToast('Nenhum cliente para exportar', 'warning');
+        return;
+      }
+
+      // Prepare CSV headers
+      const headers = ['ID', 'Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total Pedidos', 'Total Gasto', 'Notas'];
+      
+      // Prepare CSV rows
+      const rows = customers.map(customer => {
+        return [
+          customer.id || '',
+          customer.name || 'N/A',
+          customer.email || 'N/A',
+          customer.phone || 'N/A',
+          customer.cpf || 'N/A',
+          customer.address || 'N/A',
+          customer.city || 'N/A',
+          customer.state || 'N/A',
+          customer.zip || 'N/A',
+          customer.total_orders || 0,
+          customer.total_spent ? parseFloat(customer.total_spent).toFixed(2) : '0.00',
+          customer.notes || ''
+        ];
+      });
+
+      // Create CSV content
+      let csvContent = headers.join(',') + '\n';
+      rows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`.trim()).join(',') + '\n';
+      });
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Clientes_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`${customers.length} clientes exportados como CSV!`);
+    })
+    .catch(error => {
+      console.error('Error exporting customers:', error);
+      showToast('Erro ao exportar clientes', 'error');
+    });
 }
 
 // ==================== REPORTS ====================
@@ -1340,7 +1507,114 @@ function renderPaymentReport(orders) {
 }
 
 function exportReports() {
-  showToast('Relatórios exportados como CSV!');
+  // Use the current report period or default to 7
+  const days = currentReportPeriod || '7';
+  
+  fetch(`${API_BASE}/orders`)
+    .then(res => res.json())
+    .then(async orders => {
+      // Also fetch products for category mapping
+      const productsRes = await fetch(`${API_BASE}/products`);
+      const productsData = await productsRes.json();
+      // Handle both array and object response formats
+      const products = Array.isArray(productsData) ? productsData : (productsData.value || []);
+      
+      if (!orders || orders.length === 0) {
+        showToast('Nenhum pedido para exportar', 'warning');
+        return;
+      }
+
+      // Filter orders based on period
+      const now = new Date();
+      const daysInt = parseInt(days);
+      const startDate = new Date(now.getTime() - daysInt * 24 * 60 * 60 * 1000);
+      
+      const filteredOrders = orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate >= startDate && order.payment_status === 'Pago';
+      });
+
+      // Calculate statistics
+      const totalSold = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+      const totalOrders = filteredOrders.length;
+      const averageTicket = totalOrders > 0 ? totalSold / totalOrders : 0;
+
+      // Create CSV content for summary
+      let csvContent = 'RELATÓRIO DE VENDAS\n';
+      csvContent += `Período: Últimos ${days} dias\n`;
+      csvContent += `Data de Geração: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
+      
+      csvContent += 'RESUMO EXECUTIVO\n';
+      csvContent += `Total Vendido,R$ ${totalSold.toFixed(2)}\n`;
+      csvContent += `Total de Pedidos,${totalOrders}\n`;
+      csvContent += `Ticket Médio,R$ ${averageTicket.toFixed(2)}\n\n`;
+
+      // Sales by category
+      csvContent += 'VENDAS POR CATEGORIA\n';
+      csvContent += 'Categoria,Total\n';
+      
+      const productMap = {};
+      products.forEach(p => {
+        productMap[p.id] = p;
+      });
+
+      const salesByCategory = {};
+      filteredOrders.forEach(order => {
+        if (order.items) {
+          order.items.forEach(item => {
+            const product = productMap[item.product_id];
+            const category = product ? (product.category || 'Sem categoria') : 'Desconhecido';
+            const itemTotal = (item.quantity * item.price);
+            
+            if (!salesByCategory[category]) {
+              salesByCategory[category] = 0;
+            }
+            salesByCategory[category] += itemTotal;
+          });
+        }
+      });
+
+      const sortedCategories = Object.entries(salesByCategory)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10); // Top 10 categories
+
+      sortedCategories.forEach(([category, total]) => {
+        csvContent += `"${category}",${total.toFixed(2)}\n`;
+      });
+
+      csvContent += '\n\nPEDIDOS NO PERÍODO\n';
+      csvContent += 'Pedido,Cliente,Email,Telefone,Data,Total,Forma de Pagamento,Status Pagamento,Status Pedido\n';
+
+      filteredOrders.forEach(order => {
+        const orderDate = new Date(order.created_at).toLocaleDateString('pt-BR');
+        const orderNumber = String(order.id).padStart(3, '0');
+        const status = order.status || 'Pendente';
+        const paymentStatus = order.payment_status || 'Pendente';
+        const paymentMethod = order.payment_method || 'N/A';
+        const total = parseFloat(order.total || 0).toFixed(2);
+        
+        csvContent += `"${orderNumber}","${order.customer_name || 'N/A'}","${order.customer_email || 'N/A'}","${order.customer_phone || 'N/A'}","${orderDate}","${total}","${paymentMethod}","${paymentStatus}","${status}"\n`;
+      });
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Relatorio_Vendas_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`Relatório de ${days} dias exportado como CSV!`);
+    })
+    .catch(error => {
+      console.error('Error exporting reports:', error);
+      showToast('Erro ao exportar relatórios', 'error');
+    });
 }
 
 // ==================== MODAL UTILITIES ====================

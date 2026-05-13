@@ -14,6 +14,12 @@ let currentSearch = '';
 let selectedProductForQuantity = null;
 let selectedQuantity = 1;
 
+// Função para formatar valores em moeda
+function formatCurrency(value) {
+  const num = parseFloat(value) || 0;
+  return 'R$ ' + num.toFixed(2).replace('.', ',');
+}
+
 // Variáveis para polling de pagamento
 let paymentPollingInterval = null;
 let paymentPollingData = null;
@@ -554,15 +560,122 @@ function goBackToPaymentMethod() {
 }
 
 function confirmMoneyPayment(type) {
+  console.log('💰 confirmMoneyPayment chamado com type:', type);
+  
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Erro ao processar pagamento');
+    return;
+  }
+  
+  // Fechar modal de seleção
+  var moneyConfirmModal = document.getElementById('moneyConfirmModal');
+  if (moneyConfirmModal) {
+    moneyConfirmModal.classList.remove('open');
+    console.log('✓ Fechado moneyConfirmModal');
+  }
+  
+  if (type === 'exact') {
+    console.log('📌 Abrindo modal de pagamento exato...');
+    // Mostrar modal de confirmação para pagamento exato
+    var exactMoneyConfirmModal = document.getElementById('exactMoneyConfirmModal');
+    var exactMoneyTotalAmount = document.getElementById('exactMoneyTotalAmount');
+    
+    console.log('  - exactMoneyConfirmModal existe?', exactMoneyConfirmModal ? 'SIM' : 'NÃO');
+    console.log('  - exactMoneyTotalAmount existe?', exactMoneyTotalAmount ? 'SIM' : 'NÃO');
+    
+    if (exactMoneyConfirmModal && exactMoneyTotalAmount) {
+      var formatted = formatCurrency(pendingCheckoutData.total);
+      exactMoneyTotalAmount.textContent = formatted;
+      console.log('  - Valor formatado:', formatted);
+      exactMoneyConfirmModal.classList.add('open');
+      console.log('  - Classe open adicionada');
+    } else {
+      console.error('❌ Elementos não encontrados!');
+    }
+  } else if (type === 'change') {
+    console.log('📌 Abrindo modal de troco...');
+    // Mostrar modal de troco
+    var changeMoneyModal = document.getElementById('changeMoneyModal');
+    var changeMoneyTotalAmount = document.getElementById('changeMoneyTotalAmount');
+    var changeMoneyPaidAmount = document.getElementById('changeMoneyPaidAmount');
+    
+    console.log('  - changeMoneyModal existe?', changeMoneyModal ? 'SIM' : 'NÃO');
+    console.log('  - changeMoneyTotalAmount existe?', changeMoneyTotalAmount ? 'SIM' : 'NÃO');
+    console.log('  - changeMoneyPaidAmount existe?', changeMoneyPaidAmount ? 'SIM' : 'NÃO');
+    
+    if (changeMoneyModal && changeMoneyTotalAmount) {
+      var formatted = formatCurrency(pendingCheckoutData.total);
+      changeMoneyTotalAmount.textContent = formatted;
+      changeMoneyPaidAmount.value = '';
+      console.log('  - Valor formatado:', formatted);
+      document.getElementById('changeMoneyChangeAmount').textContent = 'R$ 0,00';
+      document.getElementById('confirmChangeBtn').disabled = true;
+      document.getElementById('confirmChangeBtn').style.opacity = '0.5';
+      changeMoneyModal.classList.add('open');
+      console.log('  - Classe open adicionada');
+      // Focus no input para melhor UX
+      setTimeout(function() {
+        changeMoneyPaidAmount.focus();
+      }, 300);
+    } else {
+      console.error('❌ Elementos não encontrados!');
+    }
+  }
+}
+
+function backToMoneyOptions() {
+  // Fechar modals de confirmação
+  var exactMoneyConfirmModal = document.getElementById('exactMoneyConfirmModal');
+  if (exactMoneyConfirmModal) {
+    exactMoneyConfirmModal.classList.remove('open');
+  }
+  
+  var changeMoneyModal = document.getElementById('changeMoneyModal');
+  if (changeMoneyModal) {
+    changeMoneyModal.classList.remove('open');
+  }
+  
+  // Reabrir modal de seleção
+  var moneyConfirmModal = document.getElementById('moneyConfirmModal');
+  if (moneyConfirmModal) {
+    moneyConfirmModal.classList.add('open');
+  }
+}
+
+function calculateChange() {
+  var totalAmount = pendingCheckoutData.total;
+  var paidAmountInput = document.getElementById('changeMoneyPaidAmount');
+  var paidAmount = parseFloat(paidAmountInput.value) || 0;
+  var change = paidAmount - totalAmount;
+  
+  var changeMoneyChangeAmount = document.getElementById('changeMoneyChangeAmount');
+  var confirmChangeBtn = document.getElementById('confirmChangeBtn');
+  
+  if (paidAmount >= totalAmount) {
+    changeMoneyChangeAmount.textContent = formatCurrency(change);
+    changeMoneyChangeAmount.style.color = '#4285F4';
+    confirmChangeBtn.disabled = false;
+    confirmChangeBtn.style.opacity = '1';
+  } else {
+    changeMoneyChangeAmount.textContent = formatCurrency(change);
+    changeMoneyChangeAmount.style.color = '#e74c3c';
+    confirmChangeBtn.disabled = true;
+    confirmChangeBtn.style.opacity = '0.5';
+  }
+}
+
+function confirmExactMoneyPayment() {
   if (!selectedPaymentMethod || !pendingCheckoutData) {
     alert('Erro ao processar pagamento');
     return;
   }
   
   pendingCheckoutData.payment = selectedPaymentMethod;
-  pendingCheckoutData.paymentType = type;
+  // Dinheiro começa como Pendente - só vira Pago quando admin confirmar
+  pendingCheckoutData.paymentStatus = 'Pendente';
+  pendingCheckoutData.paymentType = 'exact';
   
-  console.log('Enviando pedido Dinheiro:', JSON.stringify(pendingCheckoutData, null, 2));
+  console.log('Enviando pedido Dinheiro (Exato):', JSON.stringify(pendingCheckoutData, null, 2));
   
   // Send to API
   fetch(API_URL + '/orders', {
@@ -582,24 +695,86 @@ function confirmMoneyPayment(type) {
   .then(function(data) {
     console.log('Order created:', data);
     console.log('✅ Pedido criado com sucesso! ID: ' + data.id);
-    if (type === 'exact') {
-      console.log('💰 Pagamento exato na entrega');
-    } else {
-      console.log('💵 O entregador está preparado para dar troco');
+    console.log('💰 Pagamento exato na entrega');
+    
+    // Fechar modal de confirmação
+    var exactMoneyConfirmModal = document.getElementById('exactMoneyConfirmModal');
+    if (exactMoneyConfirmModal) {
+      exactMoneyConfirmModal.classList.remove('open');
     }
     
-    // Fechar modal de pagamento em dinheiro
-    var moneyConfirmModal = document.getElementById('moneyConfirmModal');
-    if (moneyConfirmModal) {
-      moneyConfirmModal.classList.remove('open');
-    }
-    
-    // Mostrar modal de confirmação
+    // Mostrar modal de confirmação geral
     showPaymentConfirmedModal({
       order_id: data.id,
       amount: data.total || pendingCheckoutData.total,
       payment_method: 'Dinheiro',
-      payment_type: type
+      payment_type: 'exact'
+    });
+    
+    cart = [];
+    updateCartBadge();
+  })
+  .catch(function(error) {
+    console.error('Error creating order:', error);
+    alert('Erro ao criar pedido:\n' + error.message);
+  });
+}
+
+function confirmChangeMoneyPayment() {
+  if (!selectedPaymentMethod || !pendingCheckoutData) {
+    alert('Erro ao processar pagamento');
+    return;
+  }
+  
+  var paidAmount = parseFloat(document.getElementById('changeMoneyPaidAmount').value) || 0;
+  var totalAmount = pendingCheckoutData.total;
+  
+  if (paidAmount < totalAmount) {
+    alert('O valor pago deve ser maior ou igual ao valor total!');
+    return;
+  }
+  
+  pendingCheckoutData.payment = selectedPaymentMethod;
+  // Dinheiro começa como Pendente - só vira Pago quando admin confirmar
+  pendingCheckoutData.paymentStatus = 'Pendente';
+  pendingCheckoutData.paymentType = 'change';
+  pendingCheckoutData.paidAmount = paidAmount;
+  pendingCheckoutData.changeAmount = paidAmount - totalAmount;
+  
+  console.log('Enviando pedido Dinheiro (Com Troco):', JSON.stringify(pendingCheckoutData, null, 2));
+  
+  // Send to API
+  fetch(API_URL + '/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pendingCheckoutData)
+  })
+  .then(function(response) {
+    console.log('Response status:', response.status);
+    if (response.ok) {
+      return response.json();
+    }
+    return response.json().then(function(data) {
+      throw new Error(JSON.stringify(data));
+    });
+  })
+  .then(function(data) {
+    console.log('Order created:', data);
+    console.log('✅ Pedido criado com sucesso! ID: ' + data.id);
+    console.log('💵 O entregador está preparado para dar troco');
+    
+    // Fechar modal de troco
+    var changeMoneyModal = document.getElementById('changeMoneyModal');
+    if (changeMoneyModal) {
+      changeMoneyModal.classList.remove('open');
+    }
+    
+    // Mostrar modal de confirmação geral
+    showPaymentConfirmedModal({
+      order_id: data.id,
+      amount: data.total || pendingCheckoutData.total,
+      payment_method: 'Dinheiro',
+      payment_type: 'change'
     });
     
     cart = [];
@@ -618,6 +793,8 @@ function confirmCardPayment() {
   }
   
   pendingCheckoutData.payment = selectedPaymentMethod;
+  // Cartão começa como Pendente - só vira Pago quando admin confirmar
+  pendingCheckoutData.paymentStatus = 'Pendente';
   
   console.log('Enviando pedido Cartão:', JSON.stringify(pendingCheckoutData, null, 2));
   
@@ -667,6 +844,9 @@ function confirmPixPayment() {
     alert('Erro ao processar pagamento');
     return;
   }
+  
+  // PIX fica como 'Aguardando' até webhook confirmar pagamento
+  pendingCheckoutData.paymentStatus = 'Aguardando';
   
   // Close confirmation modal
   var pixConfirmModal = document.getElementById('pixConfirmModal');
@@ -1344,9 +1524,9 @@ function createPaymentConfirmedModal() {
     return;
   }
   
-  var html = '<div id="paymentConfirmedModal" class="modal" style="display: none;">' +
-    '<div class="modal-overlay"></div>' +
-    '<div class="modal-content" style="max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">' +
+  var html = '<div id="paymentConfirmedModal" class="modal" style="display: none; z-index: 1400;">' +
+    '<div class="modal-overlay" style="z-index: 1400;"></div>' +
+    '<div class="modal-content" style="max-width: 90%; max-height: 90vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 1401;">' +
       '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
         '<div style="font-size: 80px; margin-bottom: 16px; animation: bounce 0.6s ease-in-out;">✅</div>' +
         '<h1 style="margin: 0; font-size: 28px; font-weight: 900;">Pagamento Confirmado!</h1>' +
@@ -1550,6 +1730,37 @@ document.addEventListener('DOMContentLoaded', function() {
     overlay.addEventListener('click', function(e) {
       if (e.target === overlay) {
         closeCheckout();
+      }
+    });
+  }
+  
+  // Event listeners para modais de dinheiro
+  var moneyConfirmModal = document.getElementById('moneyConfirmModal');
+  if (moneyConfirmModal) {
+    moneyConfirmModal.addEventListener('click', function(e) {
+      if (e.target === moneyConfirmModal) {
+        console.log('Clique no overlay de moneyConfirmModal detectado');
+        goBackToPaymentMethod();
+      }
+    });
+  }
+  
+  var exactMoneyConfirmModal = document.getElementById('exactMoneyConfirmModal');
+  if (exactMoneyConfirmModal) {
+    exactMoneyConfirmModal.addEventListener('click', function(e) {
+      if (e.target === exactMoneyConfirmModal) {
+        console.log('Clique no overlay de exactMoneyConfirmModal detectado');
+        backToMoneyOptions();
+      }
+    });
+  }
+  
+  var changeMoneyModal = document.getElementById('changeMoneyModal');
+  if (changeMoneyModal) {
+    changeMoneyModal.addEventListener('click', function(e) {
+      if (e.target === changeMoneyModal) {
+        console.log('Clique no overlay de changeMoneyModal detectado');
+        backToMoneyOptions();
       }
     });
   }

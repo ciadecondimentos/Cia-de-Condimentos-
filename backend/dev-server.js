@@ -9,6 +9,9 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Diretório de frontend
+const frontendDir = path.join(__dirname, '../frontend');
+
 // In-memory database com produtos que podem ter imagens
 let products = [
   { id: 1, name: 'Pimenta do Reino Preta', category: 'Pimentas', price: 18.90, stock: 45, description: 'Pimenta do reino preta moída na hora, aroma intenso e picância moderada. Ideal para carnes, massas e temperos gerais.', images: [], barcode: '7891234560001', weight: '100g', origin: 'Índia', active: true },
@@ -23,9 +26,86 @@ let products = [
 
 let maxProductId = 8;
 
+// In-memory orders database
+let orders = [
+  { id: 1, customer_name: 'João Silva', customer_email: 'joao@email.com', customer_phone: '(11) 99999-1111', total: 150.00, payment_method: 'PIX', payment_status: 'Pago', status: 'Entregue', created_at: new Date(Date.now() - 5*24*60*60*1000).toISOString(), items: [] },
+  { id: 2, customer_name: 'Maria Santos', customer_email: 'maria@email.com', customer_phone: '(11) 99999-2222', total: 280.50, payment_method: 'Cartão', payment_status: 'Pendente', status: 'Processando', created_at: new Date(Date.now() - 3*24*60*60*1000).toISOString(), items: [] },
+  { id: 3, customer_name: 'Pedro Oliveira', customer_email: 'pedro@email.com', customer_phone: '(11) 99999-3333', total: 420.00, payment_method: 'PIX', payment_status: 'Pendente', status: 'Processando', created_at: new Date(Date.now() - 1*24*60*60*1000).toISOString(), items: [] }
+];
+
+let maxOrderId = 3;
+
+// In-memory customers database
+let customers = [
+  { id: 1, name: 'João Silva', email: 'joao@email.com', phone: '(11) 99999-1111', cpf: '123.456.789-00', address: 'Rua A, 123', city: 'São Paulo', state: 'SP', zip: '01234-567', total_orders: 5, total_spent: 1200.00, notes: 'Cliente frequente' },
+  { id: 2, name: 'Maria Santos', email: 'maria@email.com', phone: '(11) 99999-2222', cpf: '987.654.321-11', address: 'Avenida B, 456', city: 'São Paulo', state: 'SP', zip: '02345-678', total_orders: 3, total_spent: 680.50, notes: '' }
+];
+
+let maxCustomerId = 2;
+
 function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
   res.end(JSON.stringify(data));
+}
+
+function serveStaticFile(pathname, res) {
+  // Mapear rotas para arquivos
+  const fileMap = {
+    '/': 'index.html',
+    '/admin': 'admin.html',
+    '/admin.html': 'admin.html',
+    '/index.html': 'index.html'
+  };
+  
+  // Se é uma rota raiz ou mapeada, servir arquivo correspondente
+  let filePath = fileMap[pathname] ? path.join(frontendDir, fileMap[pathname]) : path.join(frontendDir, pathname);
+  
+  // Remover query string
+  filePath = filePath.split('?')[0];
+  
+  // Segurança: garantir que não acessa fora do diretório
+  if (!filePath.startsWith(frontendDir) || filePath.includes('..')) {
+    return false;
+  }
+  
+  // Verificar se arquivo existe
+  if (!fs.existsSync(filePath)) {
+    return false;
+  }
+  
+  // Determinar MIME type
+  const ext = path.extname(filePath).toLowerCase();
+  const mimeTypes = {
+    '.html': 'text/html; charset=utf-8',
+    '.css': 'text/css',
+    '.js': 'application/javascript',
+    '.json': 'application/json',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+    '.ico': 'image/x-icon',
+    '.woff': 'font/woff',
+    '.woff2': 'font/woff2'
+  };
+  
+  const contentType = mimeTypes[ext] || 'application/octet-stream';
+  
+  // Ler e servir arquivo
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Arquivo não encontrado' }));
+      return;
+    }
+    
+    res.writeHead(200, { 'Content-Type': contentType });
+    res.end(data);
+  });
+  
+  return true;
 }
 
 function setCORSHeaders(res) {
@@ -169,7 +249,7 @@ const server = http.createServer((req, res) => {
   
   // ========== GET /api/products ==========
   if (pathname === '/api/products' && req.method === 'GET') {
-    sendJSON(res, 200, { value: products, Count: products.length });
+    sendJSON(res, 200, products);
     return;
   }
   
@@ -255,6 +335,135 @@ const server = http.createServer((req, res) => {
       return;
     }
     sendJSON(res, 200, product);
+    return;
+  }
+  
+  // ========== SERVIR ARQUIVOS ESTÁTICOS (FRONTEND) ==========
+  if (req.method === 'GET' && !pathname.startsWith('/api')) {
+    if (serveStaticFile(pathname, res)) {
+      return;
+    }
+  }
+  
+  // ========== GET /api/orders ==========
+  if (pathname === '/api/orders' && req.method === 'GET') {
+    sendJSON(res, 200, orders);
+    return;
+  }
+  
+  // ========== GET /api/orders/:id ==========
+  const ordersGetMatch = pathname.match(/^\/api\/orders\/(\d+)$/);
+  if (ordersGetMatch && req.method === 'GET') {
+    const orderId = parseInt(ordersGetMatch[1]);
+    const order = orders.find(o => o.id === orderId);
+    if (!order) {
+      sendJSON(res, 404, { error: 'Pedido não encontrado' });
+      return;
+    }
+    sendJSON(res, 200, order);
+    return;
+  }
+  
+  // ========== PUT /api/orders/:id ==========
+  const ordersPutMatch = pathname.match(/^\/api\/orders\/(\d+)$/);
+  if (ordersPutMatch && req.method === 'PUT') {
+    const orderId = parseInt(ordersPutMatch[1]);
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const order = orders.find(o => o.id === orderId);
+        if (!order) {
+          sendJSON(res, 404, { error: 'Pedido não encontrado' });
+          return;
+        }
+        
+        if (data.status !== undefined) order.status = data.status;
+        if (data.payment_status !== undefined) order.payment_status = data.payment_status;
+        if (data.payment !== undefined) order.payment_method = data.payment;
+        
+        sendJSON(res, 200, order);
+      } catch (e) {
+        sendJSON(res, 400, { error: e.message });
+      }
+    });
+    return;
+  }
+  
+  // ========== DELETE /api/orders/delete/all ==========
+  if (pathname === '/api/orders/delete/all' && req.method === 'DELETE') {
+    const deletedCount = orders.length;
+    orders = [];
+    console.log(`🗑️ ADMIN: ${deletedCount} pedidos deletados`);
+    sendJSON(res, 200, { 
+      success: true,
+      deleted: deletedCount,
+      message: `${deletedCount} pedidos deletados com sucesso`
+    });
+    return;
+  }
+  
+  // ========== DELETE /api/orders/:id ==========
+  const ordersDeleteMatch = pathname.match(/^\/api\/orders\/(\d+)$/);
+  if (ordersDeleteMatch && req.method === 'DELETE') {
+    const orderId = parseInt(ordersDeleteMatch[1]);
+    const index = orders.findIndex(o => o.id === orderId);
+    if (index === -1) {
+      sendJSON(res, 404, { error: 'Pedido não encontrado' });
+      return;
+    }
+    orders.splice(index, 1);
+    sendJSON(res, 200, { message: 'Pedido deletado' });
+    return;
+  }
+  
+  // ========== GET /api/auth/admin/customers ==========
+  if (pathname === '/api/auth/admin/customers' && req.method === 'GET') {
+    sendJSON(res, 200, customers);
+    return;
+  }
+  
+  // ========== GET /api/auth/admin/customers/:id ==========
+  const customersGetMatch = pathname.match(/^\/api\/auth\/admin\/customers\/(\d+)$/);
+  if (customersGetMatch && req.method === 'GET') {
+    const customerId = parseInt(customersGetMatch[1]);
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) {
+      sendJSON(res, 404, { error: 'Cliente não encontrado' });
+      return;
+    }
+    sendJSON(res, 200, customer);
+    return;
+  }
+  
+  // ========== POST /api/auth/admin/customers ==========
+  if (pathname === '/api/auth/admin/customers' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body);
+        const newCustomer = {
+          id: ++maxCustomerId,
+          name: data.name || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          cpf: data.cpf || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          zip: data.zip || '',
+          total_orders: data.total_orders || 0,
+          total_spent: data.total_spent || 0,
+          notes: data.notes || ''
+        };
+        customers.push(newCustomer);
+        sendJSON(res, 201, newCustomer);
+      } catch (e) {
+        sendJSON(res, 400, { error: e.message });
+      }
+    });
     return;
   }
   

@@ -109,7 +109,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, payment_status } = req.body;
+    const { status, payment_status, payment } = req.body;
 
     // Buscar pedido atual antes de atualizar
     const currentOrderResult = await db.query(
@@ -128,10 +128,11 @@ router.put('/:id', async (req, res) => {
     const result = await db.query(
       `UPDATE orders 
        SET status = COALESCE($1, status),
-           payment_status = COALESCE($2, payment_status)
-       WHERE id = $3
+           payment_status = COALESCE($2, payment_status),
+           payment = COALESCE($3, payment)
+       WHERE id = $4
        RETURNING *`,
-      [status, payment_status, id]
+      [status, payment_status, payment, id]
     );
 
     // ✅ NOVO: Se admin marcou como "Pago", diminuir estoque
@@ -230,6 +231,27 @@ router.post('/:id/confirm-stock', async (req, res) => {
   } catch (error) {
     console.error('Erro ao confirmar estoque:', error.message);
     res.status(500).json({ error: 'Erro ao confirmar estoque: ' + error.message });
+  }
+});
+
+// DELETE all orders (admin - USE WITH CAUTION!) - MUST BE BEFORE /:id route
+router.delete('/delete/all', async (req, res) => {
+  try {
+    // Delete all order items first
+    await db.query('DELETE FROM order_items');
+    // Then delete all orders
+    const result = await db.query('DELETE FROM orders');
+
+    console.log(`🗑️ ADMIN: ${result.rowCount} pedidos deletados`);
+
+    res.json({ 
+      success: true,
+      deleted: result.rowCount,
+      message: `${result.rowCount} pedidos deletados com sucesso`
+    });
+  } catch (error) {
+    console.error('Error deleting all orders:', error);
+    res.status(500).json({ error: 'Failed to delete all orders' });
   }
 });
 

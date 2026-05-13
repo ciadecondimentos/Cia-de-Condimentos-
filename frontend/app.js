@@ -14,10 +14,27 @@ let currentSearch = '';
 let selectedProductForQuantity = null;
 let selectedQuantity = 1;
 
-// Função para formatar valores em moeda
-function formatCurrency(value) {
-  const num = parseFloat(value) || 0;
-  return 'R$ ' + num.toFixed(2).replace('.', ',');
+// ==================== PAYMENT LOADING STATE ====================
+// Flag para prevenir múltiplos cliques em botões de pagamento
+let isPaymentProcessing = false;
+
+function setPaymentButtonLoading(buttonId, isLoading) {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  
+  if (isLoading) {
+    button.disabled = true;
+    button.style.opacity = '0.6';
+    button.style.cursor = 'not-allowed';
+    const originalText = button.textContent;
+    button.textContent = '⏳ Processando...';
+    button.dataset.originalText = originalText;
+  } else {
+    button.disabled = false;
+    button.style.opacity = '1';
+    button.style.cursor = 'pointer';
+    button.textContent = button.dataset.originalText || button.textContent;
+  }
 }
 
 // Variáveis para polling de pagamento
@@ -28,6 +45,12 @@ let paymentPollingAttempts = 0;
 let paymentPollingFailures = 0;
 let paymentPollingStartTime = null;
 let paymentPollingInterval_ms = 2000; // Começa a cada 2s, pode aumentar com backoff
+
+// Função para formatar valores em moeda
+function formatCurrency(value) {
+  const num = parseFloat(value) || 0;
+  return 'R$ ' + num.toFixed(2).replace('.', ',');
+}
 
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';
@@ -670,6 +693,15 @@ function confirmExactMoneyPayment() {
     return;
   }
   
+  // Prevenir múltiplos cliques
+  if (isPaymentProcessing) {
+    console.warn('⏳ Pagamento já está sendo processado...');
+    return;
+  }
+  
+  isPaymentProcessing = true;
+  setPaymentButtonLoading('confirmExactPaymentBtn', true);
+  
   pendingCheckoutData.payment = selectedPaymentMethod;
   // Dinheiro começa como Pendente - só vira Pago quando admin confirmar
   pendingCheckoutData.paymentStatus = 'Pendente';
@@ -713,10 +745,16 @@ function confirmExactMoneyPayment() {
     
     cart = [];
     updateCartBadge();
+    
+    // Limpar flag de processamento
+    isPaymentProcessing = false;
   })
   .catch(function(error) {
     console.error('Error creating order:', error);
     alert('Erro ao criar pedido:\n' + error.message);
+    // Re-habilitar botão em caso de erro
+    isPaymentProcessing = false;
+    setPaymentButtonLoading('confirmExactPaymentBtn', false);
   });
 }
 
@@ -726,11 +764,22 @@ function confirmChangeMoneyPayment() {
     return;
   }
   
+  // Prevenir múltiplos cliques
+  if (isPaymentProcessing) {
+    console.warn('⏳ Pagamento já está sendo processado...');
+    return;
+  }
+  
+  isPaymentProcessing = true;
+  setPaymentButtonLoading('confirmChangeBtn', true);
+  
   var paidAmount = parseFloat(document.getElementById('changeMoneyPaidAmount').value) || 0;
   var totalAmount = pendingCheckoutData.total;
   
   if (paidAmount < totalAmount) {
     alert('O valor pago deve ser maior ou igual ao valor total!');
+    isPaymentProcessing = false;
+    setPaymentButtonLoading('confirmChangeBtn', false);
     return;
   }
   
@@ -779,10 +828,16 @@ function confirmChangeMoneyPayment() {
     
     cart = [];
     updateCartBadge();
+    
+    // Limpar flag de processamento
+    isPaymentProcessing = false;
   })
   .catch(function(error) {
     console.error('Error creating order:', error);
     alert('Erro ao criar pedido:\n' + error.message);
+    // Re-habilitar botão em caso de erro
+    isPaymentProcessing = false;
+    setPaymentButtonLoading('confirmChangeBtn', false);
   });
 }
 
@@ -791,6 +846,15 @@ function confirmCardPayment() {
     alert('Erro ao processar pagamento');
     return;
   }
+  
+  // Prevenir múltiplos cliques
+  if (isPaymentProcessing) {
+    console.warn('⏳ Pagamento já está sendo processado...');
+    return;
+  }
+  
+  isPaymentProcessing = true;
+  setPaymentButtonLoading('confirmCardPaymentBtn', true);
   
   pendingCheckoutData.payment = selectedPaymentMethod;
   // Cartão começa como Pendente - só vira Pago quando admin confirmar
@@ -832,10 +896,16 @@ function confirmCardPayment() {
     
     cart = [];
     updateCartBadge();
+    
+    // Limpar flag de processamento
+    isPaymentProcessing = false;
   })
   .catch(function(error) {
     console.error('Error creating order:', error);
     alert('Erro ao processar o pagamento:\n' + error.message);
+    // Re-habilitar botão em caso de erro
+    isPaymentProcessing = false;
+    setPaymentButtonLoading('confirmCardPaymentBtn', false);
   });
 }
 
@@ -844,6 +914,15 @@ function confirmPixPayment() {
     alert('Erro ao processar pagamento');
     return;
   }
+  
+  // Prevenir múltiplos cliques
+  if (isPaymentProcessing) {
+    console.warn('⏳ Pagamento já está sendo processado...');
+    return;
+  }
+  
+  isPaymentProcessing = true;
+  setPaymentButtonLoading('confirmPixPaymentBtn', true);
   
   // PIX fica como 'Aguardando' até webhook confirmar pagamento
   pendingCheckoutData.paymentStatus = 'Aguardando';
@@ -967,6 +1046,9 @@ function confirmPixPayment() {
     // ✅ NOVO: Iniciar polling AUTOMATICAMENTE
     startPaymentPolling();
     
+    // Limpar flag de processamento após iniciar polling
+    isPaymentProcessing = false;
+    
     // ✅ Modal de QR Code permanece aberto enquanto polling acontece
     // showWaitingForPaymentModal(); // REMOVIDO: mantém o modal de PIX visível
   })
@@ -975,6 +1057,9 @@ function confirmPixPayment() {
     if (pixQrCode) pixQrCode.innerHTML = '❌ Erro ao processar: ' + error.message;
     if (pixCode) pixCode.textContent = 'Erro: ' + error.message;
     alert('Erro ao processar PIX:\n' + error.message);
+    // Re-habilitar botão em caso de erro
+    isPaymentProcessing = false;
+    setPaymentButtonLoading('confirmPixPaymentBtn', false);
   });
 }
 

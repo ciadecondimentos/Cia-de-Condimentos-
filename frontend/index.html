@@ -367,10 +367,10 @@
         <div style="font-size: 14px; color: #666; margin-bottom: 16px;">Escolha como deseja pagar:</div>
         
         <div style="display: grid; gap: 12px;">
-          <button onclick="confirmMoneyPayment('exact')" style="width: 100%; background: var(--amarelo); color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
+          <button id="confirmExactMoneyBtn" onclick="confirmMoneyPayment('exact')" style="width: 100%; background: var(--amarelo); color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
             💰 Pagamento Exato
           </button>
-          <button onclick="confirmMoneyPayment('change')" style="width: 100%; background: white; color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
+          <button id="confirmChangeOptionBtn" onclick="confirmMoneyPayment('change')" style="width: 100%; background: white; color: var(--marrom); border: 2px solid var(--amarelo); padding: 16px; font-weight: 700; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s;">
             🔄 Com Troco
           </button>
         </div>
@@ -401,7 +401,7 @@
         </div>
       </div>
 
-      <button onclick="confirmExactMoneyPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+      <button id="confirmExactPaymentBtn" onclick="confirmExactMoneyPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
         ✓ Confirmar Pagamento
       </button>
 
@@ -470,7 +470,7 @@
         </div>
       </div>
       
-      <button onclick="confirmCardPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+      <button id="confirmCardPaymentBtn" onclick="confirmCardPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
         ✓ Confirmar Pagamento
       </button>
       
@@ -501,7 +501,7 @@
         </div>
       </div>
       
-      <button onclick="confirmPixPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
+      <button id="confirmPixPaymentBtn" onclick="confirmPixPayment()" style="width: 100%; background: var(--vermelho); color: white; border: none; padding: 16px; font-weight: 900; cursor: pointer; border-radius: 8px; font-size: 15px; letter-spacing: 1px; transition: all 0.2s; margin-bottom: 12px;">
         ✓ Gerar QR Code
       </button>
       

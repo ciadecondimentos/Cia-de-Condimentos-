@@ -1634,42 +1634,45 @@ function createPaymentConfirmedModal() {
     return;
   }
   
-  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 1400; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 20px;">' +
-    '<div class="modal-overlay" style="position: absolute; inset: 0; z-index: 1400; background: rgba(0,0,0,0.6); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
-    '<div class="modal-content payment-confirmed-content" style="max-width: 90%; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 1401; display: flex; flex-direction: column; background: white; position: relative;">' +
-      '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 32px 24px; text-align: center; border-radius: 16px 16px 0 0; flex-shrink: 0;">' +
-        '<div style="font-size: 80px; margin-bottom: 16px; animation: bounce 0.6s ease-in-out;">✅</div>' +
-        '<h1 style="margin: 0; font-size: 28px; font-weight: 900;">Pagamento Confirmado!</h1>' +
-        '<p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.95;" id="paymentMethodText">Seu PIX foi processado com sucesso</p>' +
+  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 2000; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 16px;">' +
+    '<div class="modal-overlay" style="position: absolute; inset: 0; z-index: 1999; background: rgba(0,0,0,0.7); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
+    '<div class="modal-content payment-confirmed-content" style="max-width: 90%; width: 100%; max-height: 85vh; border-radius: 16px 16px 0 0; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 2001; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden;">' +
+      '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 24px 20px; text-align: center; border-radius: 16px 16px 0 0; flex-shrink: 0;">' +
+        '<div style="font-size: 64px; margin-bottom: 12px; animation: bounce 0.6s ease-in-out; line-height: 1;">✅</div>' +
+        '<h1 style="margin: 0; font-size: 26px; font-weight: 900; line-height: 1.2;">Pagamento<br>Confirmado!</h1>' +
+        '<p style="margin: 8px 0 0 0; font-size: 14px; opacity: 0.95; font-weight: 600;" id="paymentMethodText">Seu PIX foi processado com sucesso</p>' +
       '</div>' +
-      '<div class="payment-confirmed-body" style="padding: 24px; text-align: center; background: white; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0;">' +
-        '<div style="margin-bottom: 24px;">' +
-          '<p style="margin: 0 0 8px 0; font-size: 14px; color: #666; font-weight: 600;">NÚMERO DO PEDIDO</p>' +
-          '<p style="margin: 0; font-size: 28px; font-weight: 900; color: var(--marrom); word-break: break-word;" id="confirmedOrderId">-</p>' +
+      '<div class="payment-confirmed-body" style="padding: 20px 16px; text-align: center; background: white; overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; min-height: 0;">' +
+        '<div style="margin-bottom: 20px;">' +
+          '<p style="margin: 0 0 6px 0; font-size: 12px; color: #999; font-weight: 700; letter-spacing: 1px;">NÚMERO DO PEDIDO</p>' +
+          '<p style="margin: 0; font-size: 32px; font-weight: 900; color: var(--marrom); word-break: break-word;" id="confirmedOrderId">-</p>' +
         '</div>' +
-        '<div style="margin-bottom: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px;">' +
-          '<p style="margin: 0 0 8px 0; font-size: 14px; color: #666;">Valor Pago:</p>' +
-          '<p style="margin: 0; font-size: 24px; font-weight: 900; color: var(--verde);" id="confirmedAmount">R$ 0,00</p>' +
+        '<div style="margin-bottom: 18px; padding: 14px; background: #f0f8f0; border-radius: 8px; border: 1px solid #d0e8d0;">' +
+          '<p style="margin: 0 0 6px 0; font-size: 12px; color: #666; font-weight: 600;">Valor Pago</p>' +
+          '<p style="margin: 0; font-size: 28px; font-weight: 900; color: #27a745;" id="confirmedAmount">R$ 0,00</p>' +
         '</div>' +
-        '<p style="margin: 0 0 16px 0; font-size: 14px; color: #666; line-height: 1.6; word-wrap: break-word; overflow-wrap: break-word;">' +
-          '✓ Pagamento recebido com sucesso<br>' +
-          '✓ Seu pedido está sendo preparado<br>' +
-          '✓ Você receberá atualizações em breve' +
-        '</p>' +
-        '<div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
-          '<small style="color: #2e7d32;">🎉 Obrigado pela sua compra na Cia de Condimentos!</small>' +
+        '<div style="background: #f5f5f5; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: left;">' +
+          '<p style="margin: 0; font-size: 13px; color: #555; line-height: 1.6;">' +
+            '<span style="display: block; margin-bottom: 4px;">✅ Pagamento recebido com sucesso</span>' +
+            '<span style="display: block; margin-bottom: 4px;">📦 Seu pedido está sendo preparado</span>' +
+            '<span style="display: block;">📱 Você receberá atualizações em breve</span>' +
+          '</p>' +
+        '</div>' +
+        '<div style="background: #e8f5e9; padding: 12px; border-radius: 8px; border-left: 4px solid #27a745;">' +
+          '<p style="margin: 0; color: #2e7d32; font-size: 12px; font-weight: 600;">🎉 Obrigado pela sua compra!</p>' +
         '</div>' +
       '</div>' +
-      '<div class="payment-confirmed-footer" style="padding: 16px 24px; background: white; border-top: 1px solid #e0e0e0; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px; border-radius: 0 0 16px 16px;">' +
-        '<button onclick="sendOrderToWhatsApp()" style="background: #25d366; color: white; border: none; padding: 14px 16px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; width: 100%;">' +
+      '<div class="payment-confirmed-footer" style="padding: 12px 16px; background: #fafafa; border-top: 1px solid #e0e0e0; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; border-radius: 0 0 16px 16px;">' +
+        '<button onclick="sendOrderToWhatsApp()" style="background: #25d366; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; width: 100%; transition: background 0.2s;">' +
           '💬 WhatsApp' +
         '</button>' +
-        '<button onclick="closePaymentConfirmedModal()" style="background: var(--verde); color: white; border: none; padding: 14px 32px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 16px; width: 100%; letter-spacing: 0.5px; min-height: 44px;">' +
+        '<button onclick="closePaymentConfirmedModal()" style="background: var(--marrom); color: white; border: none; padding: 12px 32px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; width: 100%; letter-spacing: 0.5px; min-height: 44px; transition: background 0.2s;">' +
           'Fechar' +
         '</button>' +
       '</div>' +
     '</div>' +
   '</div>';
+  
   
   document.body.insertAdjacentHTML('beforeend', html);
 }

@@ -68,10 +68,11 @@ router.post('/', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT o.*, json_agg(json_build_object('product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price)) as items
+      `SELECT o.*, 
+              COALESCE(json_agg(json_build_object('product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price)) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) as items
        FROM orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
-       GROUP BY o.id
+       GROUP BY o.id, o.customer_name, o.customer_email, o.customer_phone, o.customer_cpf, o.customer_address, o.subtotal, o.frete, o.total, o.payment_method, o.status, o.payment_status, o.created_at, o.updated_at
        ORDER BY o.created_at DESC`
     );
     res.json(result.rows);
@@ -86,11 +87,12 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await db.query(
-      `SELECT o.*, json_agg(json_build_object('product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price)) as items
+      `SELECT o.*, 
+              COALESCE(json_agg(json_build_object('product_id', oi.product_id, 'quantity', oi.quantity, 'price', oi.price)) FILTER (WHERE oi.id IS NOT NULL), '[]'::json) as items
        FROM orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
        WHERE o.id = $1
-       GROUP BY o.id`,
+       GROUP BY o.id, o.customer_name, o.customer_email, o.customer_phone, o.customer_cpf, o.customer_address, o.subtotal, o.frete, o.total, o.payment_method, o.status, o.payment_status, o.created_at, o.updated_at`,
       [id]
     );
 
@@ -109,7 +111,7 @@ router.get('/:id', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, payment_status, payment } = req.body;
+    const { status, payment_status, payment_method } = req.body;
 
     // Buscar pedido atual antes de atualizar
     const currentOrderResult = await db.query(
@@ -129,10 +131,10 @@ router.put('/:id', async (req, res) => {
       `UPDATE orders 
        SET status = COALESCE($1, status),
            payment_status = COALESCE($2, payment_status),
-           payment = COALESCE($3, payment)
+           payment_method = COALESCE($3, payment_method)
        WHERE id = $4
        RETURNING *`,
-      [status, payment_status, payment, id]
+      [status, payment_status, payment_method, id]
     );
 
     // ✅ NOVO: Se admin marcou como "Pago", diminuir estoque

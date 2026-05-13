@@ -587,9 +587,17 @@ function confirmMoneyPayment(type) {
     } else {
       console.log('💵 O entregador está preparado para dar troco');
     }
+    
+    // Mostrar modal de confirmação
+    showPaymentConfirmedModal({
+      order_id: data.id,
+      amount: data.total || pendingCheckoutData.total,
+      payment_method: 'Dinheiro',
+      payment_type: type
+    });
+    
     cart = [];
     updateCartBadge();
-    cancelCheckoutProcess();
   })
   .catch(function(error) {
     console.error('Error creating order:', error);
@@ -625,9 +633,16 @@ function confirmCardPayment() {
   .then(function(data) {
     console.log('Order created:', data);
     console.log('✅ Pagamento com cartão processado com sucesso! Pedido ID: ' + data.id);
+    
+    // Mostrar modal de confirmação
+    showPaymentConfirmedModal({
+      order_id: data.id,
+      amount: data.total || pendingCheckoutData.total,
+      payment_method: 'Cartão'
+    });
+    
     cart = [];
     updateCartBadge();
-    cancelCheckoutProcess();
   })
   .catch(function(error) {
     console.error('Error creating order:', error);
@@ -1258,6 +1273,22 @@ function showPaymentConfirmedModal(paymentData) {
     console.log('   Valor:', amountFormatted);
   }
   
+  // Atualizar texto de pagamento dinamicamente
+  var paymentMethodText = document.getElementById('paymentMethodText');
+  if (paymentMethodText) {
+    if (paymentData.payment_method === 'Dinheiro') {
+      if (paymentData.payment_type === 'exact') {
+        paymentMethodText.textContent = '💰 Pagamento exato na entrega';
+      } else {
+        paymentMethodText.textContent = '💵 O entregador está preparado para dar troco';
+      }
+    } else if (paymentData.payment_method === 'Cartão') {
+      paymentMethodText.textContent = '💳 Pagamento com cartão processado com sucesso';
+    } else {
+      paymentMethodText.textContent = '✅ Seu PIX foi processado com sucesso';
+    }
+    console.log('   Método de pagamento:', paymentMethodText.textContent);
+  }
   // Fechar modais anteriores
   var waitingModal = document.getElementById('waitingForPaymentModal');
   if (waitingModal) {
@@ -1307,7 +1338,7 @@ function createPaymentConfirmedModal() {
       '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">' +
         '<div style="font-size: 80px; margin-bottom: 16px; animation: bounce 0.6s ease-in-out;">✅</div>' +
         '<h1 style="margin: 0; font-size: 28px; font-weight: 900;">Pagamento Confirmado!</h1>' +
-        '<p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.95;">Seu PIX foi processado com sucesso</p>' +
+        '<p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.95;" id="paymentMethodText">Seu PIX foi processado com sucesso</p>' +
       '</div>' +
       '<div style="padding: 32px 24px; text-align: center; background: white;">' +
         '<div style="margin-bottom: 24px;">' +

@@ -111,6 +111,12 @@ function loadDashboard() {
   renderRecentOrders();
   renderLowStockProducts();
   renderTopProducts();
+  // Atualizar gráfico de vendas com o período atual
+  if (currentReportPeriod) {
+    renderSalesChart(currentReportPeriod);
+  } else {
+    renderSalesChart('week');
+  }
 }
 
 function fetchDashboardStats() {
@@ -294,24 +300,52 @@ function renderLowStockProducts() {
 function renderTopProducts() {
   const container = document.getElementById('topProducts');
   
-  fetch(`${API_BASE}/products/admin/all`)
-    .then(res => res.json())
-    .then(products => {
-      const topProducts = products.slice(0, 3);
-      if (topProducts.length === 0) {
-        container.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">Sem produtos cadastrados</div>';
-        return;
+  // Buscar produtos e pedidos em paralelo
+  Promise.all([
+    fetch(`${API_BASE}/products/admin/all`).then(res => res.json()),
+    fetch(`${API_BASE}/orders`).then(res => res.json())
+  ])
+  .then(([products, orders]) => {
+    // Contar vendas por produto (apenas pedidos com pagamento confirmado = 'Pago')
+    const salesByProduct = {};
+    
+    orders.forEach(order => {
+      // Apenas contar vendas de pedidos onde payment_status === 'Pago'
+      if (order.payment_status === 'Pago' && order.items && Array.isArray(order.items)) {
+        order.items.forEach(item => {
+          const productId = item.product_id;
+          salesByProduct[productId] = (salesByProduct[productId] || 0) + item.quantity;
+        });
       }
-      container.innerHTML = topProducts.map(prod => `
-        <div class="order-row">
-          <div style="flex: 1; font-weight: 700;">${prod.name}</div>
-          <div style="color: var(--vermelho); font-weight: 700;">0 vendas</div>
-        </div>
-      `).join('');
-    })
-    .catch(() => {
-      container.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">Erro ao carregar</div>';
     });
+    
+    // Adicionar contagem de vendas aos produtos
+    const productsWithSales = products.map(prod => ({
+      ...prod,
+      sales: salesByProduct[prod.id] || 0
+    }));
+    
+    // Ordenar por vendas (decrescente)
+    const topProducts = productsWithSales
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 3);
+    
+    if (topProducts.length === 0) {
+      container.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">Sem vendas registradas</div>';
+      return;
+    }
+    
+    container.innerHTML = topProducts.map(prod => `
+      <div class="order-row">
+        <div style="flex: 1; font-weight: 700;">${prod.name}</div>
+        <div style="color: var(--vermelho); font-weight: 700;">${prod.sales} ${prod.sales === 1 ? 'venda' : 'vendas'}</div>
+      </div>
+    `).join('');
+  })
+  .catch(err => {
+    console.error('Erro ao carregar top produtos:', err);
+    container.innerHTML = '<div style="padding: 16px; text-align: center; color: #999;">Erro ao carregar</div>';
+  });
 }
 
 // ==================== PRODUCTS ====================
@@ -1008,7 +1042,7 @@ function saveOrderStatus() {
     body: JSON.stringify({ 
       status: orderStatus, 
       payment_status: paymentStatus,
-      payment: paymentMethod 
+      payment_method: paymentMethod 
     })
   })
   .then(res => res.json())
@@ -1058,6 +1092,8 @@ function deleteAllOrders() {
           showToast(`✅ ${data.deleted || 0} pedidos deletados com sucesso!`);
           renderOrdersTableAsync();
           loadDashboard();
+          // Atualizar gráfico de vendas
+          renderSalesChart(currentReportPeriod || 'week');
         }
       })
       .catch(err => {

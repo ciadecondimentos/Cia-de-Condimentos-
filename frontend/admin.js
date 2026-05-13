@@ -1408,6 +1408,9 @@ function renderReportChart(days, orders) {
   const chart = document.getElementById('reportChart');
   const daysInt = parseInt(days);
   
+  // Map of days of week
+  const daysOfWeek = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  
   // Group sales by day
   const salesByDay = {};
   const now = new Date();
@@ -1425,8 +1428,8 @@ function renderReportChart(days, orders) {
     }
   });
   
-  // Sort dates
-  const sortedDates = Object.keys(salesByDay).sort().reverse();
+  // Sort dates in ascending order (oldest to newest)
+  const sortedDates = Object.keys(salesByDay).sort();
   const maxSale = Math.max(...Object.values(salesByDay), 1);
   
   let html = '';
@@ -1434,10 +1437,12 @@ function renderReportChart(days, orders) {
     const sales = salesByDay[date];
     const height = (sales / maxSale) * 160 + 20; // Scale to chart height
     const dateObj = new Date(date);
-    const dayNum = daysInt - index;
+    const dayNum = index + 1;
+    const dayName = daysOfWeek[dayNum - 1];
     
     html += `
       <div class="bar-group" title="R$ ${sales.toFixed(2)}">
+        <div style="text-align: center; font-size: 12px; color: var(--marrom); font-weight: 600; margin-bottom: 4px;">${dayName}</div>
         <div class="bar" data-value="R$ ${sales.toFixed(2)}" style="height: ${height}px; background: linear-gradient(to top, var(--marrom), #d4a574);"></div>
         <div class="bar-label">${dayNum}</div>
       </div>
@@ -1619,7 +1624,7 @@ function exportReports() {
       });
 
       csvContent += '\n\nPEDIDOS NO PERÍODO\n';
-      csvContent += 'Pedido,Cliente,Email,Telefone,Data,Total,Forma de Pagamento,Status Pagamento,Status Pedido\n';
+      csvContent += 'Pedido,Cliente,Telefone,Data,Total,Forma de Pagamento,Status Pagamento,Status Pedido\n';
 
       filteredOrders.forEach(order => {
         const orderDate = new Date(order.created_at).toLocaleDateString('pt-BR');
@@ -1629,7 +1634,7 @@ function exportReports() {
         const paymentMethod = order.payment_method || 'N/A';
         const total = parseFloat(order.total || 0).toFixed(2);
         
-        csvContent += `"${orderNumber}","${order.customer_name || 'N/A'}","${order.customer_email || 'N/A'}","${order.customer_phone || 'N/A'}","${orderDate}","${total}","${paymentMethod}","${paymentStatus}","${status}"\n`;
+        csvContent += `"${orderNumber}","${order.customer_name || 'N/A'}","${order.customer_phone || 'N/A'}","${orderDate}","${total}","${paymentMethod}","${paymentStatus}","${status}"\n`;
       });
 
       // Download CSV

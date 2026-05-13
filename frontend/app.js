@@ -71,7 +71,9 @@ function getProducts() {
   .then(function(response) {
     clearTimeout(timeout);
     if (response.ok) {
-      return response.json().then(function(products) {
+      return response.json().then(function(data) {
+        // Handle both array and object with value property
+        var products = Array.isArray(data) ? data : (data.value || []);
         return products.map(function(p) { 
           return Object.assign({}, p, { price: parseFloat(p.price) || 0 }); 
         });
@@ -230,12 +232,16 @@ function openQuantityModal(product) {
   updateQuantityTotal();
   
   var modal = document.getElementById('quantityModal');
-  if (modal) modal.classList.add('open');
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
 function closeQuantityModal() {
   var modal = document.getElementById('quantityModal');
   if (modal) modal.classList.remove('open');
+  document.body.style.overflow = 'auto';
   selectedProductForQuantity = null;
   selectedQuantity = 1;
 }
@@ -277,7 +283,8 @@ function confirmQuantity() {
       id: selectedProductForQuantity.id, 
       name: selectedProductForQuantity.name, 
       price: selectedProductForQuantity.price, 
-      quantity: selectedQuantity 
+      quantity: selectedQuantity,
+      image: selectedProductForQuantity.image
     });
   }
   
@@ -387,17 +394,21 @@ function updateCartBadge() {
 function openCart() {
   var sidebar = document.getElementById('cartSidebar');
   var overlay = document.getElementById('cartOverlay');
+  var floatingBtn = document.getElementById('floatingCartBtn');
   if (!sidebar || !overlay) return;
   sidebar.classList.add('open');
   overlay.classList.add('open');
+  if (floatingBtn) floatingBtn.style.display = 'none';
   renderCartItems();
 }
 
 function closeCart() {
   var sidebar = document.getElementById('cartSidebar');
   var overlay = document.getElementById('cartOverlay');
+  var floatingBtn = document.getElementById('floatingCartBtn');
   if (sidebar) sidebar.classList.remove('open');
   if (overlay) overlay.classList.remove('open');
+  if (floatingBtn) floatingBtn.style.display = 'flex';
 }
 
 function renderCartItems() {
@@ -410,10 +421,21 @@ function renderCartItems() {
   }
   
   var html = cart.map(function(item) {
+    var imageHtml = '';
+    if (item.image) {
+      imageHtml = '<img src="' + getImageUrl(item.image) + '" style="width: 100%; height: 100%; object-fit: cover;">';
+    } else {
+      imageHtml = '<span style="font-size: 28px;">🌶️</span>';
+    }
+    
+    var subtotal = item.price * item.quantity;
+    
     return '<div class="cart-item">' +
+      '<div class="cart-item-img">' + imageHtml + '</div>' +
       '<div class="cart-item-info">' +
         '<div class="cart-item-name">' + item.name + '</div>' +
         '<div class="cart-item-price">R$ ' + item.price.toFixed(2).replace('.', ',') + '</div>' +
+        '<div style="font-size: 12px; color: #999; margin-top: 4px;">Subtotal: R$ ' + subtotal.toFixed(2).replace('.', ',') + '</div>' +
         '<div class="qty-controls">' +
           '<button class="qty-btn" onclick="updateQuantity(' + item.id + ', ' + (item.quantity - 1) + ')">−</button>' +
           '<div class="qty-val">' + item.quantity + '</div>' +
@@ -441,6 +463,7 @@ function openCheckout() {
   var modal = document.getElementById('checkoutModal');
   if (modal) {
     modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
     renderCheckoutForm();
   }
 }
@@ -1268,6 +1291,7 @@ function cancelCheckoutProcess() {
   if (checkoutModal) checkoutModal.classList.remove('open');
   if (paymentModal) paymentModal.classList.remove('open');
   
+  document.body.style.overflow = 'auto';
   pendingCheckoutData = null;
   selectedPaymentMethod = null;
 }
@@ -1279,6 +1303,7 @@ function closeCheckout() {
   var paymentModal = document.getElementById('paymentMethodModal');
   if (paymentModal) paymentModal.classList.remove('open');
   
+  document.body.style.overflow = 'auto';
   pendingCheckoutData = null;
   selectedPaymentMethod = null;
 }

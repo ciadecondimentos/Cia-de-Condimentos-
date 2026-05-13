@@ -1270,20 +1270,25 @@ function showPaymentConfirmedModal(paymentData) {
     unlockPixQrModal(); // ✅ Destravando o modal após confirmação
   }
   
+  // Armazenar dados do pedido para usar no WhatsApp
+  window.confirmedOrderData = {
+    order_id: paymentData.order_id,
+    amount: paymentData.amount,
+    payment_method: paymentData.payment_method || 'PIX',
+    customer_name: paymentData.customer_name || 'Cliente',
+    customer_phone: paymentData.customer_phone || '',
+    customer_email: paymentData.customer_email || '',
+    items: paymentData.items || [],
+    notes: paymentData.notes || ''
+  };
+  
   // Mostrar modal de confirmação
   if (modal) {
     console.log('   Exibindo modal de confirmação...');
+    console.log('   ℹ️  Modal permanecerá aberta - cliente deve clicar para fechar');
     modal.classList.add('open');
     // Garantir que apareça com display block
     modal.style.display = 'flex';
-    
-    // Auto-fechar após 5 segundos (usuário pode clicar antes)
-    setTimeout(function() {
-      if (modal && modal.classList.contains('open')) {
-        console.log('   Auto-fechando modal após 5 segundos...');
-        closePaymentConfirmedModal();
-      }
-    }, 5000);
   } else {
     console.error('❌ Elemento da modal não encontrado!');
   }
@@ -1319,7 +1324,12 @@ function createPaymentConfirmedModal() {
         '<div style="background: #e8f5e9; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
           '<small style="color: #2e7d32;">🎉 Obrigado pela sua compra na Cia de Condimentos!</small>' +
         '</div>' +
-        '<button onclick="closePaymentConfirmedModal()" style="background: var(--verde); color: white; border: none; padding: 14px 32px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 16px; margin-top: 16px; width: 100%; letter-spacing: 0.5px;">' +
+        '<div style="display: flex; gap: 12px; margin-top: 16px;">' +
+          '<button onclick="sendOrderToWhatsApp()" style="flex: 1; background: #25d366; color: white; border: none; padding: 14px 16px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 14px; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">' +
+            '💬 Enviar para WhatsApp' +
+          '</button>' +
+        '</div>' +
+        '<button onclick="closePaymentConfirmedModal()" style="background: var(--verde); color: white; border: none; padding: 14px 32px; border-radius: 6px; cursor: pointer; font-weight: 900; font-size: 16px; margin-top: 12px; width: 100%; letter-spacing: 0.5px;">' +
           'Fechar' +
         '</button>' +
       '</div>' +
@@ -1387,6 +1397,66 @@ function testConfirmPayment() {
     console.error('❌ Erro ao confirmar:', error);
     alert('❌ Erro: ' + error.message);
   });
+}
+
+function sendOrderToWhatsApp() {
+  if (!window.confirmedOrderData) {
+    alert('❌ Erro: Dados do pedido não disponíveis');
+    return;
+  }
+  
+  const orderData = window.confirmedOrderData;
+  console.log('📱 Enviando pedido para WhatsApp:', orderData);
+  
+  // Construir mensagem formatada
+  let message = '🎉 *Novo Pedido Confirmado*\n\n';
+  message += '📋 *Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
+  message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
+  message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
+  message += '👤 *Cliente:* ' + (orderData.customer_name || 'Cliente') + '\n';
+  
+  if (orderData.customer_phone) {
+    message += '📞 *Telefone:* ' + orderData.customer_phone + '\n';
+  }
+  
+  message += '\n' + '━'.repeat(40) + '\n\n';
+  
+  // Adicionar itens do pedido se disponíveis
+  if (orderData.items && orderData.items.length > 0) {
+    message += '🛒 *Itens do Pedido:*\n';
+    orderData.items.forEach(function(item) {
+      message += '  • ' + item.name + ' (x' + item.quantity + ') - R$ ' + (parseFloat(item.price) * item.quantity).toFixed(2).replace('.', ',') + '\n';
+    });
+    message += '\n';
+  }
+  
+  // Adicionar nota se existir
+  if (orderData.notes) {
+    message += '📝 *Observações:* ' + orderData.notes + '\n\n';
+  }
+  
+  message += '✅ *Status:* Pagamento confirmado - Pedido em preparação\n';
+  message += '🕐 *Horário:* ' + new Date().toLocaleString('pt-BR') + '\n\n';
+  message += '_Mensagem enviada automaticamente pelo sistema_';
+  
+  console.log('📤 Mensagem construída:\n', message);
+  
+  // Obter número do WhatsApp da loja (você pode armazenar isso em uma variável global)
+  // Por enquanto, você vai precisar configurar o número da loja
+  const storeWhatsAppNumber = '5585988883392'; // MUDE PARA O SEU NÚMERO COM +55 + DDD + NÚMERO SEM CARACTERES ESPECIAIS
+  
+  // Codificar a mensagem para URL
+  const encodedMessage = encodeURIComponent(message);
+  
+  // URL do WhatsApp Web ou App
+  const whatsappURL = 'https://wa.me/' + storeWhatsAppNumber + '?text=' + encodedMessage;
+  
+  console.log('🔗 URL do WhatsApp:', whatsappURL);
+  
+  // Abrir em nova aba
+  window.open(whatsappURL, '_blank');
+  
+  alert('✅ WhatsApp aberto! A mensagem do seu pedido foi preparada e pode ser enviada.');
 }
 
 document.addEventListener('DOMContentLoaded', function() {

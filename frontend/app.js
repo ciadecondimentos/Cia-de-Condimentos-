@@ -1673,9 +1673,6 @@ function createPaymentConfirmedModal() {
   
   document.body.insertAdjacentHTML('beforeend', html);
 }
-  
-  document.body.insertAdjacentHTML('beforeend', html);
-}
 
 function goBackToPixPayment() {
   var waitingModal = document.getElementById('waitingForPaymentModal');

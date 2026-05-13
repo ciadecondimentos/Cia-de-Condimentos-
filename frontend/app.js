@@ -1751,42 +1751,74 @@ function sendOrderToWhatsApp() {
   const orderData = window.confirmedOrderData;
   console.log('📱 Enviando pedido para WhatsApp:', orderData);
   
-  // Construir mensagem formatada
-  let message = '🎉 *Novo Pedido Confirmado*\n\n';
-  message += '📋 *Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
-  message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
-  message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
-  message += '👤 *Cliente:* ' + (orderData.customer_name || 'Cliente') + '\n';
+  // Construir mensagem formatada detalhada
+  let message = '🎉 *NOVO PEDIDO CONFIRMADO*\n';
+  message += '_Cia de Condimentos e Especiarias_\n\n';
   
+  message += '─ *INFORMAÇÕES DO CLIENTE* ─\n';
+  message += '👤 *Nome:* ' + (orderData.customer_name || 'Cliente') + '\n';
   if (orderData.customer_phone) {
     message += '📞 *Telefone:* ' + orderData.customer_phone + '\n';
   }
+  if (orderData.customer_email) {
+    message += '📧 *E-mail:* ' + orderData.customer_email + '\n';
+  }
   
-  message += '\n' + '━'.repeat(40) + '\n\n';
+  message += '\n─ *DETALHES DO PEDIDO* ─\n';
+  message += '📋 *Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
+  message += '🕐 *Data/Hora:* ' + new Date().toLocaleString('pt-BR') + '\n';
   
-  // Adicionar itens do pedido se disponíveis
+  // Adicionar itens do pedido com mais detalhes
   if (orderData.items && orderData.items.length > 0) {
-    message += '🛒 *Itens do Pedido:*\n';
-    orderData.items.forEach(function(item) {
-      message += '  • ' + item.name + ' (x' + item.quantity + ') - R$ ' + (parseFloat(item.price) * item.quantity).toFixed(2).replace('.', ',') + '\n';
+    message += '\n─ *ITENS DO PEDIDO* ─\n';
+    let subtotal = 0;
+    orderData.items.forEach(function(item, index) {
+      const itemTotal = parseFloat(item.price) * item.quantity;
+      subtotal += itemTotal;
+      message += '\n' + (index + 1) + '. ' + item.name + '\n';
+      message += '   Quantidade: ' + item.quantity + ' unidade' + (item.quantity > 1 ? 's' : '') + '\n';
+      message += '   Valor unitário: R$ ' + parseFloat(item.price).toFixed(2).replace('.', ',') + '\n';
+      message += '   Subtotal: R$ ' + itemTotal.toFixed(2).replace('.', ',') + '\n';
     });
     message += '\n';
   }
   
-  // Adicionar nota se existir
-  if (orderData.notes) {
-    message += '📝 *Observações:* ' + orderData.notes + '\n\n';
+  message += '─ *RESUMO FINANCEIRO* ─\n';
+  message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
+  message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
+  
+  // Adicionar endereço se disponível
+  if (orderData.address || orderData.city || orderData.state) {
+    message += '\n─ *ENDEREÇO DE ENTREGA* ─\n';
+    if (orderData.address) {
+      message += '📍 *Endereço:* ' + orderData.address + '\n';
+    }
+    if (orderData.city) {
+      message += '🏙️ *Cidade:* ' + orderData.city;
+      if (orderData.state) {
+        message += ', ' + orderData.state;
+      }
+      message += '\n';
+    }
   }
   
-  message += '✅ *Status:* Pagamento confirmado - Pedido em preparação\n';
-  message += '🕐 *Horário:* ' + new Date().toLocaleString('pt-BR') + '\n\n';
-  message += '_Mensagem enviada automaticamente pelo sistema_';
+  // Adicionar nota especial/observações se existir
+  if (orderData.notes) {
+    message += '\n─ *OBSERVAÇÕES/PEDIDOS ESPECIAIS* ─\n';
+    message += '📝 ' + orderData.notes + '\n';
+  }
+  
+  message += '\n─ *STATUS DO PEDIDO* ─\n';
+  message += '✅ *Status Atual:* Pagamento confirmado - Pedido em preparação\n';
+  message += '⏱️ *Previsão:* Saiba em breve o horário de entrega/retirada\n';
+  
+  message += '\n_Obrigado pela sua compra! 🙏_\n';
+  message += '_Mensagem enviada automaticamente pelo sistema da Cia de Condimentos_';
   
   console.log('📤 Mensagem construída:\n', message);
   
-  // Obter número do WhatsApp da loja (você pode armazenar isso em uma variável global)
-  // Por enquanto, você vai precisar configurar o número da loja
-  const storeWhatsAppNumber = '5585988883392'; // MUDE PARA O SEU NÚMERO COM +55 + DDD + NÚMERO SEM CARACTERES ESPECIAIS
+  // Número do WhatsApp da loja - ATUALIZADO
+  const storeWhatsAppNumber = '5581971132776'; // +55 81 97113-2776
   
   // Codificar a mensagem para URL
   const encodedMessage = encodeURIComponent(message);

@@ -1871,7 +1871,7 @@ function handleMainSearch(searchTerm) {
         ? '<img src="' + imageUrl + '" alt="' + p.name + '">'
         : '<div style="font-size: 20px;">🌶️</div>';
       
-      return '<div class="search-result-item" onclick="closeMainSearch(); openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
+      return '<div class="search-result-item" onclick="selectSearchResult(' + p.id + ', ' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
         '<div class="search-result-img">' + imgHtml + '</div>' +
         '<div class="search-result-info">' +
           '<div class="search-result-name">' + p.name + '</div>' +
@@ -1883,6 +1883,13 @@ function handleMainSearch(searchTerm) {
     resultsContainer.innerHTML = html;
     resultsContainer.classList.add('active');
   });
+}
+
+function selectSearchResult(productId, product) {
+  closeMainSearch();
+  if (product && product.id === productId) {
+    openProductDetail(product);
+  }
 }
 
 function closeMainSearch() {
@@ -1898,11 +1905,13 @@ function closeMainSearch() {
 
 // Fechar resultados da busca quando clicar fora
 document.addEventListener('click', function(event) {
-  const searchWrapper = document.querySelector('.search-wrapper');
+  const searchSection = document.querySelector('.search-section');
   const resultsContainer = document.getElementById('mainSearchResults');
   
-  if (searchWrapper && resultsContainer && !searchWrapper.contains(event.target)) {
-    resultsContainer.classList.remove('active');
+  if (searchSection && resultsContainer) {
+    if (!searchSection.contains(event.target)) {
+      resultsContainer.classList.remove('active');
+    }
   }
 });
 

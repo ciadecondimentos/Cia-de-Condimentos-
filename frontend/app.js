@@ -1825,7 +1825,7 @@ function sendOrderToWhatsApp() {
   console.log('📤 Mensagem construída:\n', message);
   
   // Número do WhatsApp da loja - ATUALIZADO
-  const storeWhatsAppNumber = '5581971132776'; // +55 81 97113-2776
+  const storeWhatsAppNumber = '5581997364190'; // +55 81 99736-4190
   
   // Codificar a mensagem para URL
   const encodedMessage = encodeURIComponent(message);

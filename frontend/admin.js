@@ -390,7 +390,7 @@ function renderProductsTable(products) {
           </div>
         </div>
       </td>
-      <td data-label="SKU">${prod.sku || 'N/A'}</td>
+      <td data-label="COD">${prod.sku || 'N/A'}</td>
       <td data-label="Categoria">${prod.category || 'N/A'}</td>
       <td data-label="Preço">R$ ${parseFloat(prod.price || 0).toFixed(2)}</td>
       <td data-label="Estoque">${prod.stock || 0} unid.</td>
@@ -422,7 +422,7 @@ function openAddProduct() {
         <input type="text" id="prodName" placeholder="Ex: Pimenta Malagueta">
       </div>
       <div class="fg">
-        <label>SKU</label>
+        <label>COD</label>
         <input type="text" id="prodSku" placeholder="Ex: PM001">
       </div>
     </div>
@@ -825,7 +825,7 @@ function openEditProduct(product) {
         <input type="text" id="prodName" placeholder="Ex: Pimenta Malagueta" value="${product.name || ''}">
       </div>
       <div class="fg">
-        <label>SKU</label>
+        <label>COD</label>
         <input type="text" id="prodSku" placeholder="Ex: PM001" value="${product.sku || ''}">
       </div>
     </div>

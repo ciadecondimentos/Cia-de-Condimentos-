@@ -826,7 +826,7 @@ function openEditProduct(product) {
       </div>
       <div class="fg">
         <label>COD</label>
-        <input type="text" id="prodSku" placeholder="Ex: PM001" value="${product.sku || ''}">
+        <input type="text" id="prodCod" placeholder="Ex: PM001" value="${product.cod || ''}">
       </div>
     </div>
     <div class="form-row-2">

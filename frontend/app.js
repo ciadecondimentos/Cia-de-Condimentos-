@@ -1834,10 +1834,12 @@ function sendOrderToWhatsApp() {
   
   message += '\n─ *STATUS DO PEDIDO* ─\n';
   // Determinar status baseado no método de pagamento
-  if (paymentMethod === 'dinheiro' || paymentMethod === 'cartão') {
-    message += '*Status Atual:* Pagamento na entrega\n';
+  if (paymentMethod === 'dinheiro') {
+    message += '*Status Atual:* Pagamento na entrega (Dinheiro)\n';
+  } else if (paymentMethod === 'cartão') {
+    message += '*Status Atual:* Pagamento no cartão (na entrega)\n';
   } else {
-    message += '*Status Atual:* Pagamento confirmado\n';
+    message += '*Status Atual:* Pagamento confirmado (' + (orderData.payment_method || 'PIX') + ')\n';
   }
   
   message += '\n_Obrigado pela sua compra!_\n';

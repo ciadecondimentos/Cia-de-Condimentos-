@@ -770,7 +770,8 @@ function confirmExactMoneyPayment() {
       order_id: data.id,
       amount: data.total || pendingCheckoutData.total,
       payment_method: 'Dinheiro',
-      payment_type: 'exact'
+      payment_type: 'exact',
+      items: pendingCheckoutData.items || []
     });
     
     cart = [];
@@ -853,7 +854,8 @@ function confirmChangeMoneyPayment() {
       order_id: data.id,
       amount: data.total || pendingCheckoutData.total,
       payment_method: 'Dinheiro',
-      payment_type: 'change'
+      payment_type: 'change',
+      items: pendingCheckoutData.items || []
     });
     
     cart = [];
@@ -921,7 +923,8 @@ function confirmCardPayment() {
     showPaymentConfirmedModal({
       order_id: data.id,
       amount: data.total || pendingCheckoutData.total,
-      payment_method: 'Cartão'
+      payment_method: 'Cartão',
+      items: pendingCheckoutData.items || []
     });
     
     cart = [];
@@ -1490,7 +1493,9 @@ function checkOrderStatus(orderId) {
       stopPaymentPolling();
       showPaymentConfirmedModal({
         order_id: orderId,
-        amount: orderData.total || (paymentPollingData ? paymentPollingData.amount : 0)
+        amount: orderData.total || (paymentPollingData ? paymentPollingData.amount : 0),
+        payment_method: 'PIX',
+        items: pendingCheckoutData && pendingCheckoutData.items || []
       });
     }
   })
@@ -1617,10 +1622,11 @@ function showPaymentConfirmedModal(paymentData) {
     order_id: paymentData.order_id,
     amount: paymentData.amount,
     payment_method: paymentData.payment_method || 'PIX',
-    customer_name: paymentData.customer_name || 'Cliente',
-    customer_phone: paymentData.customer_phone || '',
-    customer_email: paymentData.customer_email || '',
-    items: paymentData.items || [],
+    customer_name: paymentData.customer_name || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.name) || 'Cliente',
+    customer_phone: paymentData.customer_phone || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.phone) || '',
+    customer_email: paymentData.customer_email || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.email) || '',
+    address: paymentData.address || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.address) || '',
+    items: paymentData.items || (pendingCheckoutData && pendingCheckoutData.items) || [],
     notes: paymentData.notes || ''
   };
   
@@ -1740,7 +1746,9 @@ function testConfirmPayment() {
     // Mostrar modal de confirmação
     showPaymentConfirmedModal({
       order_id: paymentPollingData.order_id,
-      amount: paymentPollingData.amount
+      amount: paymentPollingData.amount,
+      payment_method: 'PIX',
+      items: pendingCheckoutData && pendingCheckoutData.items || []
     });
   })
   .catch(function(error) {
@@ -1763,7 +1771,9 @@ function sendOrderToWhatsApp() {
   message += '_Cia de Condimentos e Especiarias_\n\n';
   
   message += '─ *INFORMAÇÕES DO CLIENTE* ─\n';
-  message += '👤 *Nome:* ' + (orderData.customer_name || 'Cliente') + '\n';
+  // Verificar nome do cliente em várias possibilidades
+  const clientName = (orderData.customer_name || orderData.customerName || localStorage.getItem('lastCustomerName') || 'Cliente');
+  message += '👤 *Nome:* ' + clientName + '\n';
   if (orderData.customer_phone) {
     message += '📞 *Telefone:* ' + orderData.customer_phone + '\n';
   }
@@ -1775,22 +1785,18 @@ function sendOrderToWhatsApp() {
   message += '📋 *Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
   message += '🕐 *Data/Hora:* ' + new Date().toLocaleString('pt-BR') + '\n';
   
-  // Adicionar itens do pedido com mais detalhes
+  // Adicionar itens do pedido com formato compacto
   if (orderData.items && orderData.items.length > 0) {
     message += '\n─ *ITENS DO PEDIDO* ─\n';
-    let subtotal = 0;
-    orderData.items.forEach(function(item, index) {
-      const itemTotal = parseFloat(item.price) * item.quantity;
-      subtotal += itemTotal;
-      message += '\n' + (index + 1) + '. ' + item.name + '\n';
-      message += '   Quantidade: ' + item.quantity + ' unidade' + (item.quantity > 1 ? 's' : '') + '\n';
-      message += '   Valor unitário: R$ ' + parseFloat(item.price).toFixed(2).replace('.', ',') + '\n';
-      message += '   Subtotal: R$ ' + itemTotal.toFixed(2).replace('.', ',') + '\n';
-    });
-    message += '\n';
+    const itemsFormatted = orderData.items.map(function(item) {
+      const priceFormatted = parseFloat(item.price).toFixed(2).replace('.', ',');
+      const quantity = item.quantity || item.qty || 1;
+      return item.name + ' R$ ' + priceFormatted + ' ' + quantity + 'x';
+    }).join(' - ');
+    message += itemsFormatted + '\n';
   }
   
-  message += '─ *RESUMO FINANCEIRO* ─\n';
+  message += '\n─ *RESUMO FINANCEIRO* ─\n';
   message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
   message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
   
@@ -1816,8 +1822,13 @@ function sendOrderToWhatsApp() {
   }
   
   message += '\n─ *STATUS DO PEDIDO* ─\n';
-  message += '✅ *Status Atual:* Pagamento confirmado - Pedido em preparação\n';
-  message += '⏱️ *Previsão:* Saiba em breve o horário de entrega/retirada\n';
+  // Determinar status baseado no método de pagamento
+  const paymentMethod = (orderData.payment_method || 'PIX').toLowerCase();
+  if (paymentMethod === 'dinheiro' || paymentMethod === 'cartão') {
+    message += '✅ *Status Atual:* Pagamento na entrega - Pedido em preparação\n';
+  } else {
+    message += '✅ *Status Atual:* Pagamento confirmado - Pedido em preparação\n';
+  }
   
   message += '\n_Obrigado pela sua compra! 🙏_\n';
   message += '_Mensagem enviada automaticamente pelo sistema da Cia de Condimentos_';

@@ -389,6 +389,13 @@ function updateCartBadge() {
     badge.textContent = total;
     badge.style.display = total > 0 ? 'flex' : 'none';
   }
+  
+  // Atualizar badge do botão flutuante
+  var floatingBadge = document.getElementById('floatingCartBadge');
+  if (floatingBadge) {
+    floatingBadge.textContent = total;
+    floatingBadge.style.display = total > 0 ? 'flex' : 'none';
+  }
 }
 
 function openCart() {

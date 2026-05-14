@@ -962,6 +962,18 @@ tr:hover td { background: #faf7f2; }
           <option value="Entregue">Entregue</option>
           <option value="Cancelado">Cancelado</option>
         </select>
+        <select id="exportPeriodFilter" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="">Período: Todos os Pedidos</option>
+          <option value="24h">Últimas 24 horas</option>
+          <option value="3d">Últimos 3 dias</option>
+          <option value="7d">Última semana</option>
+          <option value="14d">Últimos 14 dias</option>
+          <option value="30d">Último mês</option>
+          <option value="60d">Últimos 2 meses</option>
+          <option value="90d">Último trimestre</option>
+          <option value="180d">Último semestre</option>
+          <option value="365d">Último ano</option>
+        </select>
         <button class="btn btn-secondary" onclick="exportOrders()">📥 Exportar CSV</button>
         <button class="btn btn-danger" onclick="deleteAllOrders()" style="margin-left: auto;">🗑️ Limpar Todos</button>
       </div>

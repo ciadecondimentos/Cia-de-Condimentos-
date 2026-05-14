@@ -1107,6 +1107,7 @@ function exportOrders() {
   // Buscar dados reais do servidor
   const search = document.getElementById('orderSearch')?.value || '';
   const statusFilter = document.getElementById('orderStatusFilter')?.value || '';
+  const periodFilter = document.getElementById('exportPeriodFilter')?.value || '';
   
   fetch(`${API_BASE}/orders`)
     .then(res => res.json())
@@ -1116,11 +1117,41 @@ function exportOrders() {
         return;
       }
 
-      // Aplicar mesmos filtros da tela
-      const filtered = orders.filter(o => 
-        (o.customer_name?.toLowerCase().includes(search.toLowerCase()) || String(o.id).includes(search)) &&
-        (!statusFilter || o.status === statusFilter)
-      );
+      // Calcular data inicial baseado no período
+      const now = new Date();
+      let startDate = null;
+      let periodLabel = 'Todos os pedidos';
+
+      if (periodFilter) {
+        const dayCount = parseInt(periodFilter);
+        if (!isNaN(dayCount)) {
+          startDate = new Date(now.getTime() - (dayCount * 24 * 60 * 60 * 1000));
+          
+          // Labels descritivos
+          const labels = {
+            '1': 'Últimas 24 horas',
+            '3': 'Últimos 3 dias',
+            '7': 'Última semana',
+            '14': 'Últimos 14 dias',
+            '30': 'Último mês',
+            '60': 'Últimos 2 meses',
+            '90': 'Último trimestre',
+            '180': 'Último semestre',
+            '365': 'Último ano'
+          };
+          
+          periodLabel = labels[dayCount] || `Últimos ${dayCount} dias`;
+        }
+      }
+
+      // Aplicar filtros
+      const filtered = orders.filter(o => {
+        const matchesSearch = o.customer_name?.toLowerCase().includes(search.toLowerCase()) || String(o.id).includes(search);
+        const matchesStatus = !statusFilter || o.status === statusFilter;
+        const matchesPeriod = !startDate || new Date(o.created_at) >= startDate;
+        
+        return matchesSearch && matchesStatus && matchesPeriod;
+      });
 
       if (filtered.length === 0) {
         showToast('Nenhum pedido corresponde aos filtros aplicados', 'warning');
@@ -1164,14 +1195,14 @@ function exportOrders() {
       const url = URL.createObjectURL(blob);
       
       link.setAttribute('href', url);
-      link.setAttribute('download', `Pedidos_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Pedidos_${periodLabel}_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      showToast(`✅ ${filtered.length} pedido(s) exportado(s) com dados reais!`);
+      showToast(`✅ ${filtered.length} pedido(s) exportado(s) (${periodLabel})!`);
     })
     .catch(error => {
       console.error('Error exporting orders:', error);

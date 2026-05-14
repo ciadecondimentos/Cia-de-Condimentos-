@@ -1627,7 +1627,9 @@ function showPaymentConfirmedModal(paymentData) {
     customer_email: paymentData.customer_email || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.email) || '',
     address: paymentData.address || (pendingCheckoutData && pendingCheckoutData.customer && pendingCheckoutData.customer.address) || '',
     items: paymentData.items || (pendingCheckoutData && pendingCheckoutData.items) || [],
-    notes: paymentData.notes || ''
+    notes: paymentData.notes || '',
+    changeAmount: paymentData.changeAmount || (pendingCheckoutData && pendingCheckoutData.changeAmount) || 0,
+    paidAmount: paymentData.paidAmount || (pendingCheckoutData && pendingCheckoutData.paidAmount) || 0
   };
   
   // Mostrar modal de confirmação
@@ -1800,6 +1802,13 @@ function sendOrderToWhatsApp() {
   message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
   message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
   
+  // Adicionar informação de troco se for dinheiro com troco
+  const paymentMethod = (orderData.payment_method || 'PIX').toLowerCase();
+  if (paymentMethod === 'dinheiro' && orderData.changeAmount > 0) {
+    message += '💵 *Valor Pago:* R$ ' + (parseFloat(orderData.paidAmount) || 0).toFixed(2).replace('.', ',') + '\n';
+    message += '🔄 *Troco:* R$ ' + (parseFloat(orderData.changeAmount) || 0).toFixed(2).replace('.', ',') + '\n';
+  }
+  
   // Adicionar endereço se disponível
   if (orderData.address || orderData.city || orderData.state) {
     message += '\n─ *ENDEREÇO DE ENTREGA* ─\n';
@@ -1823,11 +1832,10 @@ function sendOrderToWhatsApp() {
   
   message += '\n─ *STATUS DO PEDIDO* ─\n';
   // Determinar status baseado no método de pagamento
-  const paymentMethod = (orderData.payment_method || 'PIX').toLowerCase();
   if (paymentMethod === 'dinheiro' || paymentMethod === 'cartão') {
-    message += '✅ *Status Atual:* Pagamento na entrega - Pedido em preparação\n';
+    message += '✅ *Status Atual:* Pagamento na entrega\n';
   } else {
-    message += '✅ *Status Atual:* Pagamento confirmado - Pedido em preparação\n';
+    message += '✅ *Status Atual:* Pagamento confirmado\n';
   }
   
   message += '\n_Obrigado pela sua compra! 🙏_\n';

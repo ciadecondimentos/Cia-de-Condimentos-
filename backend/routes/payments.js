@@ -238,12 +238,12 @@ router.get('/status/:paymentId', async (req, res) => {
         if (payment.order_id) {
           await db.query(
             'UPDATE orders SET payment_status = $1 WHERE id = $2',
-            ['Confirmado', payment.order_id]
+            ['Pago', payment.order_id]
           );
 
           await db.query(
             'UPDATE orders SET status = $1 WHERE id = $2',
-            ['Confirmado', payment.order_id]
+            ['Pago', payment.order_id]
           );
 
           // Diminuir estoque
@@ -382,16 +382,16 @@ router.post('/webhook', async (req, res) => {
       // Se tiver order_id, atualizar status do pedido E CONFIRMAR ESTOQUE
       const payment = dbResult.rows[0];
       if (payment.order_id) {
-        // Atualizar status de pagamento para "Confirmado"
+        // Atualizar status de pagamento para "Pago"
         await db.query(
           'UPDATE orders SET payment_status = $1 WHERE id = $2',
-          ['Confirmado', payment.order_id]
+          ['Pago', payment.order_id]
         );
 
-        // ✅ NOVO: Também atualizar status do pedido para "Confirmado" (para PIX ir direto para aba confirmados)
+        // ✅ NOVO: Também atualizar status do pedido para "Pago" (para PIX ir direto para aba confirmados)
         await db.query(
           'UPDATE orders SET status = $1 WHERE id = $2',
-          ['Confirmado', payment.order_id]
+          ['Pago', payment.order_id]
         );
 
         // ✅ NOVO: Diminuir estoque para PIX quando pagamento é aprovado
@@ -556,7 +556,7 @@ router.post('/confirm-test/:paymentId', async (req, res) => {
     if (updatedPayment.order_id) {
       await db.query(
         'UPDATE orders SET payment_status = $1, status = $2, updated_at = NOW() WHERE id = $3',
-        ['Confirmado', 'Confirmado', updatedPayment.order_id]
+        ['Pago', 'Confirmado', updatedPayment.order_id]
       );
 
       // Diminuir estoque

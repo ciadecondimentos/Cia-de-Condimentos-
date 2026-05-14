@@ -153,11 +153,11 @@ router.put('/:id', async (req, res) => {
         );
       }
 
-      // Se for Cartão/Dinheiro, mudar status para "Confirmado"
-      if (currentOrder.payment_method !== 'PIX') {
+      // Se for Cartão/Dinheiro, mudar status para "Pago"
+      if (currentOrder.payment_method !== 'pix') {
         await db.query(
-          `UPDATE orders SET status = $1 WHERE id = $2`,
-          ['Confirmado', id]
+          'UPDATE orders SET status = $1 WHERE id = $2',
+          ['Pago', id]
         );
         
         console.log(`✅ Pedido #${id} (${currentOrder.payment_method}) - Estoque baixado, Status: Confirmado`);

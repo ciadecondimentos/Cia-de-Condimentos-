@@ -5,7 +5,7 @@ const db = require('../db');
 // ==================== FORNECEDORES ====================
 
 // GET: Listar todos os fornecedores com filtros
-router.get('/suppliers', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const { filter, search, sortBy = 'name' } = req.query;
     let query = 'SELECT * FROM suppliers WHERE 1=1';
@@ -70,7 +70,7 @@ router.get('/suppliers', async (req, res) => {
 });
 
 // GET: Obter fornecedor específico com histórico
-router.get('/suppliers/:id', async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -127,7 +127,7 @@ router.get('/suppliers/:id', async (req, res) => {
 });
 
 // POST: Criar novo fornecedor
-router.post('/suppliers', async (req, res) => {
+router.post('/', async (req, res) => {
   try {
     console.log('POST /suppliers - recebido:', req.body);
     
@@ -163,7 +163,7 @@ router.post('/suppliers', async (req, res) => {
 });
 
 // PUT: Atualizar fornecedor
-router.put('/suppliers/:id', async (req, res) => {
+router.put('/:id', async (req, res) => {
   try {
     console.log('PUT /suppliers/:id - id:', req.params.id, '- recebido:', req.body);
     
@@ -211,7 +211,7 @@ router.put('/suppliers/:id', async (req, res) => {
 });
 
 // DELETE: Deletar fornecedor
-router.delete('/suppliers/:id', async (req, res) => {
+router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -231,7 +231,7 @@ router.delete('/suppliers/:id', async (req, res) => {
 // ==================== HISTÓRICO DE COMPRAS ====================
 
 // GET: Histórico de um fornecedor
-router.get('/suppliers/:id/purchases', async (req, res) => {
+router.get('/:id/purchases', async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -248,7 +248,7 @@ router.get('/suppliers/:id/purchases', async (req, res) => {
 });
 
 // POST: Registrar compra/suprimento
-router.post('/suppliers/:id/purchases', async (req, res) => {
+router.post('/:id/purchases', async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -277,7 +277,7 @@ router.post('/suppliers/:id/purchases', async (req, res) => {
 });
 
 // PUT: Atualizar compra
-router.put('/suppliers/:id/purchases/:purchaseId', async (req, res) => {
+router.put('/:id/purchases/:purchaseId', async (req, res) => {
   try {
     const { id, purchaseId } = req.params;
     const {
@@ -314,7 +314,7 @@ router.put('/suppliers/:id/purchases/:purchaseId', async (req, res) => {
 });
 
 // DELETE: Deletar compra
-router.delete('/suppliers/:id/purchases/:purchaseId', async (req, res) => {
+router.delete('/:id/purchases/:purchaseId', async (req, res) => {
   try {
     const { id, purchaseId } = req.params;
 

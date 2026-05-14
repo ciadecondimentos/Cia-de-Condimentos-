@@ -216,15 +216,17 @@ function openQuantityModal(product) {
   
   var imageEl = document.getElementById('quantityProductImage');
   if (imageEl) {
-    if (product.image) {
-      imageEl.innerHTML = '<img src="' + product.image + '" style="width: 100%; height: 100%; object-fit: cover;">';
+    // Usar a mesma lógica de imageUrl que em openProductDetail
+    var imageUrl = product.image_url || ((product.images && product.images.length > 0) ? getImageUrl(product.images[0]) : product.image);
+    if (imageUrl) {
+      imageEl.innerHTML = '<img src="' + imageUrl + '" style="width: 100%; height: 100%; object-fit: cover;">';
     } else {
       imageEl.textContent = '🌶️';
     }
   }
   
   var priceEl = document.getElementById('quantityProductPrice');
-  if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',');
+  if (priceEl) priceEl.textContent = 'UN R$ ' + product.price.toFixed(2).replace('.', ',');
   
   var qtyDisplay = document.getElementById('quantityDisplay');
   if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;

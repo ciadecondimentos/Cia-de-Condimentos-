@@ -390,7 +390,7 @@ function renderProductsTable(products) {
           </div>
         </div>
       </td>
-      <td data-label="COD">${prod.sku || 'N/A'}</td>
+      <td data-label="COD">${prod.cod || 'N/A'}</td>
       <td data-label="Categoria">${prod.category || 'N/A'}</td>
       <td data-label="Preço">R$ ${parseFloat(prod.price || 0).toFixed(2)}</td>
       <td data-label="Estoque">${prod.stock || 0} unid.</td>
@@ -423,7 +423,7 @@ function openAddProduct() {
       </div>
       <div class="fg">
         <label>COD</label>
-        <input type="text" id="prodSku" placeholder="Ex: PM001">
+        <input type="text" id="prodCod" placeholder="Ex: PM001">
       </div>
     </div>
     <div class="form-row-2">
@@ -562,7 +562,7 @@ function closeProductModal() {
 function saveProduct() {
   const id = document.getElementById('prodId')?.value;
   const name = document.getElementById('prodName')?.value?.trim();
-  const sku = document.getElementById('prodSku')?.value?.trim();
+  const cod = document.getElementById('prodCod')?.value?.trim();
   const category = document.getElementById('prodCategory')?.value;
   const price = parseFloat(document.getElementById('prodPrice')?.value) || 0;
   const stock = parseInt(document.getElementById('prodStock')?.value) || 0;
@@ -626,7 +626,7 @@ function saveProduct() {
   // Preparar dados do produto
   const productData = {
     name,
-    sku,
+    cod,
     category,
     price,
     stock,

@@ -83,10 +83,10 @@ router.post('/', async (req, res) => {
     }
 
     const result = await db.query(
-      `INSERT INTO products (name, category, price, stock, description, barcode, sku, weight, origin, brand, expiry, active)
+      `INSERT INTO products (name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [name, category || null, price, stock, description || '', barcode || '', sku || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', active !== false]
+      [name, category || null, price, stock, description || '', barcode || '', cod || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', active !== false]
     );
 
     const product = result.rows[0];
@@ -184,7 +184,7 @@ router.put('/:id', async (req, res) => {
            stock = COALESCE($4, stock),
            description = COALESCE($5, description),
            barcode = COALESCE($6, barcode),
-           sku = COALESCE($7, sku),
+           cod = COALESCE($7, cod),
            weight = COALESCE($8, weight),
            origin = COALESCE($9, origin),
            brand = COALESCE($10, brand),
@@ -192,7 +192,7 @@ router.put('/:id', async (req, res) => {
            active = COALESCE($12, active)
        WHERE id = $13
        RETURNING *`,
-      [name, category, price, stock, description, barcode, sku, weight, origin, brand, expiry, active, id]
+      [name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active, id]
     );
 
     if (result.rows.length === 0) {

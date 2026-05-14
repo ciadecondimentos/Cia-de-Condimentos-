@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS products (
   description TEXT,
   image TEXT,
   barcode VARCHAR(50),
-  sku VARCHAR(100),
+  cod VARCHAR(100),
   weight VARCHAR(100),
   origin VARCHAR(100),
   brand VARCHAR(255),

@@ -94,7 +94,7 @@ Abra em seu navegador:
 - description (TEXT) - Descrição
 - image (LONGTEXT) - URL ou Base64 da imagem
 - barcode (VARCHAR) - Código de barras
-- sku (VARCHAR) - SKU
+- cod (VARCHAR) - Código do Produto
 - weight (VARCHAR) - Peso
 - origin (VARCHAR) - Origem
 - brand (VARCHAR) - Sempre "Cia. Condimentos e Especiarias"
@@ -126,7 +126,7 @@ Body: {
   description: "string",
   image: "string (URL or Base64)",
   barcode: "string",
-  sku: "string",
+  cod: "string",
   weight: "string",
   origin: "string",
   expiry: "string",

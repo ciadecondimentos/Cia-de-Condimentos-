@@ -269,7 +269,7 @@ const server = http.createServer((req, res) => {
           description: data.description || '',
           images: data.images || [],
           barcode: data.barcode || '',
-          sku: data.sku || '',
+          cod: data.cod || '',
           weight: data.weight || '',
           origin: data.origin || '',
           brand: data.brand || 'Cia. Condimentos e Especiarias',
@@ -310,7 +310,7 @@ const server = http.createServer((req, res) => {
         if (data.description !== undefined) product.description = data.description;
         if (data.images !== undefined) product.images = data.images;
         if (data.barcode !== undefined) product.barcode = data.barcode;
-        if (data.sku !== undefined) product.sku = data.sku;
+        if (data.cod !== undefined) product.cod = data.cod;
         if (data.weight !== undefined) product.weight = data.weight;
         if (data.origin !== undefined) product.origin = data.origin;
         if (data.active !== undefined) product.active = data.active;

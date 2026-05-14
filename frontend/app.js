@@ -1768,26 +1768,26 @@ function sendOrderToWhatsApp() {
   }
   
   const orderData = window.confirmedOrderData;
-  console.log('📱 Enviando pedido para WhatsApp:', orderData);
+  console.log('Enviando pedido para WhatsApp:', orderData);
   
   // Construir mensagem formatada detalhada
-  let message = '🎉 *NOVO PEDIDO CONFIRMADO*\n';
+  let message = '*NOVO PEDIDO CONFIRMADO*\n';
   message += '_Cia de Condimentos e Especiarias_\n\n';
   
   message += '─ *INFORMAÇÕES DO CLIENTE* ─\n';
   // Verificar nome do cliente em várias possibilidades
   const clientName = (orderData.customer_name || orderData.customerName || localStorage.getItem('lastCustomerName') || 'Cliente');
-  message += '👤 *Nome:* ' + clientName + '\n';
+  message += '*Nome:* ' + clientName + '\n';
   if (orderData.customer_phone) {
-    message += '📞 *Telefone:* ' + orderData.customer_phone + '\n';
+    message += '*Telefone:* ' + orderData.customer_phone + '\n';
   }
   if (orderData.customer_email) {
-    message += '📧 *E-mail:* ' + orderData.customer_email + '\n';
+    message += '*E-mail:* ' + orderData.customer_email + '\n';
   }
   
   message += '\n─ *DETALHES DO PEDIDO* ─\n';
-  message += '📋 *Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
-  message += '🕐 *Data/Hora:* ' + new Date().toLocaleString('pt-BR') + '\n';
+  message += '*Número do Pedido:* ' + (orderData.order_id || 'N/A') + '\n';
+  message += '*Data/Hora:* ' + new Date().toLocaleString('pt-BR') + '\n';
   
   // Adicionar itens do pedido com formato compacto
   if (orderData.items && orderData.items.length > 0) {
@@ -1801,24 +1801,24 @@ function sendOrderToWhatsApp() {
   }
   
   message += '\n─ *RESUMO FINANCEIRO* ─\n';
-  message += '💰 *Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
-  message += '💳 *Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
+  message += '*Valor Total:* R$ ' + (parseFloat(orderData.amount) || 0).toFixed(2).replace('.', ',') + '\n';
+  message += '*Forma de Pagamento:* ' + (orderData.payment_method || 'PIX') + '\n';
   
   // Adicionar informação de troco se for dinheiro com troco
   const paymentMethod = (orderData.payment_method || 'PIX').toLowerCase();
   if (paymentMethod === 'dinheiro' && orderData.changeAmount > 0) {
-    message += '💵 *Valor Pago:* R$ ' + (parseFloat(orderData.paidAmount) || 0).toFixed(2).replace('.', ',') + '\n';
-    message += '🔄 *Troco:* R$ ' + (parseFloat(orderData.changeAmount) || 0).toFixed(2).replace('.', ',') + '\n';
+    message += '*Valor Pago:* R$ ' + (parseFloat(orderData.paidAmount) || 0).toFixed(2).replace('.', ',') + '\n';
+    message += '*Troco:* R$ ' + (parseFloat(orderData.changeAmount) || 0).toFixed(2).replace('.', ',') + '\n';
   }
   
   // Adicionar endereço se disponível
   if (orderData.address || orderData.city || orderData.state) {
     message += '\n─ *ENDEREÇO DE ENTREGA* ─\n';
     if (orderData.address) {
-      message += '📍 *Endereço:* ' + orderData.address + '\n';
+      message += '*Endereço:* ' + orderData.address + '\n';
     }
     if (orderData.city) {
-      message += '🏙️ *Cidade:* ' + orderData.city;
+      message += '*Cidade:* ' + orderData.city;
       if (orderData.state) {
         message += ', ' + orderData.state;
       }
@@ -1829,18 +1829,18 @@ function sendOrderToWhatsApp() {
   // Adicionar nota especial/observações se existir
   if (orderData.notes) {
     message += '\n─ *OBSERVAÇÕES/PEDIDOS ESPECIAIS* ─\n';
-    message += '📝 ' + orderData.notes + '\n';
+    message += orderData.notes + '\n';
   }
   
   message += '\n─ *STATUS DO PEDIDO* ─\n';
   // Determinar status baseado no método de pagamento
   if (paymentMethod === 'dinheiro' || paymentMethod === 'cartão') {
-    message += '✅ *Status Atual:* Pagamento na entrega\n';
+    message += '*Status Atual:* Pagamento na entrega\n';
   } else {
-    message += '✅ *Status Atual:* Pagamento confirmado\n';
+    message += '*Status Atual:* Pagamento confirmado\n';
   }
   
-  message += '\n_Obrigado pela sua compra! 🙏_\n';
+  message += '\n_Obrigado pela sua compra!_\n';
   message += '_Mensagem enviada automaticamente pelo sistema da Cia de Condimentos_';
   
   console.log('📤 Mensagem construída:\n', message);

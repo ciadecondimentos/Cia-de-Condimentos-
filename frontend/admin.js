@@ -969,10 +969,6 @@ function openOrderModal(orderId) {
               <span>${order.customer_name || 'N/A'}</span>
             </div>
             <div class="detail-row">
-              <strong>Email:</strong>
-              <span>${order.customer_email || 'N/A'}</span>
-            </div>
-            <div class="detail-row">
               <strong>Telefone:</strong>
               <span>${order.customer_phone || 'N/A'}</span>
             </div>

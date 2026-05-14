@@ -1554,7 +1554,7 @@ function renderPaymentReport(orders) {
     'Cartão': '💳',
     'Dinheiro': '💵',
     'Boleto': '📄',
-    'Desconhecido': '❓'
+    'Desconhecido': '📦'
   };
   
   let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';

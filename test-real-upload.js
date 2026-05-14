@@ -64,7 +64,7 @@ async function testUpload() {
           } else if (content.includes('\x89PNG')) {
             console.log('\n✅ SUCESSO: Arquivo é um PNG real!');
           } else {
-            console.log('\n❓ Tipo de arquivo desconhecido');
+            console.log('\n📦 Tipo de arquivo desconhecido');
           }
         } else {
           console.log('\n❌ Arquivo não encontrado no servidor');

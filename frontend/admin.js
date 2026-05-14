@@ -76,6 +76,8 @@ function showPage(pageId, buttonElement) {
     loadReportData('7');
   } else if (pageId === 'crm') {
     initializeCrm();
+  } else if (pageId === 'suppliers') {
+    initializeSuppliers();
   }
 }
 

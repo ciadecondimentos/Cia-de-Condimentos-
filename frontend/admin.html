@@ -788,6 +788,48 @@ tr:hover td { background: #faf7f2; }
   </div>
 </div>
 
+<!-- SUPPLIER MODALS -->
+<div class="modal-overlay" id="supplierModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="supplierModalTitle">Novo Fornecedor</h3>
+      <button class="close" onclick="closeSupplierModal()">✕</button>
+    </div>
+    <div class="modal-body" id="supplierModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSupplierModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSupplier()">💾 Salvar Fornecedor</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="supplierDetailModal" style="max-height: 95vh; overflow-y: auto;">
+  <div class="modal" style="max-height: 95vh; overflow-y: auto; max-width: 800px;">
+    <div class="modal-header">
+      <h3 id="supplierDetailModalTitle">Detalhes do Fornecedor</h3>
+      <button class="close" onclick="closeSupplierDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="supplierDetailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSupplierDetailModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="supplierPurchaseModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="supplierPurchaseModalTitle">Nova Compra</h3>
+      <button class="close" onclick="closeSupplierPurchaseModal()">✕</button>
+    </div>
+    <div class="modal-body" id="supplierPurchaseModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSupplierPurchaseModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveSupplierPurchase()">💾 Salvar Compra</button>
+    </div>
+  </div>
+</div>
+
 
 
 <div class="modal-overlay" id="confirmModal">
@@ -832,6 +874,9 @@ tr:hover td { background: #faf7f2; }
   </div>
   <div class="nav-item" onclick="showPage('crm', this)">
     <span class="nav-icon">👥</span> Central de Clientes
+  </div>
+  <div class="nav-item" onclick="showPage('suppliers', this)">
+    <span class="nav-icon">🏭</span> Central de Fornecedores
   </div>
   <div class="sidebar-bottom">
     <div class="store-link" onclick="window.open('loja.html','_blank')">
@@ -1064,10 +1109,47 @@ tr:hover td { background: #faf7f2; }
       </table>
     </div>
 
+    <!-- CENTRAL DE FORNECEDORES -->
+    <div class="page" id="page-suppliers">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">🏭 Central de Fornecedores</h2>
+        <button class="btn btn-primary" onclick="openAddSupplier()">+ Novo Fornecedor</button>
+      </div>
+
+      <div class="table-toolbar" style="margin-bottom: 20px;">
+        <div class="search-box">
+          <input type="text" placeholder="Buscar empresa, contato, cidade..." id="suppliersSearch" oninput="searchSuppliers(this.value)">
+        </div>
+        <select id="suppliersFilterSelect" onchange="filterSuppliers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="all">Todos Fornecedores</option>
+          <option value="active">✓ Ativos</option>
+          <option value="debt">💔 Devedores</option>
+          <option value="inactive">❌ Inativos</option>
+          <option value="new">🆕 Novos (30 dias)</option>
+        </select>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Empresa</th>
+            <th>Contato</th>
+            <th>Telefone</th>
+            <th>Situação</th>
+            <th style="text-align: right;">Total Comprado</th>
+            <th style="text-align: right;">Em Aberto</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="suppliersTableBody"></tbody>
+      </table>
+    </div>
+
   </div>
 </main>
 
 <script src="admin.js"></script>
 <script src="admin-crm.js"></script>
+<script src="admin-suppliers.js"></script>
 </body>
 </html>

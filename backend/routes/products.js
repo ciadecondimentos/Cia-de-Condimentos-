@@ -230,20 +230,45 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log(`🗑️  Tentando deletar produto ID: ${id}`);
+    
     // First, delete all associated images
+    console.log(`  → Deletando imagens do produto...`);
     await db.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+    console.log(`  ✅ Imagens deletadas`);
+    
+    // Check if product exists and has orders
+    const orderCheck = await db.query(
+      'SELECT COUNT(*) as count FROM orders WHERE product_id = $1',
+      [id]
+    );
+    
+    if (orderCheck.rows[0].count > 0) {
+      console.warn(`  ⚠️  Produto #${id} está vinculado a ${orderCheck.rows[0].count} pedidos`);
+      return res.status(400).json({ 
+        error: `Não é possível deletar este produto. Ele está vinculado a ${orderCheck.rows[0].count} pedido(s).`,
+        code: 'PRODUCT_HAS_ORDERS'
+      });
+    }
     
     // Then delete the product
+    console.log(`  → Deletando produto...`);
     const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
+      console.warn(`  ⚠️  Produto #${id} não encontrado`);
       return res.status(404).json({ error: 'Product not found' });
     }
 
+    console.log(`  ✅ Produto #${id} deletado com sucesso`);
     res.json({ message: 'Product deleted', product: result.rows[0] });
   } catch (error) {
-    console.error('Error deleting product:', error);
-    res.status(500).json({ error: 'Failed to delete product' });
+    console.error('❌ Erro ao deletar produto:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Failed to delete product', 
+      message: error.message 
+    });
   }
 });
 

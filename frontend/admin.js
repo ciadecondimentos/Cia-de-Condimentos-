@@ -925,9 +925,17 @@ function deleteProduct(id) {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' }
     })
-    .then(res => {
+    .then(async res => {
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        // Try to extract error message from server response
+        let errorMessage = `HTTP error! status: ${res.status}`;
+        try {
+          const errorData = await res.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // Response is not JSON, use status message
+        }
+        throw new Error(errorMessage);
       }
       return res.json();
     })

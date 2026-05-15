@@ -110,7 +110,6 @@ function renderProducts() {
           '<div class="product-category">' + (p.category || '') + '</div>' +
           '<div class="product-name">' + p.name + '</div>' +
           '<div class="product-desc">' + (p.description || '') + '</div>' +
-          '<div class="product-stock">Estoque: ' + p.stock + ' unidades</div>' +
           '<div class="product-footer">' +
             '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
             '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
@@ -163,9 +162,6 @@ function openProductDetail(product) {
   
   var priceEl = document.getElementById('productDetailPrice');
   if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',');
-  
-  var stockEl = document.getElementById('productDetailStock');
-  if (stockEl) stockEl.textContent = 'Estoque: ' + product.stock + ' unidades';
   
   var imgEl = document.getElementById('productDetailImage');
   if (imgEl) imgEl.innerHTML = imgHtml;

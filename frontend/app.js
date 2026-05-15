@@ -277,12 +277,13 @@ function confirmQuantity() {
   if (existing) {
     existing.quantity += selectedQuantity;
   } else {
+    var imageUrl = selectedProductForQuantity.image_url || ((selectedProductForQuantity.images && selectedProductForQuantity.images.length > 0) ? getImageUrl(selectedProductForQuantity.images[0]) : selectedProductForQuantity.image);
     cart.push({ 
       id: selectedProductForQuantity.id, 
       name: selectedProductForQuantity.name, 
       price: selectedProductForQuantity.price, 
       quantity: selectedQuantity,
-      image: selectedProductForQuantity.image
+      image: imageUrl
     });
   }
   

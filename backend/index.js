@@ -15,6 +15,7 @@ const paymentsRoutes = require('./routes/payments');
 const uploadRoutes = require('./routes/upload');
 const crmRoutes = require('./routes/crm');
 const suppliersRoutes = require('./routes/suppliers');
+const promotionsRoutes = require('./routes/promotions');
 
 // TODO: Implementar uploads com Cloudinary ou S3 depois
 // const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -36,6 +37,7 @@ const corsOptions = {
       'http://127.0.0.1:5000',
       'http://127.0.0.1:8080',
       'https://ciadecondimentosteste.netlify.app',
+      'https://ciadecondimentos.netlify.app',
       'https://cia-de-condimentos.onrender.com',
       process.env.FRONTEND_URL
     ].filter(Boolean);
@@ -173,6 +175,7 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/suppliers', suppliersRoutes);
+app.use('/api/promotions', promotionsRoutes);
 
 // Tratamento de erros geral
 app.use((err, req, res, next) => {

@@ -746,6 +746,20 @@ tr:hover td { background: #faf7f2; }
   </div>
 </div>
 
+<div class="modal-overlay" id="promotionModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="promotionModalTitle">Adicionar Promoção</h3>
+      <button class="close" onclick="closePromotionModal()">✕</button>
+    </div>
+    <div class="modal-body" id="promotionModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePromotionModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="savePromotion()">💾 Salvar Promoção</button>
+    </div>
+  </div>
+</div>
+
 <!-- CRM MODALS -->
 <div class="modal-overlay" id="crmCustomerModal">
   <div class="modal">
@@ -868,6 +882,9 @@ tr:hover td { background: #faf7f2; }
   <div class="nav-item" onclick="showPage('orders', this)">
     <span class="nav-icon">📦</span> Pedidos
     <span class="sidebar-badge" id="ordersCount">0</span>
+  </div>
+  <div class="nav-item" onclick="showPage('promotions', this)">
+    <span class="nav-icon">🎁</span> Promoções
   </div>
   <div class="nav-item" onclick="showPage('reports', this)">
     <span class="nav-icon">📈</span> Relatórios
@@ -1039,7 +1056,33 @@ tr:hover td { background: #faf7f2; }
       </table>
     </div>
 
-
+    <!-- PROMOTIONS -->
+    <div class="page" id="page-promotions">
+      <div class="table-toolbar">
+        <div class="search-box"><input type="text" placeholder="Buscar promoção..." id="promoSearch" oninput="renderPromotionsTableAsync()"></div>
+        <select id="promoStatusFilter" onchange="renderPromotionsTableAsync()" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="">Todos Status</option>
+          <option value="Ativa">Ativa</option>
+          <option value="Inativa">Inativa</option>
+          <option value="Expirada">Expirada</option>
+        </select>
+        <button class="btn btn-primary" onclick="openAddPromotion()">+ Nova Promoção</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Descrição</th>
+            <th>Tipo</th>
+            <th>Valor</th>
+            <th>Válido até</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="promotionsTableBody"></tbody>
+      </table>
+    </div>
 
     <!-- REPORTS -->
     <div class="page" id="page-reports">

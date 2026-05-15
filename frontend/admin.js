@@ -64,6 +64,7 @@ function showPage(pageId, buttonElement) {
     'dashboard': 'Dashboard',
     'products': 'Produtos',
     'orders': 'Pedidos',
+    'promotions': 'Promoções',
     'customers': 'Clientes',
     'reports': 'Relatórios',
     'crm': 'Central de Clientes'
@@ -85,6 +86,8 @@ function showPage(pageId, buttonElement) {
     renderCustomersTableAsync();
   } else if (pageId === 'dashboard') {
     loadDashboard();
+  } else if (pageId === 'promotions') {
+    renderPromotionsTableAsync();
   } else if (pageId === 'reports') {
     loadReportData('7');
   } else if (pageId === 'crm') {
@@ -1761,6 +1764,294 @@ function exportReports() {
       console.error('Error exporting reports:', error);
       showToast('Erro ao exportar relatórios', 'error');
     });
+}
+
+// ==================== PROMOTIONS MANAGEMENT ====================
+
+function renderPromotionsTableAsync() {
+  const search = document.getElementById('promoSearch')?.value || '';
+  const status = document.getElementById('promoStatusFilter')?.value || '';
+  
+  fetch(`${API_BASE}/promotions`)
+    .then(res => res.json())
+    .then(promotions => {
+      const promos = Array.isArray(promotions) ? promotions : (promotions.value || []);
+      
+      const filtered = promos.filter(p => 
+        (p.code.toLowerCase().includes(search.toLowerCase()) || 
+         p.description.toLowerCase().includes(search.toLowerCase())) &&
+        (!status || p.status === status)
+      );
+      
+      renderPromotionsTable(filtered);
+    })
+    .catch(error => {
+      console.error('Error fetching promotions:', error);
+      document.getElementById('promotionsTableBody').innerHTML = '<tr><td colspan="7">Erro ao carregar promoções</td></tr>';
+    });
+}
+
+function renderPromotionsTable(promotions) {
+  const tbody = document.getElementById('promotionsTableBody');
+  
+  if (!promotions || promotions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Nenhuma promoção cadastrada</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = promotions.map(promo => {
+    const validUntil = new Date(promo.valid_until);
+    const now = new Date();
+    let status = promo.status || 'Inativa';
+    
+    if (validUntil < now && status === 'Ativa') {
+      status = 'Expirada';
+    }
+    
+    const statusClass = status === 'Ativa' ? 'tag-active' : (status === 'Expirada' ? 'tag-low' : 'tag-inactive');
+    const typeDisplay = promo.type === 'percentage' ? `${promo.value}%` : `R$ ${parseFloat(promo.value).toFixed(2)}`;
+    
+    return `
+    <tr>
+      <td data-label="Código">${promo.code || 'N/A'}</td>
+      <td data-label="Descrição">${promo.description || 'N/A'}</td>
+      <td data-label="Tipo">${promo.type === 'percentage' ? 'Percentual' : 'Valor Fixo'}</td>
+      <td data-label="Valor">${typeDisplay}</td>
+      <td data-label="Válido até">${validUntil.toLocaleDateString('pt-BR')}</td>
+      <td data-label="Status"><span class="tag ${statusClass}">${status}</span></td>
+      <td data-label="Ações">
+        <div class="actions-cell">
+          <button class="btn btn-sm btn-ghost" onclick="editPromotion(${promo.id})">✏️</button>
+          <button class="btn btn-sm btn-ghost" onclick="deletePromotion(${promo.id})">🗑️</button>
+        </div>
+      </td>
+    </tr>
+  `;
+  }).join('');
+}
+
+function openAddPromotion() {
+  const modal = document.getElementById('promotionModal');
+  const title = document.getElementById('promotionModalTitle');
+  const body = document.getElementById('promotionModalBody');
+  
+  title.textContent = 'Adicionar Nova Promoção';
+  body.innerHTML = `
+    <div class="form-row-2">
+      <div class="fg">
+        <label>Código da Promoção *</label>
+        <input type="text" id="promoCode" placeholder="Ex: PROMO2024">
+      </div>
+      <div class="fg">
+        <label>Descrição *</label>
+        <input type="text" id="promoDescription" placeholder="Ex: Desconto no Natal">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="fg">
+        <label>Tipo de Desconto *</label>
+        <select id="promoType" onchange="updatePromoTypeDisplay()">
+          <option value="percentage">Percentual (%)</option>
+          <option value="fixed">Valor Fixo (R$)</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Valor <span id="promoTypeLabel">(%)</span> *</label>
+        <input type="number" id="promoValue" placeholder="0.00" step="0.01">
+      </div>
+    </div>
+    <div class="form-row-2">
+      <div class="fg">
+        <label>Válido até *</label>
+        <input type="date" id="promoValidUntil">
+      </div>
+      <div class="fg">
+        <label>Status</label>
+        <select id="promoStatus">
+          <option value="Ativa">Ativa</option>
+          <option value="Inativa">Inativa</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg">
+      <label>Observações</label>
+      <textarea id="promoNotes" placeholder="Notas internas sobre esta promoção..."></textarea>
+    </div>
+  `;
+  
+  modal.classList.add('open');
+  
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 30);
+  document.getElementById('promoValidUntil').valueAsDate = tomorrow;
+}
+
+function updatePromoTypeDisplay() {
+  const type = document.getElementById('promoType')?.value;
+  const label = document.getElementById('promoTypeLabel');
+  label.textContent = type === 'percentage' ? '(%)' : '(R$)';
+}
+
+function editPromotion(id) {
+  fetch(`${API_BASE}/promotions/${id}`)
+    .then(res => res.json())
+    .then(promo => {
+      const modal = document.getElementById('promotionModal');
+      const title = document.getElementById('promotionModalTitle');
+      const body = document.getElementById('promotionModalBody');
+      
+      title.textContent = 'Editar Promoção';
+      body.innerHTML = `
+        <input type="hidden" id="promoId" value="${promo.id}">
+        <div class="form-row-2">
+          <div class="fg">
+            <label>Código da Promoção *</label>
+            <input type="text" id="promoCode" placeholder="Ex: PROMO2024" value="${promo.code || ''}">
+          </div>
+          <div class="fg">
+            <label>Descrição *</label>
+            <input type="text" id="promoDescription" placeholder="Ex: Desconto no Natal" value="${promo.description || ''}">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="fg">
+            <label>Tipo de Desconto *</label>
+            <select id="promoType" onchange="updatePromoTypeDisplay()">
+              <option value="percentage" ${promo.type === 'percentage' ? 'selected' : ''}>Percentual (%)</option>
+              <option value="fixed" ${promo.type === 'fixed' ? 'selected' : ''}>Valor Fixo (R$)</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label>Valor <span id="promoTypeLabel">${promo.type === 'percentage' ? '(%)' : '(R$)'}</span> *</label>
+            <input type="number" id="promoValue" placeholder="0.00" step="0.01" value="${promo.value || ''}">
+          </div>
+        </div>
+        <div class="form-row-2">
+          <div class="fg">
+            <label>Válido até *</label>
+            <input type="date" id="promoValidUntil" value="${promo.valid_until ? promo.valid_until.split('T')[0] : ''}">
+          </div>
+          <div class="fg">
+            <label>Status</label>
+            <select id="promoStatus">
+              <option value="Ativa" ${promo.status === 'Ativa' ? 'selected' : ''}>Ativa</option>
+              <option value="Inativa" ${promo.status === 'Inativa' ? 'selected' : ''}>Inativa</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg">
+          <label>Observações</label>
+          <textarea id="promoNotes" placeholder="Notas internas sobre esta promoção...">${promo.notes || ''}</textarea>
+        </div>
+      `;
+      
+      modal.classList.add('open');
+    })
+    .catch(error => {
+      console.error('Error loading promotion:', error);
+      showToast('Erro ao carregar promoção', 'error');
+    });
+}
+
+function closePromotionModal() {
+  document.getElementById('promotionModal').classList.remove('open');
+}
+
+function savePromotion() {
+  const id = document.getElementById('promoId')?.value;
+  const code = document.getElementById('promoCode')?.value?.trim();
+  const description = document.getElementById('promoDescription')?.value?.trim();
+  const type = document.getElementById('promoType')?.value;
+  const value = parseFloat(document.getElementById('promoValue')?.value) || 0;
+  const validUntil = document.getElementById('promoValidUntil')?.value;
+  const status = document.getElementById('promoStatus')?.value;
+  const notes = document.getElementById('promoNotes')?.value?.trim();
+  
+  if (!code || code.length === 0) {
+    showToast('Por favor, preencha o Código da Promoção', 'error');
+    return;
+  }
+  
+  if (!description || description.length === 0) {
+    showToast('Por favor, preencha a Descrição', 'error');
+    return;
+  }
+  
+  if (value <= 0) {
+    showToast('Por favor, preencha um Valor válido (maior que 0)', 'error');
+    return;
+  }
+  
+  if (!validUntil) {
+    showToast('Por favor, preencha a data de validade', 'error');
+    return;
+  }
+  
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/promotions/${id}` : `${API_BASE}/promotions`;
+  
+  const promotionData = {
+    code,
+    description,
+    type,
+    value,
+    valid_until: validUntil,
+    status,
+    notes
+  };
+  
+  fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(promotionData)
+  })
+  .then(res => {
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return res.json();
+  })
+  .then(data => {
+    if (data.error) {
+      showToast('Erro ao salvar promoção: ' + data.error, 'error');
+    } else {
+      showToast('✅ Promoção salva com sucesso!', 'success');
+      closePromotionModal();
+      renderPromotionsTableAsync();
+    }
+  })
+  .catch(error => {
+    console.error('Error saving promotion:', error);
+    showToast('Erro ao salvar promoção: ' + error.message, 'error');
+  });
+}
+
+function deletePromotion(id) {
+  if (!confirm('Tem certeza que deseja deletar esta promoção?')) {
+    return;
+  }
+  
+  fetch(`${API_BASE}/promotions/${id}`, {
+    method: 'DELETE'
+  })
+  .then(res => {
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    return res.json();
+  })
+  .then(data => {
+    if (data.error) {
+      showToast('Erro ao deletar promoção: ' + data.error, 'error');
+    } else {
+      showToast('✅ Promoção deletada com sucesso!', 'success');
+      renderPromotionsTableAsync();
+    }
+  })
+  .catch(error => {
+    console.error('Error deleting promotion:', error);
+    showToast('Erro ao deletar promoção: ' + error.message, 'error');
+  });
 }
 
 // ==================== MODAL UTILITIES ====================

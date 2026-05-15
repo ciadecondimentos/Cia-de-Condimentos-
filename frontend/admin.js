@@ -921,8 +921,24 @@ function openEditProduct(product) {
 
 function deleteProduct(id) {
   showConfirm(`Tem certeza que deseja deletar o produto ${id}?`, () => {
-    showToast('Produto deletado com sucesso!');
-    renderProductsTableAsync();
+    fetch(`${API_BASE}/products/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(res => {
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      return res.json();
+    })
+    .then(data => {
+      showToast('✅ Produto deletado com sucesso!', 'success');
+      renderProductsTableAsync();
+    })
+    .catch(error => {
+      console.error('Error deleting product:', error);
+      showToast('❌ Erro ao deletar produto: ' + error.message, 'error');
+    });
   });
 }
 

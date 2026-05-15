@@ -710,6 +710,17 @@ function saveProduct() {
         Promise.all(uploadPromises)
           .then(imageUrls => {
             console.log('✅ Todos os uploads concluídos. URLs:', imageUrls);
+            
+            // Salvar URLs na tabela product_images
+            return fetch(`${API_BASE}/products/${productId}/images`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ images: imageUrls })
+            })
+            .then(res => res.json());
+          })
+          .then(result => {
+            console.log('✅ Imagens registradas no banco:', result.images);
             showToast('✅ Produto criado e imagens enviadas!', 'success');
             closeProductModal();
             renderProductsTableAsync();
@@ -752,7 +763,17 @@ function saveProduct() {
       }
       
       Promise.all(uploadPromises)
-        .then(() => {
+        .then(imageUrls => {
+          // Salvar URLs na tabela product_images
+          return fetch(`${API_BASE}/products/${id}/images`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: imageUrls })
+          })
+          .then(res => res.json());
+        })
+        .then(result => {
+          console.log('✅ Imagens registradas no banco:', result.images);
           showToast('✅ Imagens enviadas!', 'success');
           saveProductToDB(productData);
         })

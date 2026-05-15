@@ -230,21 +230,43 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
+    // Validate ID is a number
+    if (!id || isNaN(id)) {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+    
     console.log(`🗑️  Tentando deletar produto ID: ${id}`);
+    
+    // Check if product exists first
+    console.log(`  → Verificando se produto existe...`);
+    const productCheck = await db.query('SELECT id FROM products WHERE id = $1', [id]);
+    
+    if (productCheck.rows.length === 0) {
+      console.warn(`  ⚠️  Produto #${id} não encontrado`);
+      return res.status(404).json({ error: 'Product not found' });
+    }
     
     // Check if product has order items
     console.log(`  → Verificando se produto tem itens em pedidos...`);
-    const orderItemsCheck = await db.query(
-      'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
-      [id]
-    );
-    
-    if (orderItemsCheck.rows[0].count > 0) {
-      console.warn(`  ⚠️  Produto #${id} está em ${orderItemsCheck.rows[0].count} item(ns) de pedidos`);
-      return res.status(400).json({ 
-        error: `Não é possível deletar este produto. Ele está vinculado a ${orderItemsCheck.rows[0].count} item(ns) de pedidos.`,
-        code: 'PRODUCT_HAS_ORDER_ITEMS'
-      });
+    try {
+      const orderItemsCheck = await db.query(
+        'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
+        [id]
+      );
+      
+      const itemCount = parseInt(orderItemsCheck.rows[0]?.count || 0);
+      
+      if (itemCount > 0) {
+        console.warn(`  ⚠️  Produto #${id} está em ${itemCount} item(ns) de pedidos`);
+        return res.status(400).json({ 
+          error: `Não é possível deletar este produto. Ele está vinculado a ${itemCount} item(ns) de pedidos.`,
+          code: 'PRODUCT_HAS_ORDER_ITEMS',
+          itemCount: itemCount
+        });
+      }
+    } catch (checkError) {
+      console.warn(`  ⚠️  Não foi possível verificar itens de pedidos (tabela pode não existir ainda):`, checkError.message);
+      // Continue anyway - table might not exist yet in development
     }
     
     // First, delete all associated images
@@ -257,7 +279,7 @@ router.delete('/:id', async (req, res) => {
     const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
-      console.warn(`  ⚠️  Produto #${id} não encontrado`);
+      console.warn(`  ⚠️  Produto #${id} não encontrado durante deleção`);
       return res.status(404).json({ error: 'Product not found' });
     }
 
@@ -266,9 +288,24 @@ router.delete('/:id', async (req, res) => {
   } catch (error) {
     console.error('❌ Erro ao deletar produto:', error.message);
     console.error('Stack:', error.stack);
-    res.status(500).json({ 
-      error: 'Failed to delete product', 
-      message: error.message 
+    
+    // Handle specific PostgreSQL errors
+    let errorMessage = 'Failed to delete product';
+    let statusCode = 500;
+    
+    if (error.code === '23503') {
+      // Foreign key constraint violation
+      errorMessage = 'Este produto está vinculado a pedidos e não pode ser deletado. Remova os pedidos primeiro.';
+      statusCode = 400;
+    } else if (error.code === '23505') {
+      // Unique constraint violation
+      errorMessage = 'Conflito de dados ao deletar produto';
+    }
+    
+    res.status(statusCode).json({ 
+      error: errorMessage,
+      details: error.message,
+      code: error.code
     });
   }
 });

@@ -1863,51 +1863,73 @@ function sendOrderToWhatsApp() {
 // ==================== MAIN SEARCH BAR ====================
 function handleMainSearch(searchTerm) {
   const resultsContainer = document.getElementById('mainSearchResults');
-  if (!resultsContainer) return;
+  if (resultsContainer) {
+    resultsContainer.classList.remove('active');
+    resultsContainer.innerHTML = '';
+  }
   
   const term = searchTerm.toLowerCase().trim();
   
-  // Se vazio, limpar resultados
+  // Se vazio, renderizar todos os produtos e voltar ao filtro anterior
   if (!term) {
-    resultsContainer.classList.remove('active');
-    resultsContainer.innerHTML = '';
+    currentSearch = '';
+    renderProducts();
     return;
   }
   
+  // Atualizar a busca global
+  currentSearch = term;
+  
+  // Renderizar apenas produtos que correspondem à busca
   getProducts().then(function(products) {
-    // Filtrar produtos ativos que correspondem à busca
     const filtered = products.filter(function(p) {
       return p.active && (
         p.name.toLowerCase().indexOf(term) !== -1 ||
         (p.description || '').toLowerCase().indexOf(term) !== -1 ||
         (p.category || '').toLowerCase().indexOf(term) !== -1
       );
-    }).slice(0, 8); // Limitar a 8 resultados
+    });
+    
+    const grid = document.getElementById('productsGrid');
+    if (!grid) return;
     
     if (filtered.length === 0) {
-      resultsContainer.innerHTML = '<div class="search-results-empty">Nenhum produto encontrado para "' + searchTerm + '"</div>';
-      resultsContainer.classList.add('active');
+      grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #999;">Nenhum produto encontrado para "' + searchTerm + '"</div>';
       return;
     }
     
-    // Renderizar resultados
+    // Renderizar produtos filtrados
     const html = filtered.map(function(p) {
       const imageUrl = p.image_url || ((p.images && p.images.length > 0) ? getImageUrl(p.images[0]) : p.image);
       const imgHtml = imageUrl
-        ? '<img src="' + imageUrl + '" alt="' + p.name + '">'
-        : '<div style="font-size: 20px;">🌶️</div>';
+        ? '<img src="' + imageUrl + '" alt="' + p.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
+        : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px;">🌶️</div>';
       
-      return '<div class="search-result-item" onclick="selectSearchResult(' + p.id + ', ' + JSON.stringify(p).replace(/"/g, '&quot;') + ')">' +
-        '<div class="search-result-img">' + imgHtml + '</div>' +
-        '<div class="search-result-info">' +
-          '<div class="search-result-name">' + p.name + '</div>' +
-          '<div class="search-result-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+      return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer;">' +
+        '<div class="product-img">' + imgHtml + '</div>' +
+        '<div class="product-body">' +
+          '<div class="product-category">' + (p.category || '') + '</div>' +
+          '<div class="product-name">' + p.name + '</div>' +
+          '<div class="product-desc">' + (p.description || '') + '</div>' +
+          '<div class="product-footer">' +
+            '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+            '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
+              (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
     }).join('');
     
-    resultsContainer.innerHTML = html;
-    resultsContainer.classList.add('active');
+    grid.innerHTML = html;
+    
+    // Rolar automaticamente até a seção de produtos
+    const produtosSection = document.getElementById('produtos');
+    if (produtosSection) {
+      setTimeout(function() {
+        produtosSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
   });
 }
 

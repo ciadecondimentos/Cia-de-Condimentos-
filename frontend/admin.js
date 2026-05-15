@@ -388,9 +388,14 @@ function renderProductsTable(products) {
 
   const tbody = document.getElementById('productsTableBody');
   tbody.innerHTML = filtered.map(prod => {
-    // Get first image or emoji
-    const firstImage = prod.images && prod.images.length > 0 ? prod.images[0] : null;
-    const imageUrl = getImageUrl(firstImage);
+    // Get first image from product_images, or fallback to image_url column
+    let imageUrl = null;
+    if (prod.images && prod.images.length > 0) {
+      imageUrl = getImageUrl(prod.images[0]);
+    } else if (prod.image_url) {
+      imageUrl = getImageUrl(prod.image_url);
+    }
+    
     const imgHtml = imageUrl 
       ? `<img src="${imageUrl}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='🌶️'">` 
       : '🌶️';
@@ -808,7 +813,10 @@ function openEditProduct(product) {
   
   // Build images display with previews
   let imagesHtml = '';
-  if (product.images && product.images.length > 0) {
+  // Use product_images array if available, fallback to image_url column
+  const productImages = (product.images && product.images.length > 0) ? product.images : (product.image_url ? [product.image_url] : []);
+  
+  if (productImages && productImages.length > 0) {
     imagesHtml = `
       <div style="margin-bottom: 15px;">
         <strong style="color: #c0392b; font-size: 13px;">📷 Imagens Atuais:</strong>
@@ -816,7 +824,7 @@ function openEditProduct(product) {
       <div style="display: flex; gap: 12px; flex-wrap: wrap; border: 2px solid #e0d8c8; padding: 15px; border-radius: 8px; background: #fff9f5; margin-bottom: 12px;">
     `;
     
-    product.images.forEach((img, idx) => {
+    productImages.forEach((img, idx) => {
       imagesHtml += `
         <div style="text-align: center; position: relative;">
           <div style="

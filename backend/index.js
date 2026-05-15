@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const dotenv = require('dotenv');
 const path = require('path');
 const fs = require('fs');
+const { runMigrations } = require('./migrations-runner');
 dotenv.config();
 
 const db = require('./db');
@@ -200,13 +201,24 @@ app.get('/api/health', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 
-// Iniciar servidor com melhor tratamento de erro
-const server = app.listen(PORT, () => {
-  console.log(`✅ Server listening on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || `http://localhost:${PORT}`}`);
-  console.log(`🌐 CORS enabled for: https://ciadecondimentosteste.netlify.app, localhost:*`);
-});
+// Initialize server with migrations
+(async () => {
+  try {
+    // Run database migrations before starting the server
+    await runMigrations();
+    
+    // Iniciar servidor com melhor tratamento de erro
+    const server = app.listen(PORT, () => {
+      console.log(`✅ Server listening on port ${PORT}`);
+      console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || `http://localhost:${PORT}`}`);
+      console.log(`🌐 CORS enabled for: https://ciadecondimentosteste.netlify.app, localhost:*`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+})();
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {

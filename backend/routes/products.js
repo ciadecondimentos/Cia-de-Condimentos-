@@ -246,8 +246,8 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Check if product has order items
-    console.log(`  → Verificando se produto tem itens em pedidos...`);
+    // Remove order items that reference this product
+    console.log(`  → Removendo itens de pedidos que contêm este produto...`);
     try {
       const orderItemsCheck = await db.query(
         'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
@@ -257,24 +257,21 @@ router.delete('/:id', async (req, res) => {
       const itemCount = parseInt(orderItemsCheck.rows[0]?.count || 0);
       
       if (itemCount > 0) {
-        console.warn(`  ⚠️  Produto #${id} está em ${itemCount} item(ns) de pedidos`);
-        return res.status(400).json({ 
-          error: `Não é possível deletar este produto. Ele está vinculado a ${itemCount} item(ns) de pedidos.`,
-          code: 'PRODUCT_HAS_ORDER_ITEMS',
-          itemCount: itemCount
-        });
+        console.warn(`  ⚠️  Removendo ${itemCount} item(ns) de pedido vinculado(s)`);
+        await db.query('DELETE FROM order_items WHERE product_id = $1', [id]);
+        console.log(`  ✅ ${itemCount} item(ns) removido(s)`);
       }
     } catch (checkError) {
-      console.warn(`  ⚠️  Não foi possível verificar itens de pedidos (tabela pode não existir ainda):`, checkError.message);
+      console.warn(`  ⚠️  Não foi possível remover itens de pedidos:`, checkError.message);
       // Continue anyway - table might not exist yet in development
     }
     
-    // First, delete all associated images
+    // Delete all associated images
     console.log(`  → Deletando imagens do produto...`);
     await db.query('DELETE FROM product_images WHERE product_id = $1', [id]);
     console.log(`  ✅ Imagens deletadas`);
     
-    // Then delete the product
+    // Delete the product
     console.log(`  → Deletando produto...`);
     const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
@@ -283,8 +280,12 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    console.log(`  ✅ Produto #${id} deletado com sucesso`);
-    res.json({ message: 'Product deleted', product: result.rows[0] });
+    console.log(`  ✅ Produto #${id} deletado com sucesso (removidos itens de pedido vinculados)`);
+    res.json({ 
+      message: 'Product deleted successfully', 
+      product: result.rows[0],
+      orderItemsRemoved: true 
+    });
   } catch (error) {
     console.error('❌ Erro ao deletar produto:', error.message);
     console.error('Stack:', error.stack);

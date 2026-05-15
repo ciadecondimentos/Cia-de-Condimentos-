@@ -929,21 +929,18 @@ function deleteProduct(id) {
       const data = await res.json();
       
       if (!res.ok) {
-        // Try to extract detailed error message from server response
+        // Extract detailed error message from server response
         let errorMessage = data.error || `HTTP error! status: ${res.status}`;
         
-        // Add details if available
         if (data.details) {
           errorMessage += ` (${data.details})`;
         }
         
-        // Log the full response for debugging
         console.error('Delete product error response:', {
           status: res.status,
           error: data.error,
           details: data.details,
-          code: data.code,
-          itemCount: data.itemCount
+          code: data.code
         });
         
         throw new Error(errorMessage);
@@ -952,7 +949,12 @@ function deleteProduct(id) {
       return data;
     })
     .then(data => {
-      showToast('✅ Produto deletado com sucesso!', 'success');
+      // Show success message, including info about removed order items
+      let successMsg = '✅ Produto deletado com sucesso!';
+      if (data.orderItemsRemoved) {
+        successMsg += ' (itens de pedido foram removidos)';
+      }
+      showToast(successMsg, 'success');
       renderProductsTableAsync();
     })
     .catch(error => {

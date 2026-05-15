@@ -246,32 +246,12 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
     
-    // Remove order items that reference this product
-    console.log(`  → Removendo itens de pedidos que contêm este produto...`);
-    try {
-      const orderItemsCheck = await db.query(
-        'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
-        [id]
-      );
-      
-      const itemCount = parseInt(orderItemsCheck.rows[0]?.count || 0);
-      
-      if (itemCount > 0) {
-        console.warn(`  ⚠️  Removendo ${itemCount} item(ns) de pedido vinculado(s)`);
-        await db.query('DELETE FROM order_items WHERE product_id = $1', [id]);
-        console.log(`  ✅ ${itemCount} item(ns) removido(s)`);
-      }
-    } catch (checkError) {
-      console.warn(`  ⚠️  Não foi possível remover itens de pedidos:`, checkError.message);
-      // Continue anyway - table might not exist yet in development
-    }
-    
     // Delete all associated images
     console.log(`  → Deletando imagens do produto...`);
     await db.query('DELETE FROM product_images WHERE product_id = $1', [id]);
     console.log(`  ✅ Imagens deletadas`);
     
-    // Delete the product
+    // Delete the product (order_items will remain with the deleted product reference for audit trail)
     console.log(`  → Deletando produto...`);
     const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
@@ -280,11 +260,12 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    console.log(`  ✅ Produto #${id} deletado com sucesso (removidos itens de pedido vinculados)`);
+    console.log(`  ✅ Produto #${id} deletado com sucesso`);
+    console.log(`  ℹ️  Itens de pedido continuam existindo (para auditoria)`);
     res.json({ 
       message: 'Product deleted successfully', 
       product: result.rows[0],
-      orderItemsRemoved: true 
+      orderItemsPreserved: true
     });
   } catch (error) {
     console.error('❌ Erro ao deletar produto:', error.message);

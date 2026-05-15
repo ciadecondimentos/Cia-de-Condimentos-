@@ -949,12 +949,7 @@ function deleteProduct(id) {
       return data;
     })
     .then(data => {
-      // Show success message, including info about removed order items
-      let successMsg = '✅ Produto deletado com sucesso!';
-      if (data.orderItemsRemoved) {
-        successMsg += ' (itens de pedido foram removidos)';
-      }
-      showToast(successMsg, 'success');
+      showToast('✅ Produto deletado com sucesso!', 'success');
       renderProductsTableAsync();
     })
     .catch(error => {

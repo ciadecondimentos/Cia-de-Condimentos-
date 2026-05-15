@@ -445,7 +445,7 @@ function renderCartItems() {
           '<button class="qty-btn" onclick="updateQuantity(' + item.id + ', ' + (item.quantity - 1) + ')">−</button>' +
           '<div class="qty-val">' + item.quantity + '</div>' +
           '<button class="qty-btn" onclick="updateQuantity(' + item.id + ', ' + (item.quantity + 1) + ')">+</button>' +
-          '<button class="remove-btn" onclick="removeFromCart(' + item.id + ')">✕</button>' +
+          '<button class="remove-btn" onclick="removeFromCart(' + item.id + ')">🗑️</button>' +
         '</div>' +
       '</div>' +
     '</div>';

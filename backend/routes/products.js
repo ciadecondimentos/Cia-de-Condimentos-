@@ -229,6 +229,11 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // First, delete all associated images
+    await db.query('DELETE FROM product_images WHERE product_id = $1', [id]);
+    
+    // Then delete the product
     const result = await db.query('DELETE FROM products WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {

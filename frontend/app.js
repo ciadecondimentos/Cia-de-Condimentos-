@@ -1254,6 +1254,10 @@ function cancelPixPayment() {
   
   console.log('🚫 Cancelando pagamento PIX...');
   
+  // ✅ RESETAR FLAG DE PROCESSAMENTO - IMPORTANTE!
+  isPaymentProcessing = false;
+  setPaymentButtonLoading('confirmPixPaymentBtn', false);
+  
   // Parar o polling se estiver ativo
   stopPaymentPolling();
   

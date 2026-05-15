@@ -3,8 +3,21 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
   ? 'http://localhost:3000/api'
   : 'https://cia-de-condimentos.onrender.com/api';
 
+const BACKEND_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:3000'
+  : 'https://cia-de-condimentos.onrender.com';
+
 // Global variable to track current report period
 let currentReportPeriod = '7';
+
+// ==================== IMAGE URL HANDLER ====================
+function getImageUrl(imageUrl) {
+  if (!imageUrl) return '';
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  return BACKEND_BASE + imageUrl;
+}
 
 // ==================== SIDEBAR TOGGLE ====================
 function toggleSidebar() {
@@ -377,8 +390,9 @@ function renderProductsTable(products) {
   tbody.innerHTML = filtered.map(prod => {
     // Get first image or emoji
     const firstImage = prod.images && prod.images.length > 0 ? prod.images[0] : null;
-    const imgHtml = firstImage 
-      ? `<img src="${firstImage}" alt="${prod.name}" onerror="this.parentElement.innerHTML='🌶️'">` 
+    const imageUrl = getImageUrl(firstImage);
+    const imgHtml = imageUrl 
+      ? `<img src="${imageUrl}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='🌶️'">` 
       : '🌶️';
     
     return `
@@ -796,7 +810,7 @@ function openEditProduct(product) {
             overflow: hidden;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
           ">
-            <img src="${img}" style="max-width: 100%; max-height: 100%; object-fit: cover;" alt="Imagem ${idx + 1}" onerror="this.parentElement.innerHTML='❌'">
+            <img src="${getImageUrl(img)}" style="max-width: 100%; max-height: 100%; object-fit: cover;" alt="Imagem ${idx + 1}" onerror="this.parentElement.innerHTML='❌'">
           </div>
           <div style="
             margin-top: 8px; 

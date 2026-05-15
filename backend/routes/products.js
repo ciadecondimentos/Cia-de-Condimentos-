@@ -232,24 +232,25 @@ router.delete('/:id', async (req, res) => {
     
     console.log(`🗑️  Tentando deletar produto ID: ${id}`);
     
+    // Check if product has order items
+    console.log(`  → Verificando se produto tem itens em pedidos...`);
+    const orderItemsCheck = await db.query(
+      'SELECT COUNT(*) as count FROM order_items WHERE product_id = $1',
+      [id]
+    );
+    
+    if (orderItemsCheck.rows[0].count > 0) {
+      console.warn(`  ⚠️  Produto #${id} está em ${orderItemsCheck.rows[0].count} item(ns) de pedidos`);
+      return res.status(400).json({ 
+        error: `Não é possível deletar este produto. Ele está vinculado a ${orderItemsCheck.rows[0].count} item(ns) de pedidos.`,
+        code: 'PRODUCT_HAS_ORDER_ITEMS'
+      });
+    }
+    
     // First, delete all associated images
     console.log(`  → Deletando imagens do produto...`);
     await db.query('DELETE FROM product_images WHERE product_id = $1', [id]);
     console.log(`  ✅ Imagens deletadas`);
-    
-    // Check if product exists and has orders
-    const orderCheck = await db.query(
-      'SELECT COUNT(*) as count FROM orders WHERE product_id = $1',
-      [id]
-    );
-    
-    if (orderCheck.rows[0].count > 0) {
-      console.warn(`  ⚠️  Produto #${id} está vinculado a ${orderCheck.rows[0].count} pedidos`);
-      return res.status(400).json({ 
-        error: `Não é possível deletar este produto. Ele está vinculado a ${orderCheck.rows[0].count} pedido(s).`,
-        code: 'PRODUCT_HAS_ORDERS'
-      });
-    }
     
     // Then delete the product
     console.log(`  → Deletando produto...`);

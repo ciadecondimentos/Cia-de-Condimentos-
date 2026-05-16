@@ -1849,6 +1849,28 @@ function openAddProductPromo() {
   
   title.textContent = '➕ Nova Promoção de Produto';
   
+  // Load products if not already loaded
+  if (allProducts.length === 0) {
+    fetch(`${API_BASE}/products`)
+      .then(res => res.json())
+      .then(products => {
+        allProducts = Array.isArray(products) ? products : (products.value || []);
+        buildPromoModal();
+      })
+      .catch(error => {
+        console.error('Error loading products:', error);
+        showToast('Erro ao carregar produtos', 'error');
+      });
+    return;
+  }
+  
+  buildPromoModal();
+}
+
+function buildPromoModal() {
+  const modal = document.getElementById('promotionModal');
+  const body = document.getElementById('promotionModalBody');
+  
   const productOptions = allProducts.map(p => 
     `<option value="${p.id}">${p.name} - R$ ${parseFloat(p.price).toFixed(2)}</option>`
   ).join('');
@@ -1997,6 +2019,25 @@ function saveProductPromo() {
 }
 
 function editProductPromo(id) {
+  // Load products if not already loaded
+  if (allProducts.length === 0) {
+    fetch(`${API_BASE}/products`)
+      .then(res => res.json())
+      .then(products => {
+        allProducts = Array.isArray(products) ? products : (products.value || []);
+        loadAndEditPromo(id);
+      })
+      .catch(error => {
+        console.error('Error loading products:', error);
+        showToast('Erro ao carregar produtos', 'error');
+      });
+    return;
+  }
+  
+  loadAndEditPromo(id);
+}
+
+function loadAndEditPromo(id) {
   fetch(`${API_BASE}/promotions/${id}`)
     .then(res => res.json())
     .then(promo => {

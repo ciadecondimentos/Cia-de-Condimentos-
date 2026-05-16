@@ -412,6 +412,12 @@ function addKitToCart(kitId) {
   var kit = activeKits.find(function(k) { return k.id === kitId; });
   if (!kit) return;
   
+  // Get kit image URL
+  var imageUrl = '';
+  if (kit.products && kit.products.length > 0 && kit.products[0].image_url) {
+    imageUrl = getImageUrl(kit.products[0].image_url);
+  }
+  
   // Create product object for kit
   var kitProduct = {
     id: 'kit-' + kit.id,
@@ -419,7 +425,8 @@ function addKitToCart(kitId) {
     price: Number(kit.kit_price) || 0,
     is_kit: true,
     kit_id: kit.id,
-    stock: 999
+    stock: 999,
+    image_url: imageUrl // Adicionar URL da imagem
   };
   
   openQuantityModal(kitProduct);

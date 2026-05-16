@@ -417,6 +417,37 @@ textarea {
     min-height: auto;
   }
   
+  /* Promotion Tabs */
+  .promo-tab {
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: #999;
+    font-family: Lato, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+  
+  .promo-tab:hover {
+    color: var(--marrom);
+  }
+  
+  .promo-tab.active {
+    color: var(--marrom);
+    border-bottom-color: var(--marrom);
+  }
+  
+  .promo-content {
+    display: none;
+  }
+  
+  .promo-content.active {
+    display: block;
+  }
+  
   /* Modal */
   .modal-overlay {
     padding: 12px;
@@ -1058,30 +1089,72 @@ tr:hover td { background: #faf7f2; }
 
     <!-- PROMOTIONS -->
     <div class="page" id="page-promotions">
-      <div class="table-toolbar">
-        <div class="search-box"><input type="text" placeholder="Buscar promoção..." id="promoSearch" oninput="renderPromotionsTableAsync()"></div>
-        <select id="promoStatusFilter" onchange="renderPromotionsTableAsync()" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
-          <option value="">Todos Status</option>
-          <option value="Ativa">Ativa</option>
-          <option value="Inativa">Inativa</option>
-          <option value="Expirada">Expirada</option>
-        </select>
-        <button class="btn btn-primary" onclick="openAddPromotion()">+ Nova Promoção</button>
+      <div style="margin-bottom: 24px;">
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom); margin-bottom: 16px;">🎯 Promoções</h2>
+        
+        <!-- Tabs -->
+        <div style="display: flex; gap: 8px; border-bottom: 2px solid #e8e0d4; margin-bottom: 24px;">
+          <button class="promo-tab active" data-tab="products" onclick="switchPromoTab('products')">🏷️ Promoções de Produto</button>
+          <button class="promo-tab" data-tab="kits" onclick="switchPromoTab('kits')">📦 Kits</button>
+          <button class="promo-tab" data-tab="quantity" onclick="switchPromoTab('quantity')">📊 Por Quantidade</button>
+        </div>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Descrição</th>
-            <th>Tipo</th>
-            <th>Valor</th>
-            <th>Válido até</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody id="promotionsTableBody"></tbody>
-      </table>
+
+      <!-- PRODUCT PROMOTIONS TAB -->
+      <div id="promo-products" class="promo-content active">
+        <div class="table-toolbar">
+          <button class="btn btn-primary" onclick="openAddProductPromo()">+ Nova Promoção</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Desconto</th>
+              <th>Preços</th>
+              <th>Duração</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="productPromosBody"></tbody>
+        </table>
+      </div>
+
+      <!-- KITS TAB -->
+      <div id="promo-kits" class="promo-content" style="display: none;">
+        <div class="table-toolbar">
+          <button class="btn btn-primary" onclick="openAddKit()">+ Novo Kit</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Kit</th>
+              <th>Produtos</th>
+              <th>Preço</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="kitsBody"></tbody>
+        </table>
+      </div>
+
+      <!-- QUANTITY PROMOTIONS TAB -->
+      <div id="promo-quantity" class="promo-content" style="display: none;">
+        <div class="table-toolbar">
+          <button class="btn btn-primary" onclick="openAddQuantityPromo()">+ Nova Promoção</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Condição</th>
+              <th>Desconto</th>
+              <th>Válido até</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="quantityPromosBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- REPORTS -->

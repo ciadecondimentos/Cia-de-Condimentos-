@@ -87,7 +87,8 @@ function showPage(pageId, buttonElement) {
   } else if (pageId === 'dashboard') {
     loadDashboard();
   } else if (pageId === 'promotions') {
-    renderPromotionsTableAsync();
+    loadProductsForPromo();
+    renderProductPromotionsAsync();
   } else if (pageId === 'reports') {
     loadReportData('7');
   } else if (pageId === 'crm') {
@@ -1768,131 +1769,234 @@ function exportReports() {
 
 // ==================== PROMOTIONS MANAGEMENT ====================
 
-function renderPromotionsTableAsync() {
-  const search = document.getElementById('promoSearch')?.value || '';
-  const status = document.getElementById('promoStatusFilter')?.value || '';
+let currentPromoTab = 'products';
+let allProducts = [];
+
+// Load products for selectors
+function loadProductsForPromo() {
+  fetch(`${API_BASE}/products`)
+    .then(res => res.json())
+    .then(products => {
+      allProducts = Array.isArray(products) ? products : (products.value || []);
+    })
+    .catch(error => console.error('Error loading products:', error));
+}
+
+// Switch between promotion tabs
+function switchPromoTab(tab) {
+  currentPromoTab = tab;
+  document.querySelectorAll('.promo-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
   
+  document.querySelectorAll('.promo-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(`promo-${tab}`).classList.add('active');
+  
+  if (tab === 'products') renderProductPromotionsAsync();
+  else if (tab === 'kits') renderKitsAsync();
+  else if (tab === 'quantity') renderQuantityPromosAsync();
+}
+
+// ==================== PRODUCT PROMOTIONS ====================
+
+function renderProductPromotionsAsync() {
   fetch(`${API_BASE}/promotions`)
     .then(res => res.json())
-    .then(promotions => {
-      const promos = Array.isArray(promotions) ? promotions : (promotions.value || []);
-      
-      const filtered = promos.filter(p => 
-        (p.code.toLowerCase().includes(search.toLowerCase()) || 
-         p.description.toLowerCase().includes(search.toLowerCase())) &&
-        (!status || p.status === status)
-      );
-      
-      renderPromotionsTable(filtered);
+    .then(promos => {
+      const promoList = Array.isArray(promos) ? promos : (promos.value || []);
+      renderProductPromotions(promoList);
     })
     .catch(error => {
-      console.error('Error fetching promotions:', error);
-      document.getElementById('promotionsTableBody').innerHTML = '<tr><td colspan="7">Erro ao carregar promoções</td></tr>';
+      console.error('Error:', error);
+      document.getElementById('productPromosBody').innerHTML = '<tr><td colspan="5">Erro ao carregar</td></tr>';
     });
 }
 
-function renderPromotionsTable(promotions) {
-  const tbody = document.getElementById('promotionsTableBody');
+function renderProductPromotions(promos) {
+  const tbody = document.getElementById('productPromosBody');
   
-  if (!promotions || promotions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px;">Nenhuma promoção cadastrada</td></tr>';
+  if (!promos || promos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px;">Nenhuma promoção em produtos</td></tr>';
     return;
   }
   
-  tbody.innerHTML = promotions.map(promo => {
-    const validUntil = new Date(promo.valid_until);
+  tbody.innerHTML = promos.map(p => {
+    const endDate = new Date(p.end_date);
     const now = new Date();
-    let status = promo.status || 'Inativa';
+    const daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+    const isExpired = endDate < now;
     
-    if (validUntil < now && status === 'Ativa') {
-      status = 'Expirada';
-    }
-    
-    const statusClass = status === 'Ativa' ? 'tag-active' : (status === 'Expirada' ? 'tag-low' : 'tag-inactive');
-    const typeDisplay = promo.type === 'percentage' ? `${promo.value}%` : `R$ ${parseFloat(promo.value).toFixed(2)}`;
+    const discount = ((p.original_price - p.discount_price) / p.original_price * 100).toFixed(0);
     
     return `
     <tr>
-      <td data-label="Código">${promo.code || 'N/A'}</td>
-      <td data-label="Descrição">${promo.description || 'N/A'}</td>
-      <td data-label="Tipo">${promo.type === 'percentage' ? 'Percentual' : 'Valor Fixo'}</td>
-      <td data-label="Valor">${typeDisplay}</td>
-      <td data-label="Válido até">${validUntil.toLocaleDateString('pt-BR')}</td>
-      <td data-label="Status"><span class="tag ${statusClass}">${status}</span></td>
+      <td data-label="Produto">${p.product_name || 'N/A'}</td>
+      <td data-label="Desconto">${discount}% OFF</td>
+      <td data-label="Preço"><del>R$ ${parseFloat(p.original_price).toFixed(2)}</del> → <strong>R$ ${parseFloat(p.discount_price).toFixed(2)}</strong></td>
+      <td data-label="Válido até">${isExpired ? '⏰ Expirado' : `${daysLeft} dias`}</td>
       <td data-label="Ações">
-        <div class="actions-cell">
-          <button class="btn btn-sm btn-ghost" onclick="editPromotion(${promo.id})">✏️</button>
-          <button class="btn btn-sm btn-ghost" onclick="deletePromotion(${promo.id})">🗑️</button>
-        </div>
+        <button class="btn btn-sm btn-ghost" onclick="editProductPromo(${p.id})">✏️</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteProductPromo(${p.id})">🗑️</button>
       </td>
     </tr>
-  `;
+    `;
   }).join('');
 }
 
-function openAddPromotion() {
+function openAddProductPromo() {
   const modal = document.getElementById('promotionModal');
   const title = document.getElementById('promotionModalTitle');
   const body = document.getElementById('promotionModalBody');
   
-  title.textContent = 'Adicionar Nova Promoção';
+  title.textContent = '➕ Nova Promoção de Produto';
+  
+  const productOptions = allProducts.map(p => 
+    `<option value="${p.id}">${p.name} - R$ ${parseFloat(p.price).toFixed(2)}</option>`
+  ).join('');
+  
   body.innerHTML = `
-    <div class="form-row-2">
-      <div class="fg">
-        <label>Código da Promoção *</label>
-        <input type="text" id="promoCode" placeholder="Ex: PROMO2024">
-      </div>
-      <div class="fg">
-        <label>Descrição *</label>
-        <input type="text" id="promoDescription" placeholder="Ex: Desconto no Natal">
-      </div>
+    <div class="fg">
+      <label>Selecione o Produto *</label>
+      <select id="promoProductId" onchange="updateProductPromoInfo()">
+        <option value="">-- Selecione um produto --</option>
+        ${productOptions}
+      </select>
     </div>
+    <div id="productPromoInfo"></div>
     <div class="form-row-2">
       <div class="fg">
-        <label>Tipo de Desconto *</label>
-        <select id="promoType" onchange="updatePromoTypeDisplay()">
-          <option value="percentage">Percentual (%)</option>
-          <option value="fixed">Valor Fixo (R$)</option>
-        </select>
+        <label>Preço Original (R$) *</label>
+        <input type="number" id="promoOriginalPrice" placeholder="0.00" step="0.01" readonly>
       </div>
       <div class="fg">
-        <label>Valor <span id="promoTypeLabel">(%)</span> *</label>
-        <input type="number" id="promoValue" placeholder="0.00" step="0.01">
+        <label>Preço da Promoção (R$) *</label>
+        <input type="number" id="promoDiscountPrice" placeholder="0.00" step="0.01" onchange="updatePromoInfo()">
       </div>
     </div>
     <div class="form-row-2">
       <div class="fg">
         <label>Válido até *</label>
-        <input type="date" id="promoValidUntil">
+        <input type="date" id="promoEndDate">
       </div>
       <div class="fg">
         <label>Status</label>
-        <select id="promoStatus">
+        <select id="promoStatusSelect">
           <option value="Ativa">Ativa</option>
           <option value="Inativa">Inativa</option>
         </select>
       </div>
     </div>
-    <div class="fg">
-      <label>Observações</label>
-      <textarea id="promoNotes" placeholder="Notas internas sobre esta promoção..."></textarea>
+    <div id="promoCalcInfo" style="background:#f5f5f5; padding:15px; border-radius:4px; margin:15px 0; display:none;">
+      <p style="margin:0;"><strong>Resumo:</strong></p>
+      <p style="margin:5px 0;"><span id="discountPercent">0</span>% de desconto</p>
+      <p style="margin:5px 0;">Economia: R$ <span id="savingAmount">0.00</span></p>
     </div>
   `;
   
   modal.classList.add('open');
   
   const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 30);
-  document.getElementById('promoValidUntil').valueAsDate = tomorrow;
+  tomorrow.setDate(tomorrow.getDate() + 7);
+  document.getElementById('promoEndDate').valueAsDate = tomorrow;
 }
 
-function updatePromoTypeDisplay() {
-  const type = document.getElementById('promoType')?.value;
-  const label = document.getElementById('promoTypeLabel');
-  label.textContent = type === 'percentage' ? '(%)' : '(R$)';
+function updateProductPromoInfo() {
+  const productId = document.getElementById('promoProductId')?.value;
+  if (!productId) return;
+  
+  const product = allProducts.find(p => p.id == productId);
+  if (product) {
+    document.getElementById('promoOriginalPrice').value = parseFloat(product.price).toFixed(2);
+    document.getElementById('promoDiscountPrice').value = '';
+    document.getElementById('productPromoInfo').innerHTML = `
+      <div style="background:#e8f5e9; padding:10px; border-radius:4px; margin:10px 0;">
+        <p style="margin:0;"><strong>${product.name}</strong></p>
+        <p style="margin:5px 0; font-size:12px; color:#666;">Preço atual: R$ ${parseFloat(product.price).toFixed(2)}</p>
+      </div>
+    `;
+  }
 }
 
-function editPromotion(id) {
+function updatePromoInfo() {
+  const original = parseFloat(document.getElementById('promoOriginalPrice')?.value) || 0;
+  const discount = parseFloat(document.getElementById('promoDiscountPrice')?.value) || 0;
+  
+  if (original > 0 && discount > 0) {
+    const percent = Math.round((original - discount) / original * 100);
+    const saving = original - discount;
+    
+    document.getElementById('discountPercent').textContent = percent;
+    document.getElementById('savingAmount').textContent = saving.toFixed(2);
+    document.getElementById('promoCalcInfo').style.display = 'block';
+  } else {
+    document.getElementById('promoCalcInfo').style.display = 'none';
+  }
+}
+
+function closePromotionModal() {
+  document.getElementById('promotionModal').classList.remove('open');
+}
+
+function saveProductPromo() {
+  const id = document.getElementById('promoId')?.value;
+  const productId = document.getElementById('promoProductId')?.value;
+  const originalPrice = parseFloat(document.getElementById('promoOriginalPrice')?.value) || 0;
+  const discountPrice = parseFloat(document.getElementById('promoDiscountPrice')?.value) || 0;
+  const endDate = document.getElementById('promoEndDate')?.value;
+  const status = document.getElementById('promoStatusSelect')?.value;
+  
+  if (!productId) {
+    showToast('Selecione um produto', 'error');
+    return;
+  }
+  
+  if (originalPrice <= 0 || discountPrice <= 0) {
+    showToast('Preencha os preços corretamente', 'error');
+    return;
+  }
+  
+  if (discountPrice >= originalPrice) {
+    showToast('Preço da promoção deve ser menor que o preço original', 'error');
+    return;
+  }
+  
+  if (!endDate) {
+    showToast('Defina a data de validade', 'error');
+    return;
+  }
+  
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/promotions/${id}` : `${API_BASE}/promotions`;
+  
+  const data = {
+    product_id: productId,
+    original_price: originalPrice,
+    discount_price: discountPrice,
+    end_date: endDate,
+    status: status
+  };
+  
+  fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(result => {
+    if (result.error) {
+      showToast('Erro: ' + result.error, 'error');
+    } else {
+      showToast('✅ Promoção salva!', 'success');
+      closePromotionModal();
+      renderProductPromotionsAsync();
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showToast('Erro ao salvar', 'error');
+  });
+}
+
+function editProductPromo(id) {
   fetch(`${API_BASE}/promotions/${id}`)
     .then(res => res.json())
     .then(promo => {
@@ -1900,158 +2004,483 @@ function editPromotion(id) {
       const title = document.getElementById('promotionModalTitle');
       const body = document.getElementById('promotionModalBody');
       
-      title.textContent = 'Editar Promoção';
+      title.textContent = '✏️ Editar Promoção';
+      
+      const productOptions = allProducts.map(p => 
+        `<option value="${p.id}" ${p.id == promo.product_id ? 'selected' : ''}>${p.name}</option>`
+      ).join('');
+      
       body.innerHTML = `
         <input type="hidden" id="promoId" value="${promo.id}">
+        <div class="fg">
+          <label>Produto</label>
+          <select id="promoProductId" disabled>
+            ${productOptions}
+          </select>
+        </div>
         <div class="form-row-2">
           <div class="fg">
-            <label>Código da Promoção *</label>
-            <input type="text" id="promoCode" placeholder="Ex: PROMO2024" value="${promo.code || ''}">
+            <label>Preço Original (R$)</label>
+            <input type="number" id="promoOriginalPrice" value="${parseFloat(promo.original_price).toFixed(2)}" step="0.01">
           </div>
           <div class="fg">
-            <label>Descrição *</label>
-            <input type="text" id="promoDescription" placeholder="Ex: Desconto no Natal" value="${promo.description || ''}">
+            <label>Preço da Promoção (R$)</label>
+            <input type="number" id="promoDiscountPrice" value="${parseFloat(promo.discount_price).toFixed(2)}" step="0.01" onchange="updatePromoInfo()">
           </div>
         </div>
         <div class="form-row-2">
           <div class="fg">
-            <label>Tipo de Desconto *</label>
-            <select id="promoType" onchange="updatePromoTypeDisplay()">
-              <option value="percentage" ${promo.type === 'percentage' ? 'selected' : ''}>Percentual (%)</option>
-              <option value="fixed" ${promo.type === 'fixed' ? 'selected' : ''}>Valor Fixo (R$)</option>
-            </select>
-          </div>
-          <div class="fg">
-            <label>Valor <span id="promoTypeLabel">${promo.type === 'percentage' ? '(%)' : '(R$)'}</span> *</label>
-            <input type="number" id="promoValue" placeholder="0.00" step="0.01" value="${promo.value || ''}">
-          </div>
-        </div>
-        <div class="form-row-2">
-          <div class="fg">
-            <label>Válido até *</label>
-            <input type="date" id="promoValidUntil" value="${promo.valid_until ? promo.valid_until.split('T')[0] : ''}">
+            <label>Válido até</label>
+            <input type="date" id="promoEndDate" value="${promo.end_date.split('T')[0]}">
           </div>
           <div class="fg">
             <label>Status</label>
-            <select id="promoStatus">
+            <select id="promoStatusSelect">
               <option value="Ativa" ${promo.status === 'Ativa' ? 'selected' : ''}>Ativa</option>
               <option value="Inativa" ${promo.status === 'Inativa' ? 'selected' : ''}>Inativa</option>
             </select>
           </div>
         </div>
+      `;
+      
+      modal.classList.add('open');
+      updatePromoInfo();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Erro ao carregar', 'error');
+    });
+}
+
+function deleteProductPromo(id) {
+  if (!confirm('Deletar esta promoção?')) return;
+  
+  fetch(`${API_BASE}/promotions/${id}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(() => {
+      showToast('✅ Deletado!', 'success');
+      renderProductPromotionsAsync();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Erro ao deletar', 'error');
+    });
+}
+
+// ==================== KITS ====================
+
+function renderKitsAsync() {
+  fetch(`${API_BASE}/promotions/kits`)
+    .then(res => res.json())
+    .then(kits => {
+      const kitList = Array.isArray(kits) ? kits : (kits.value || []);
+      renderKits(kitList);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('kitsBody').innerHTML = '<tr><td colspan="4">Erro ao carregar</td></tr>';
+    });
+}
+
+function renderKits(kits) {
+  const tbody = document.getElementById('kitsBody');
+  
+  if (!kits || kits.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:30px;">Nenhum kit criado</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = kits.map(kit => `
+    <tr>
+      <td data-label="Kit">${kit.name}</td>
+      <td data-label="Produtos">${kit.product_count || 0}</td>
+      <td data-label="Preço"><strong>R$ ${parseFloat(kit.kit_price).toFixed(2)}</strong></td>
+      <td data-label="Ações">
+        <button class="btn btn-sm btn-ghost" onclick="editKit(${kit.id})">✏️</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteKit(${kit.id})">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function openAddKit() {
+  const modal = document.getElementById('promotionModal');
+  const title = document.getElementById('promotionModalTitle');
+  const body = document.getElementById('promotionModalBody');
+  
+  title.textContent = '📦 Novo Kit';
+  
+  const productOptions = allProducts.map(p => 
+    `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
+      <input type="checkbox" class="kit-product-select" value="${p.id}"> ${p.name} (R$ ${parseFloat(p.price).toFixed(2)})
+    </label>`
+  ).join('');
+  
+  body.innerHTML = `
+    <div class="fg">
+      <label>Nome do Kit *</label>
+      <input type="text" id="kitName" placeholder="Ex: Kit de Ervas Aromáticas">
+    </div>
+    <div class="fg">
+      <label>Descrição</label>
+      <textarea id="kitDescription" placeholder="Descrição do kit..." rows="3"></textarea>
+    </div>
+    <div class="fg">
+      <label>Preço do Kit (R$) *</label>
+      <input type="number" id="kitPrice" placeholder="0.00" step="0.01">
+    </div>
+    <div class="fg">
+      <label>Produtos *</label>
+      <div style="max-height:300px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
+        ${productOptions}
+      </div>
+    </div>
+  `;
+  
+  modal.classList.add('open');
+}
+
+function saveKit() {
+  const id = document.getElementById('kitId')?.value;
+  const name = document.getElementById('kitName')?.value?.trim();
+  const description = document.getElementById('kitDescription')?.value?.trim();
+  const price = parseFloat(document.getElementById('kitPrice')?.value) || 0;
+  
+  const selectedProducts = Array.from(document.querySelectorAll('.kit-product-select:checked'))
+    .map(cb => parseInt(cb.value));
+  
+  if (!name) {
+    showToast('Preencha o nome do kit', 'error');
+    return;
+  }
+  
+  if (price <= 0) {
+    showToast('Preencha um preço válido', 'error');
+    return;
+  }
+  
+  if (selectedProducts.length === 0) {
+    showToast('Selecione pelo menos um produto', 'error');
+    return;
+  }
+  
+  const method = id ? 'PUT' : 'POST';
+  const url = id ? `${API_BASE}/promotions/kits/${id}` : `${API_BASE}/promotions/kits`;
+  
+  const data = {
+    name,
+    description: description || null,
+    kit_price: price,
+    product_ids: selectedProducts,
+    status: 'Ativa'
+  };
+  
+  fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  })
+  .then(res => res.json())
+  .then(result => {
+    if (result.error) {
+      showToast('Erro: ' + result.error, 'error');
+    } else {
+      showToast('✅ Kit salvo!', 'success');
+      closePromotionModal();
+      renderKitsAsync();
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    showToast('Erro ao salvar', 'error');
+  });
+}
+
+function editKit(id) {
+  fetch(`${API_BASE}/promotions/kits/${id}`)
+    .then(res => res.json())
+    .then(kit => {
+      const modal = document.getElementById('promotionModal');
+      const title = document.getElementById('promotionModalTitle');
+      const body = document.getElementById('promotionModalBody');
+      
+      title.textContent = '✏️ Editar Kit';
+      
+      const kitProductIds = kit.products ? kit.products.map(p => p.id) : [];
+      const productOptions = allProducts.map(p => 
+        `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
+          <input type="checkbox" class="kit-product-select" value="${p.id}" ${kitProductIds.includes(p.id) ? 'checked' : ''}> ${p.name}
+        </label>`
+      ).join('');
+      
+      body.innerHTML = `
+        <input type="hidden" id="kitId" value="${kit.id}">
         <div class="fg">
-          <label>Observações</label>
-          <textarea id="promoNotes" placeholder="Notas internas sobre esta promoção...">${promo.notes || ''}</textarea>
+          <label>Nome do Kit</label>
+          <input type="text" id="kitName" value="${kit.name}">
+        </div>
+        <div class="fg">
+          <label>Descrição</label>
+          <textarea id="kitDescription" rows="3">${kit.description || ''}</textarea>
+        </div>
+        <div class="fg">
+          <label>Preço do Kit (R$)</label>
+          <input type="number" id="kitPrice" value="${parseFloat(kit.kit_price).toFixed(2)}" step="0.01">
+        </div>
+        <div class="fg">
+          <label>Produtos</label>
+          <div style="max-height:300px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
+            ${productOptions}
+          </div>
         </div>
       `;
       
       modal.classList.add('open');
     })
     .catch(error => {
-      console.error('Error loading promotion:', error);
-      showToast('Erro ao carregar promoção', 'error');
+      console.error('Error:', error);
+      showToast('Erro ao carregar', 'error');
     });
 }
 
-function closePromotionModal() {
-  document.getElementById('promotionModal').classList.remove('open');
+function deleteKit(id) {
+  if (!confirm('Deletar este kit?')) return;
+  
+  fetch(`${API_BASE}/promotions/kits/${id}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(() => {
+      showToast('✅ Deletado!', 'success');
+      renderKitsAsync();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Erro ao deletar', 'error');
+    });
 }
 
-function savePromotion() {
-  const id = document.getElementById('promoId')?.value;
-  const code = document.getElementById('promoCode')?.value?.trim();
-  const description = document.getElementById('promoDescription')?.value?.trim();
-  const type = document.getElementById('promoType')?.value;
-  const value = parseFloat(document.getElementById('promoValue')?.value) || 0;
-  const validUntil = document.getElementById('promoValidUntil')?.value;
-  const status = document.getElementById('promoStatus')?.value;
-  const notes = document.getElementById('promoNotes')?.value?.trim();
+// ==================== QUANTITY PROMOTIONS ====================
+
+function renderQuantityPromosAsync() {
+  fetch(`${API_BASE}/promotions/quantity`)
+    .then(res => res.json())
+    .then(promos => {
+      const promoList = Array.isArray(promos) ? promos : (promos.value || []);
+      renderQuantityPromos(promoList);
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      document.getElementById('quantityPromosBody').innerHTML = '<tr><td colspan="5">Erro ao carregar</td></tr>';
+    });
+}
+
+function renderQuantityPromos(promos) {
+  const tbody = document.getElementById('quantityPromosBody');
   
-  if (!code || code.length === 0) {
-    showToast('Por favor, preencha o Código da Promoção', 'error');
+  if (!promos || promos.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:30px;">Nenhuma promoção por quantidade</td></tr>';
     return;
   }
   
-  if (!description || description.length === 0) {
-    showToast('Por favor, preencha a Descrição', 'error');
+  tbody.innerHTML = promos.map(p => {
+    const endDate = new Date(p.end_date);
+    const isExpired = endDate < new Date();
+    
+    return `
+    <tr>
+      <td data-label="Nome">${p.name}</td>
+      <td data-label="Condição">Compre ${p.min_quantity}+ ${p.product_count > 0 ? `(${p.product_count} produtos)` : '(todos)'}</td>
+      <td data-label="Desconto">${p.discount_percentage}%</td>
+      <td data-label="Válido até">${isExpired ? '⏰ Expirado' : new Date(p.end_date).toLocaleDateString('pt-BR')}</td>
+      <td data-label="Ações">
+        <button class="btn btn-sm btn-ghost" onclick="editQuantityPromo(${p.id})">✏️</button>
+        <button class="btn btn-sm btn-ghost" onclick="deleteQuantityPromo(${p.id})">🗑️</button>
+      </td>
+    </tr>
+    `;
+  }).join('');
+}
+
+function openAddQuantityPromo() {
+  const modal = document.getElementById('promotionModal');
+  const title = document.getElementById('promotionModalTitle');
+  const body = document.getElementById('promotionModalBody');
+  
+  title.textContent = '📊 Nova Promoção por Quantidade';
+  
+  const productOptions = allProducts.map(p => 
+    `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
+      <input type="checkbox" class="qty-product-select" value="${p.id}"> ${p.name}
+    </label>`
+  ).join('');
+  
+  body.innerHTML = `
+    <div class="fg">
+      <label>Nome da Promoção *</label>
+      <input type="text" id="qtyPromoName" placeholder="Ex: Desconto por quantidade">
+    </div>
+    <div class="fg">
+      <label>Descrição</label>
+      <textarea id="qtyPromoDescription" placeholder="Ex: Compre 5 ou mais..." rows="2"></textarea>
+    </div>
+    <div class="form-row-2">
+      <div class="fg">
+        <label>Quantidade mínima *</label>
+        <input type="number" id="qtyPromoMinQty" placeholder="5" min="1">
+      </div>
+      <div class="fg">
+        <label>Desconto (%) *</label>
+        <input type="number" id="qtyPromoDiscount" placeholder="10" min="0" max="100" step="0.5">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Válido até *</label>
+      <input type="date" id="qtyPromoEndDate">
+    </div>
+    <div class="fg">
+      <label>Aplicar a produtos específicos (deixe em branco para todos)</label>
+      <div style="max-height:200px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
+        ${productOptions}
+      </div>
+    </div>
+  `;
+  
+  modal.classList.add('open');
+  
+  const nextMonth = new Date();
+  nextMonth.setDate(nextMonth.getDate() + 30);
+  document.getElementById('qtyPromoEndDate').valueAsDate = nextMonth;
+}
+
+function saveQuantityPromo() {
+  const id = document.getElementById('qtyPromoId')?.value;
+  const name = document.getElementById('qtyPromoName')?.value?.trim();
+  const description = document.getElementById('qtyPromoDescription')?.value?.trim();
+  const minQty = parseInt(document.getElementById('qtyPromoMinQty')?.value) || 0;
+  const discount = parseFloat(document.getElementById('qtyPromoDiscount')?.value) || 0;
+  const endDate = document.getElementById('qtyPromoEndDate')?.value;
+  
+  const selectedProducts = Array.from(document.querySelectorAll('.qty-product-select:checked'))
+    .map(cb => parseInt(cb.value));
+  
+  if (!name) {
+    showToast('Preencha o nome', 'error');
     return;
   }
   
-  if (value <= 0) {
-    showToast('Por favor, preencha um Valor válido (maior que 0)', 'error');
+  if (minQty <= 0 || discount <= 0) {
+    showToast('Preencha quantidade e desconto corretamente', 'error');
     return;
   }
   
-  if (!validUntil) {
-    showToast('Por favor, preencha a data de validade', 'error');
+  if (!endDate) {
+    showToast('Defina a data de validade', 'error');
     return;
   }
   
   const method = id ? 'PUT' : 'POST';
-  const url = id ? `${API_BASE}/promotions/${id}` : `${API_BASE}/promotions`;
+  const url = id ? `${API_BASE}/promotions/quantity/${id}` : `${API_BASE}/promotions/quantity`;
   
-  const promotionData = {
-    code,
-    description,
-    type,
-    value,
-    valid_until: validUntil,
-    status,
-    notes
+  const data = {
+    name,
+    description: description || null,
+    min_quantity: minQty,
+    discount_percentage: discount,
+    end_date: endDate,
+    product_ids: selectedProducts.length > 0 ? selectedProducts : null,
+    status: 'Ativa'
   };
   
   fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(promotionData)
+    body: JSON.stringify(data)
   })
-  .then(res => {
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    return res.json();
-  })
-  .then(data => {
-    if (data.error) {
-      showToast('Erro ao salvar promoção: ' + data.error, 'error');
+  .then(res => res.json())
+  .then(result => {
+    if (result.error) {
+      showToast('Erro: ' + result.error, 'error');
     } else {
-      showToast('✅ Promoção salva com sucesso!', 'success');
+      showToast('✅ Promoção salva!', 'success');
       closePromotionModal();
-      renderPromotionsTableAsync();
+      renderQuantityPromosAsync();
     }
   })
   .catch(error => {
-    console.error('Error saving promotion:', error);
-    showToast('Erro ao salvar promoção: ' + error.message, 'error');
+    console.error('Error:', error);
+    showToast('Erro ao salvar', 'error');
   });
 }
 
-function deletePromotion(id) {
-  if (!confirm('Tem certeza que deseja deletar esta promoção?')) {
-    return;
-  }
+function editQuantityPromo(id) {
+  fetch(`${API_BASE}/promotions/quantity/${id}`)
+    .then(res => res.json())
+    .then(promo => {
+      const modal = document.getElementById('promotionModal');
+      const title = document.getElementById('promotionModalTitle');
+      const body = document.getElementById('promotionModalBody');
+      
+      title.textContent = '✏️ Editar Promoção';
+      
+      const promoProductIds = promo.products ? promo.products.map(p => p.id) : [];
+      const productOptions = allProducts.map(p => 
+        `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
+          <input type="checkbox" class="qty-product-select" value="${p.id}" ${promoProductIds.includes(p.id) ? 'checked' : ''}> ${p.name}
+        </label>`
+      ).join('');
+      
+      body.innerHTML = `
+        <input type="hidden" id="qtyPromoId" value="${promo.id}">
+        <div class="fg">
+          <label>Nome</label>
+          <input type="text" id="qtyPromoName" value="${promo.name}">
+        </div>
+        <div class="fg">
+          <label>Descrição</label>
+          <textarea id="qtyPromoDescription" rows="2">${promo.description || ''}</textarea>
+        </div>
+        <div class="form-row-2">
+          <div class="fg">
+            <label>Quantidade mínima</label>
+            <input type="number" id="qtyPromoMinQty" value="${promo.min_quantity}" min="1">
+          </div>
+          <div class="fg">
+            <label>Desconto (%)</label>
+            <input type="number" id="qtyPromoDiscount" value="${promo.discount_percentage}" min="0" max="100" step="0.5">
+          </div>
+        </div>
+        <div class="fg">
+          <label>Válido até</label>
+          <input type="date" id="qtyPromoEndDate" value="${promo.end_date.split('T')[0]}">
+        </div>
+        <div class="fg">
+          <label>Produtos</label>
+          <div style="max-height:200px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
+            ${productOptions}
+          </div>
+        </div>
+      `;
+      
+      modal.classList.add('open');
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Erro ao carregar', 'error');
+    });
+}
+
+function deleteQuantityPromo(id) {
+  if (!confirm('Deletar esta promoção?')) return;
   
-  fetch(`${API_BASE}/promotions/${id}`, {
-    method: 'DELETE'
-  })
-  .then(res => {
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
-    }
-    return res.json();
-  })
-  .then(data => {
-    if (data.error) {
-      showToast('Erro ao deletar promoção: ' + data.error, 'error');
-    } else {
-      showToast('✅ Promoção deletada com sucesso!', 'success');
-      renderPromotionsTableAsync();
-    }
-  })
-  .catch(error => {
-    console.error('Error deleting promotion:', error);
-    showToast('Erro ao deletar promoção: ' + error.message, 'error');
-  });
+  fetch(`${API_BASE}/promotions/quantity/${id}`, { method: 'DELETE' })
+    .then(res => res.json())
+    .then(() => {
+      showToast('✅ Deletado!', 'success');
+      renderQuantityPromosAsync();
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      showToast('Erro ao deletar', 'error');
+    });
 }
 
 // ==================== MODAL UTILITIES ====================

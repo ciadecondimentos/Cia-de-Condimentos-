@@ -13,6 +13,7 @@ let currentFilter = 'all';
 let currentSearch = '';
 let selectedProductForQuantity = null;
 let selectedQuantity = 1;
+let activePromotions = {}; // Map de product_id => promotion_info
 
 // ==================== PAYMENT LOADING STATE ====================
 // Flag para prevenir múltiplos cliques em botões de pagamento
@@ -88,6 +89,33 @@ function getProducts() {
   });
 }
 
+// Load active promotions
+function loadActivePromotions() {
+  fetch(API_URL + '/promotions/active')
+    .then(function(res) {
+      return res.json();
+    })
+    .then(function(data) {
+      activePromotions = {};
+      const promos = Array.isArray(data) ? data : (data.value || []);
+      promos.forEach(function(promo) {
+        if (promo.product_id) {
+          activePromotions[promo.product_id] = {
+            promotion_id: promo.promotion_id,
+            discount_price: promo.discount_price,
+            original_price: promo.original_price,
+            end_date: promo.end_date
+          };
+        }
+      });
+      renderProducts();
+    })
+    .catch(function(e) {
+      console.error('Erro ao carregar promoções:', e);
+      renderProducts();
+    });
+}
+
 function renderProducts() {
   getProducts().then(function(products) {
     var filtered = products.filter(function(p) {
@@ -104,14 +132,50 @@ function renderProducts() {
       var imgHtml = imageUrl
         ? '<img src="' + imageUrl + '" alt="' + p.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
         : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px;">🌶️</div>';
-      return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer;">' +
-        '<div class="product-img">' + imgHtml + '</div>' +
+      
+      // Check for active promotion
+      var promoHtml = '';
+      var priceHtml = '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>';
+      
+      if (activePromotions[p.id]) {
+        var promo = activePromotions[p.id];
+        var endDate = new Date(promo.end_date);
+        var now = new Date();
+        var daysLeft = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
+        
+        if (endDate > now) {
+          // Calculate discount percentage
+          var discount = Math.round((promo.original_price - promo.discount_price) / promo.original_price * 100);
+          
+          promoHtml = '<div style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 2;">' +
+            discount + '% OFF' +
+            '</div>';
+          
+          if (daysLeft > 0) {
+            promoHtml += '<div style="position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.7); color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 2;">' +
+              daysLeft + (daysLeft === 1 ? ' dia' : ' dias') +
+              '</div>';
+          }
+          
+          // Replace price display with strikethrough and promo price
+          priceHtml = '<div style="display: flex; align-items: center; gap: 8px;">' +
+            '<span style="text-decoration: line-through; color: #999; font-size: 12px;">R$ ' + promo.original_price.toFixed(2).replace('.', ',') + '</span>' +
+            '<div style="color: #ff4444; font-weight: 700; font-size: 16px;">R$ ' + promo.discount_price.toFixed(2).replace('.', ',') + '</div>' +
+            '</div>';
+        }
+      }
+      
+      return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer; position: relative;">' +
+        '<div class="product-img" style="position: relative;">' + 
+          imgHtml + 
+          promoHtml +
+        '</div>' +
         '<div class="product-body">' +
           '<div class="product-category">' + (p.category || '') + '</div>' +
           '<div class="product-name">' + p.name + '</div>' +
           '<div class="product-desc">' + (p.description || '') + '</div>' +
           '<div class="product-footer">' +
-            '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+            priceHtml +
             '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
               (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
             '</button>' +
@@ -1969,7 +2033,7 @@ document.addEventListener('click', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', function() {
-  renderProducts();
+  loadActivePromotions();
   updateCartBadge();
   
   // Cart button in header

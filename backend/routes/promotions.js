@@ -21,6 +21,25 @@ router.get('/active', async (req, res) => {
   }
 });
 
+// DEBUG: GET all promotions (including inactive and expired)
+router.get('/debug/all', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT pr.id, pr.product_id, pr.discount_price, pr.original_price, pr.end_date, pr.status, pr.created_at, p.name
+      FROM promotions pr
+      LEFT JOIN products p ON p.id = pr.product_id
+      ORDER BY pr.created_at DESC
+    `);
+    res.json({
+      count: result.rows.length,
+      promotions: result.rows
+    });
+  } catch (error) {
+    console.error('Error fetching all promotions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== KITS ====================
 
 // GET all kits

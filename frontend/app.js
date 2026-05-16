@@ -377,6 +377,20 @@ function closeProductDetail() {
     modal.classList.remove('open');
   }
   window.currentProductDetail = null;
+  window.currentKitDetail = null;
+  
+  // Limpar campos do modal para evitar dados residuais
+  var nameEl = document.getElementById('productDetailName');
+  if (nameEl) nameEl.textContent = '';
+  
+  var descEl = document.getElementById('productDetailDescription');
+  if (descEl) descEl.textContent = '';
+  
+  var priceEl = document.getElementById('productDetailPrice');
+  if (priceEl) priceEl.textContent = '';
+  
+  var imgEl = document.getElementById('productDetailImage');
+  if (imgEl) imgEl.innerHTML = '';
 }
 
 function addToCartFromDetail() {

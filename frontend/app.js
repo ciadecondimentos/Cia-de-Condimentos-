@@ -144,9 +144,9 @@ function loadActivePromotions() {
 }
 
 function renderProducts() {
-  // If filter is 'kits', show kits
+  // If filter is 'kits', show only kits
   if (currentFilter === 'kits') {
-    renderKits();
+    renderKitsOnly();
     return;
   }
   
@@ -160,6 +160,8 @@ function renderProducts() {
           (p.description || '').toLowerCase().indexOf(currentSearch) !== -1;
       });
     }
+    
+    // Build product cards
     var html = filtered.map(function(p) {
       var imageUrl = p.image_url || ((p.images && p.images.length > 0) ? getImageUrl(p.images[0]) : p.image);
       var imgHtml = imageUrl
@@ -218,6 +220,47 @@ function renderProducts() {
         '</div>' +
       '</div>';
     }).join('');
+    
+    // If 'all' filter, also add kits
+    if (currentFilter === 'all' && activeKits && activeKits.length > 0) {
+      var filteredKits = activeKits.filter(function(kit) {
+        if (currentSearch) {
+          return kit.name.toLowerCase().indexOf(currentSearch) !== -1 ||
+            (kit.description || '').toLowerCase().indexOf(currentSearch) !== -1;
+        }
+        return true;
+      });
+      
+      var kitsHtml = filteredKits.map(function(kit) {
+        var imageUrl = '';
+        if (kit.products && kit.products.length > 0 && kit.products[0].image_url) {
+          imageUrl = getImageUrl(kit.products[0].image_url);
+        }
+        
+        var imgHtml = imageUrl
+          ? '<img src="' + imageUrl + '" alt="' + kit.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
+          : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px;">📦</div>';
+        
+        return '<div class="product-card" style="cursor: pointer; position: relative;" onclick="openKitDetail(' + kit.id + ')">' +
+          '<div class="product-img" style="position: relative;">' + 
+            imgHtml +
+            '<div style="position: absolute; top: 8px; right: 8px; background: var(--amarelo); color: var(--marrom); padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 2;">Kit</div>' +
+          '</div>' +
+          '<div class="product-body">' +
+            '<div class="product-category">Kit - ' + (kit.products ? kit.products.length : 0) + ' itens</div>' +
+            '<div class="product-name">' + kit.name + '</div>' +
+            '<div class="product-desc">' + (kit.description || 'Combo especial') + '</div>' +
+            '<div class="product-footer">' +
+              '<div class="product-price">R$ ' + Number(kit.kit_price || 0).toFixed(2).replace('.', ',') + '</div>' +
+              '<button class="add-cart-btn" onclick="event.stopPropagation(); addKitToCart(' + kit.id + ')">Adicionar</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      
+      html += kitsHtml;
+    }
+    
     var grid = document.getElementById('productsGrid');
     if (grid) {
       grid.innerHTML = html;
@@ -225,7 +268,7 @@ function renderProducts() {
   });
 }
 
-function renderKits() {
+function renderKitsOnly() {
   var filtered = activeKits.filter(function(kit) {
     if (currentSearch) {
       return kit.name.toLowerCase().indexOf(currentSearch) !== -1 ||
@@ -235,7 +278,6 @@ function renderKits() {
   });
   
   var html = filtered.map(function(kit) {
-    // Get first product image or use emoji
     var imageUrl = '';
     if (kit.products && kit.products.length > 0 && kit.products[0].image_url) {
       imageUrl = getImageUrl(kit.products[0].image_url);
@@ -245,20 +287,7 @@ function renderKits() {
       ? '<img src="' + imageUrl + '" alt="' + kit.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
       : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px;">📦</div>';
     
-    // Create a synthetic product object for kit
-    var kitProduct = {
-      id: 'kit-' + kit.id,
-      name: kit.name,
-      description: kit.description,
-      price: kit.kit_price,
-      category: 'Kit',
-      stock: 999,
-      is_kit: true,
-      kit_id: kit.id,
-      kit_products: kit.products
-    };
-    
-    return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(kitProduct).replace(/"/g, '&quot;') + ')" style="cursor: pointer; position: relative;">' +
+    return '<div class="product-card" style="cursor: pointer; position: relative;" onclick="openKitDetail(' + kit.id + ')">' +
       '<div class="product-img" style="position: relative;">' + 
         imgHtml +
         '<div style="position: absolute; top: 8px; right: 8px; background: var(--amarelo); color: var(--marrom); padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 2;">Kit</div>' +
@@ -285,20 +314,62 @@ function renderKits() {
   }
 }
 
-function addKitToCart(kitId) {
+function openKitDetail(kitId) {
   var kit = activeKits.find(function(k) { return k.id === kitId; });
   if (!kit) return;
   
-  // Create synthetic product for kit
-  var kitProduct = {
-    id: 'kit-' + kit.id,
-    name: kit.name,
-    price: kit.kit_price,
-    is_kit: true,
-    kit_id: kit.id
-  };
+  // Store kit data in window for modal access
+  window.currentKitDetail = kit;
   
-  openQuantityModal(kitProduct);
+  // Create modal content showing kit details
+  var modal = document.getElementById('productDetailModal');
+  if (!modal) return;
+  
+  var imageUrl = '';
+  if (kit.products && kit.products.length > 0 && kit.products[0].image_url) {
+    imageUrl = getImageUrl(kit.products[0].image_url);
+  }
+  
+  var imgHtml = imageUrl
+    ? '<img src="' + imageUrl + '" alt="' + kit.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
+    : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px; height: 300px;">📦</div>';
+  
+  var nameEl = document.getElementById('productDetailName');
+  if (nameEl) nameEl.textContent = kit.name + ' (Kit)';
+  
+  var catEl = document.getElementById('productDetailCategory');
+  if (catEl) catEl.textContent = 'Kit com ' + (kit.products ? kit.products.length : 0) + ' itens';
+  
+  var descEl = document.getElementById('productDetailDescription');
+  if (descEl) {
+    var productsInfo = kit.products ? kit.products.map(function(p) {
+      return '<li>' + p.name + (p.quantity > 1 ? ' (x' + p.quantity + ')' : '') + '</li>';
+    }).join('') : '';
+    descEl.innerHTML = (kit.description || 'Combo especial') + '<br/><br/><strong>Contém:</strong><ul style="margin: 8px 0; padding-left: 20px;">' + productsInfo + '</ul>';
+  }
+  
+  var priceEl = document.getElementById('productDetailPrice');
+  if (priceEl) priceEl.textContent = 'R$ ' + (kit.kit_price || 0).toFixed(2).replace('.', ',');
+  
+  var imgEl = document.getElementById('productDetailImage');
+  if (imgEl) imgEl.innerHTML = imgHtml;
+  
+  var addBtn = document.getElementById('productDetailAddBtn');
+  if (addBtn) {
+    addBtn.textContent = 'Adicionar ao Carrinho';
+    addBtn.disabled = false;
+    addBtn.onclick = function() {
+      addKitToCart(kitId);
+      closeProductDetail();
+    };
+  }
+  
+  modal.classList.add('open');
+}
+
+function renderKits() {
+  // Deprecated - use renderKitsOnly instead
+  renderKitsOnly();
 }
 
 function filterProducts(category, btn) {

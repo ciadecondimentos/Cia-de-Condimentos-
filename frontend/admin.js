@@ -2182,9 +2182,11 @@ function buildKitModal() {
   title.textContent = '📦 Novo Kit';
   
   const productOptions = allProducts.map(p => 
-    `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
-      <input type="checkbox" class="kit-product-select" value="${p.id}"> ${p.name} (R$ ${parseFloat(p.price).toFixed(2)})
-    </label>`
+    `<div style="display:flex; align-items:center; gap:10px; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px;">
+      <input type="checkbox" class="kit-product-select" value="${p.id}" onchange="updateKitProductsDisplay()"> 
+      <span style="flex:1;">${p.name} (R$ ${parseFloat(p.price).toFixed(2)})</span>
+      <input type="number" class="kit-product-qty" data-product-id="${p.id}" placeholder="Qtd" min="1" value="1" style="width:60px; padding:6px;" disabled>
+    </div>`
   ).join('');
   
   body.innerHTML = `
@@ -2201,14 +2203,28 @@ function buildKitModal() {
       <input type="number" id="kitPrice" placeholder="0.00" step="0.01">
     </div>
     <div class="fg">
-      <label>Produtos (mínimo 2) *</label>
+      <label>Produtos (mínimo 2) - Defina a quantidade de cada item *</label>
       <div style="max-height:300px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
         ${productOptions}
       </div>
     </div>
   `;
   
+  // Enable/disable quantity fields
+  document.querySelectorAll('.kit-product-select').forEach(cb => {
+    cb.addEventListener('change', updateKitProductsDisplay);
+  });
+  
   modal.classList.add('open');
+}
+
+function updateKitProductsDisplay() {
+  document.querySelectorAll('.kit-product-select').forEach(cb => {
+    const qtyInput = document.querySelector(`.kit-product-qty[data-product-id="${cb.value}"]`);
+    if (qtyInput) {
+      qtyInput.disabled = !cb.checked;
+    }
+  });
 }
 
 function saveKit() {
@@ -2217,8 +2233,15 @@ function saveKit() {
   const description = document.getElementById('kitDescription')?.value?.trim();
   const price = parseFloat(document.getElementById('kitPrice')?.value) || 0;
   
-  const selectedProducts = Array.from(document.querySelectorAll('.kit-product-select:checked'))
-    .map(cb => parseInt(cb.value));
+  // Collect products with quantities
+  const productsWithQty = Array.from(document.querySelectorAll('.kit-product-select:checked'))
+    .map(cb => {
+      const qty = parseInt(document.querySelector(`.kit-product-qty[data-product-id="${cb.value}"]`)?.value) || 1;
+      return {
+        product_id: parseInt(cb.value),
+        quantity: qty
+      };
+    });
   
   if (!name) {
     showToast('Preencha o nome do kit', 'error');
@@ -2230,7 +2253,7 @@ function saveKit() {
     return;
   }
   
-  if (selectedProducts.length < 2) {
+  if (productsWithQty.length < 2) {
     showToast('Selecione pelo menos 2 produtos para o kit', 'error');
     return;
   }
@@ -2242,7 +2265,7 @@ function saveKit() {
     name,
     description: description || null,
     kit_price: price,
-    product_ids: selectedProducts,
+    products: productsWithQty,
     status: 'Ativa'
   };
   
@@ -2278,11 +2301,17 @@ function editKit(id) {
       title.textContent = '✏️ Editar Kit';
       
       const kitProductIds = kit.products ? kit.products.map(p => p.id) : [];
-      const productOptions = allProducts.map(p => 
-        `<label style="display:block; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px; cursor:pointer;">
-          <input type="checkbox" class="kit-product-select" value="${p.id}" ${kitProductIds.includes(p.id) ? 'checked' : ''}> ${p.name}
-        </label>`
-      ).join('');
+      const kitProductMap = kit.products ? kit.products.reduce((acc, p) => ({...acc, [p.id]: p.quantity || 1}), {}) : {};
+      
+      const productOptions = allProducts.map(p => {
+        const isChecked = kitProductIds.includes(p.id);
+        const qty = kitProductMap[p.id] || 1;
+        return `<div style="display:flex; align-items:center; gap:10px; margin:8px 0; padding:10px; background:#f9f9f9; border-radius:3px;">
+          <input type="checkbox" class="kit-product-select" value="${p.id}" ${isChecked ? 'checked' : ''} onchange="updateKitProductsDisplay()"> 
+          <span style="flex:1;">${p.name} (R$ ${parseFloat(p.price).toFixed(2)})</span>
+          <input type="number" class="kit-product-qty" data-product-id="${p.id}" placeholder="Qtd" min="1" value="${qty}" style="width:60px; padding:6px;" ${isChecked ? '' : 'disabled'}>
+        </div>`;
+      }).join('');
       
       body.innerHTML = `
         <input type="hidden" id="kitId" value="${kit.id}">
@@ -2299,12 +2328,17 @@ function editKit(id) {
           <input type="number" id="kitPrice" value="${parseFloat(kit.kit_price).toFixed(2)}" step="0.01">
         </div>
         <div class="fg">
-          <label>Produtos</label>
+          <label>Produtos - Defina a quantidade de cada item</label>
           <div style="max-height:300px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
             ${productOptions}
           </div>
         </div>
       `;
+      
+      // Enable/disable quantity fields
+      document.querySelectorAll('.kit-product-select').forEach(cb => {
+        cb.addEventListener('change', updateKitProductsDisplay);
+      });
       
       modal.classList.add('open');
     })

@@ -59,6 +59,26 @@ router.get('/kits', async (req, res) => {
   }
 });
 
+// GET active kits for client
+router.get('/kits/active/public', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT pk.id, pk.name, pk.description, pk.kit_price, pk.status, pk.created_at,
+             json_agg(json_build_object('id', p.id, 'name', p.name, 'price', p.price, 'quantity', kp.quantity, 'image_url', p.image_url)) as products
+      FROM product_kits pk
+      LEFT JOIN kit_products kp ON pk.id = kp.kit_id
+      LEFT JOIN products p ON kp.product_id = p.id
+      WHERE pk.status = 'Ativa'
+      GROUP BY pk.id, pk.name, pk.description, pk.kit_price, pk.status, pk.created_at
+      ORDER BY pk.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching active kits:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET single kit with products
 router.get('/kits/:id', async (req, res) => {
   try {
@@ -87,9 +107,12 @@ router.get('/kits/:id', async (req, res) => {
 // CREATE new kit
 router.post('/kits', async (req, res) => {
   try {
-    const { name, description, kit_price, product_ids, status } = req.body;
+    const { name, description, kit_price, products, product_ids, status } = req.body;
     
-    if (!name || !kit_price || !product_ids || product_ids.length === 0) {
+    // Support both formats: products array with quantities or simple product_ids
+    const productsToAdd = products || (product_ids ? product_ids.map(id => ({ product_id: id, quantity: 1 })) : []);
+    
+    if (!name || !kit_price || !productsToAdd || productsToAdd.length === 0) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
     
@@ -103,11 +126,13 @@ router.post('/kits', async (req, res) => {
     
     const kit_id = kitResult.rows[0].id;
     
-    // Add products to kit
-    for (const product_id of product_ids) {
+    // Add products to kit with quantities
+    for (const product of productsToAdd) {
+      const product_id = product.product_id || product;
+      const quantity = product.quantity || 1;
       await db.query(
-        'INSERT INTO kit_products (kit_id, product_id) VALUES ($1, $2)',
-        [kit_id, product_id]
+        'INSERT INTO kit_products (kit_id, product_id, quantity) VALUES ($1, $2, $3)',
+        [kit_id, product_id, quantity]
       );
     }
     
@@ -121,7 +146,7 @@ router.post('/kits', async (req, res) => {
 // UPDATE kit
 router.put('/kits/:id', async (req, res) => {
   try {
-    const { name, description, kit_price, product_ids, status } = req.body;
+    const { name, description, kit_price, products, product_ids, status } = req.body;
     
     const kitResult = await db.query(
       `UPDATE product_kits 
@@ -136,13 +161,16 @@ router.put('/kits/:id', async (req, res) => {
     }
     
     // Update products if provided
-    if (product_ids) {
+    const productsToAdd = products || (product_ids ? product_ids.map(id => ({ product_id: id, quantity: 1 })) : []);
+    if (productsToAdd && productsToAdd.length > 0) {
       await db.query('DELETE FROM kit_products WHERE kit_id = $1', [req.params.id]);
       
-      for (const product_id of product_ids) {
+      for (const product of productsToAdd) {
+        const product_id = product.product_id || product;
+        const quantity = product.quantity || 1;
         await db.query(
-          'INSERT INTO kit_products (kit_id, product_id) VALUES ($1, $2)',
-          [req.params.id, product_id]
+          'INSERT INTO kit_products (kit_id, product_id, quantity) VALUES ($1, $2, $3)',
+          [req.params.id, product_id, quantity]
         );
       }
     }

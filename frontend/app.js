@@ -14,6 +14,8 @@ let currentSearch = '';
 let selectedProductForQuantity = null;
 let selectedQuantity = 1;
 let activePromotions = {}; // Map de product_id => promotion_info
+let activeKits = []; // Array de kits ativos
+let activeQuantityPromos = []; // Array de promoções por quantidade
 
 // ==================== PAYMENT LOADING STATE ====================
 // Flag para prevenir múltiplos cliques em botões de pagamento
@@ -89,8 +91,9 @@ function getProducts() {
   });
 }
 
-// Load active promotions
+// Load active promotions, kits, and quantity promotions
 function loadActivePromotions() {
+  // Load product promotions
   fetch(API_URL + '/promotions/active')
     .then(function(res) {
       return res.json();
@@ -114,9 +117,39 @@ function loadActivePromotions() {
       console.error('Erro ao carregar promoções:', e);
       renderProducts();
     });
+  
+  // Load active kits
+  fetch(API_URL + '/promotions/kits/active/public')
+    .then(function(res) {
+      return res.json();
+    })
+    .then(function(data) {
+      activeKits = Array.isArray(data) ? data : (data.value || []);
+    })
+    .catch(function(e) {
+      console.error('Erro ao carregar kits:', e);
+    });
+  
+  // Load quantity promotions
+  fetch(API_URL + '/promotions/quantity')
+    .then(function(res) {
+      return res.json();
+    })
+    .then(function(data) {
+      activeQuantityPromos = Array.isArray(data) ? data : (data.value || []);
+    })
+    .catch(function(e) {
+      console.error('Erro ao carregar promoções por quantidade:', e);
+    });
 }
 
 function renderProducts() {
+  // If filter is 'kits', show kits
+  if (currentFilter === 'kits') {
+    renderKits();
+    return;
+  }
+  
   getProducts().then(function(products) {
     var filtered = products.filter(function(p) {
       return p.active && (currentFilter === 'all' || p.category === currentFilter);
@@ -190,6 +223,82 @@ function renderProducts() {
       grid.innerHTML = html;
     }
   });
+}
+
+function renderKits() {
+  var filtered = activeKits.filter(function(kit) {
+    if (currentSearch) {
+      return kit.name.toLowerCase().indexOf(currentSearch) !== -1 ||
+        (kit.description || '').toLowerCase().indexOf(currentSearch) !== -1;
+    }
+    return true;
+  });
+  
+  var html = filtered.map(function(kit) {
+    // Get first product image or use emoji
+    var imageUrl = '';
+    if (kit.products && kit.products.length > 0 && kit.products[0].image_url) {
+      imageUrl = getImageUrl(kit.products[0].image_url);
+    }
+    
+    var imgHtml = imageUrl
+      ? '<img src="' + imageUrl + '" alt="' + kit.name + '" style="width: 100%; height: 100%; object-fit: cover;">'
+      : '<div style="display: flex; align-items: center; justify-content: center; font-size: 60px;">📦</div>';
+    
+    // Create a synthetic product object for kit
+    var kitProduct = {
+      id: 'kit-' + kit.id,
+      name: kit.name,
+      description: kit.description,
+      price: kit.kit_price,
+      category: 'Kit',
+      stock: 999,
+      is_kit: true,
+      kit_id: kit.id,
+      kit_products: kit.products
+    };
+    
+    return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(kitProduct).replace(/"/g, '&quot;') + ')" style="cursor: pointer; position: relative;">' +
+      '<div class="product-img" style="position: relative;">' + 
+        imgHtml +
+        '<div style="position: absolute; top: 8px; right: 8px; background: var(--amarelo); color: var(--marrom); padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 2;">Kit</div>' +
+      '</div>' +
+      '<div class="product-body">' +
+        '<div class="product-category">Kit - ' + (kit.products ? kit.products.length : 0) + ' itens</div>' +
+        '<div class="product-name">' + kit.name + '</div>' +
+        '<div class="product-desc">' + (kit.description || 'Combo especial') + '</div>' +
+        '<div class="product-footer">' +
+          '<div class="product-price">R$ ' + Number(kit.kit_price || 0).toFixed(2).replace('.', ',') + '</div>' +
+          '<button class="add-cart-btn" onclick="event.stopPropagation(); addKitToCart(' + kit.id + ')">Adicionar</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+  
+  var grid = document.getElementById('productsGrid');
+  if (grid) {
+    if (filtered.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">Nenhum kit disponível</div>';
+    } else {
+      grid.innerHTML = html;
+    }
+  }
+}
+
+function addKitToCart(kitId) {
+  var kit = activeKits.find(function(k) { return k.id === kitId; });
+  if (!kit) return;
+  
+  // Create synthetic product for kit
+  var kitProduct = {
+    id: 'kit-' + kit.id,
+    name: kit.name,
+    price: kit.kit_price,
+    is_kit: true,
+    kit_id: kit.id
+  };
+  
+  openQuantityModal(kitProduct);
 }
 
 function filterProducts(category, btn) {

@@ -19,7 +19,17 @@ async function runMigrations() {
       const sql = fs.readFileSync(migrationPath, 'utf8');
       
       console.log(`  ⏳ Executando: ${migration}`);
-      await pool.query(sql);
+      
+      // Split statements by semicolon and execute each one
+      const statements = sql
+        .split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+      
+      for (const statement of statements) {
+        await pool.query(statement);
+      }
+      
       console.log(`  ✅ ${migration} concluído`);
     }
     

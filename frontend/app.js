@@ -349,7 +349,7 @@ function openKitDetail(kitId) {
   }
   
   var priceEl = document.getElementById('productDetailPrice');
-  if (priceEl) priceEl.textContent = 'R$ ' + (kit.kit_price || 0).toFixed(2).replace('.', ',');
+  if (priceEl) priceEl.textContent = 'R$ ' + Number(kit.kit_price || 0).toFixed(2).replace('.', ',');
   
   var imgEl = document.getElementById('productDetailImage');
   if (imgEl) imgEl.innerHTML = imgHtml;

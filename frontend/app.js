@@ -449,6 +449,23 @@ function addToCart(productId) {
   });
 }
 
+function addKitToCart(kitId) {
+  var kit = activeKits.find(function(k) { return k.id === kitId; });
+  if (!kit) return;
+  
+  // Create product object for kit
+  var kitProduct = {
+    id: 'kit-' + kit.id,
+    name: kit.name,
+    price: Number(kit.kit_price) || 0,
+    is_kit: true,
+    kit_id: kit.id,
+    stock: 999
+  };
+  
+  openQuantityModal(kitProduct);
+}
+
 function openQuantityModal(product) {
   selectedProductForQuantity = product;
   selectedQuantity = 1;

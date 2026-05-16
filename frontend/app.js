@@ -391,6 +391,12 @@ function closeProductDetail() {
   
   var imgEl = document.getElementById('productDetailImage');
   if (imgEl) imgEl.innerHTML = '';
+  
+  // Restaurar onclick padrão do botão
+  var addBtn = document.getElementById('productDetailAddBtn');
+  if (addBtn) {
+    addBtn.onclick = null; // Remover onclick customizado
+  }
 }
 
 function addToCartFromDetail() {

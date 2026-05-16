@@ -1096,7 +1096,6 @@ tr:hover td { background: #faf7f2; }
         <div style="display: flex; gap: 8px; border-bottom: 2px solid #e8e0d4; margin-bottom: 24px;">
           <button class="promo-tab active" data-tab="products" onclick="switchPromoTab('products')">🏷️ Promoções de Produto</button>
           <button class="promo-tab" data-tab="kits" onclick="switchPromoTab('kits')">📦 Kits</button>
-          <button class="promo-tab" data-tab="quantity" onclick="switchPromoTab('quantity')">📊 Por Quantidade</button>
         </div>
       </div>
 
@@ -1134,25 +1133,6 @@ tr:hover td { background: #faf7f2; }
             </tr>
           </thead>
           <tbody id="kitsBody"></tbody>
-        </table>
-      </div>
-
-      <!-- QUANTITY PROMOTIONS TAB -->
-      <div id="promo-quantity" class="promo-content">
-        <div class="table-toolbar">
-          <button class="btn btn-primary" onclick="openAddQuantityPromo()">+ Nova Promoção</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Nome</th>
-              <th>Condição</th>
-              <th>Desconto</th>
-              <th>Válido até</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="quantityPromosBody"></tbody>
         </table>
       </div>
     </div>

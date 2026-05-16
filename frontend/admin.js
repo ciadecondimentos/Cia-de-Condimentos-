@@ -401,8 +401,8 @@ function renderProductsTable(products) {
     }
     
     const imgHtml = imageUrl 
-      ? `<img src="${imageUrl}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='🌶️'">` 
-      : '🌶️';
+      ? `<img src="${imageUrl}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.parentElement.innerHTML='️'">` 
+      : '️';
     
     return `
     <tr>
@@ -1793,7 +1793,6 @@ function switchPromoTab(tab) {
   
   if (tab === 'products') renderProductPromotionsAsync();
   else if (tab === 'kits') renderKitsAsync();
-  else if (tab === 'quantity') renderQuantityPromosAsync();
 }
 
 // Handle dynamic save button based on current promo tab
@@ -1802,8 +1801,6 @@ function handleSavePromotion() {
     saveProductPromo();
   } else if (currentPromoTab === 'kits') {
     saveKit();
-  } else if (currentPromoTab === 'quantity') {
-    saveQuantityPromo();
   }
 }
 

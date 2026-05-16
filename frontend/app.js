@@ -102,8 +102,8 @@ function loadActivePromotions() {
         if (promo.product_id) {
           activePromotions[promo.product_id] = {
             promotion_id: promo.promotion_id,
-            discount_price: promo.discount_price,
-            original_price: promo.original_price,
+            discount_price: Number(promo.discount_price) || 0,
+            original_price: Number(promo.original_price) || 0,
             end_date: promo.end_date
           };
         }
@@ -135,7 +135,7 @@ function renderProducts() {
       
       // Check for active promotion
       var promoHtml = '';
-      var priceHtml = '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>';
+      var priceHtml = '<div class="product-price">R$ ' + Number(p.price || 0).toFixed(2).replace('.', ',') + '</div>';
       
       if (activePromotions[p.id]) {
         var promo = activePromotions[p.id];
@@ -145,7 +145,9 @@ function renderProducts() {
         
         if (endDate > now) {
           // Calculate discount percentage
-          var discount = Math.round((promo.original_price - promo.discount_price) / promo.original_price * 100);
+          var originalPrice = Number(promo.original_price) || 0;
+          var discountPrice = Number(promo.discount_price) || 0;
+          var discount = originalPrice > 0 ? Math.round((originalPrice - discountPrice) / originalPrice * 100) : 0;
           
           promoHtml = '<div style="position: absolute; top: 8px; right: 8px; background: #ff4444; color: white; padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: 700; z-index: 2;">' +
             discount + '% OFF' +
@@ -159,8 +161,8 @@ function renderProducts() {
           
           // Replace price display with strikethrough and promo price
           priceHtml = '<div style="display: flex; align-items: center; gap: 8px;">' +
-            '<span style="text-decoration: line-through; color: #999; font-size: 12px;">R$ ' + promo.original_price.toFixed(2).replace('.', ',') + '</span>' +
-            '<div style="color: #ff4444; font-weight: 700; font-size: 16px;">R$ ' + promo.discount_price.toFixed(2).replace('.', ',') + '</div>' +
+            '<span style="text-decoration: line-through; color: #999; font-size: 12px;">R$ ' + Number(promo.original_price || 0).toFixed(2).replace('.', ',') + '</span>' +
+            '<div style="color: #ff4444; font-weight: 700; font-size: 16px;">R$ ' + Number(promo.discount_price || 0).toFixed(2).replace('.', ',') + '</div>' +
             '</div>';
         }
       }
@@ -1981,7 +1983,7 @@ function handleMainSearch(searchTerm) {
           '<div class="product-name">' + p.name + '</div>' +
           '<div class="product-desc">' + (p.description || '') + '</div>' +
           '<div class="product-footer">' +
-            '<div class="product-price">R$ ' + p.price.toFixed(2).replace('.', ',') + '</div>' +
+            '<div class="product-price">R$ ' + Number(p.price || 0).toFixed(2).replace('.', ',') + '</div>' +
             '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
               (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
             '</button>' +

@@ -21,110 +21,6 @@ router.get('/active', async (req, res) => {
   }
 });
 
-// GET all promotions (admin)
-router.get('/', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT pr.*, p.name as product_name, p.price
-      FROM promotions pr
-      JOIN products p ON pr.product_id = p.id
-      ORDER BY pr.created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Error fetching promotions:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET single promotion
-router.get('/:id', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT pr.*, p.name as product_name, p.price
-      FROM promotions pr
-      JOIN products p ON pr.product_id = p.id
-      WHERE pr.id = $1
-    `, [req.params.id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Promotion not found' });
-    }
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching promotion:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// CREATE new product promotion
-router.post('/', async (req, res) => {
-  try {
-    const { product_id, discount_price, original_price, end_date, status } = req.body;
-    
-    if (!product_id || !discount_price || !original_price || !end_date) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-    
-    if (discount_price >= original_price) {
-      return res.status(400).json({ error: 'Discount price must be less than original price' });
-    }
-    
-    const result = await db.query(
-      `INSERT INTO promotions (product_id, discount_price, original_price, end_date, status)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [product_id, discount_price, original_price, end_date, status || 'Ativa']
-    );
-    
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating promotion:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// UPDATE promotion
-router.put('/:id', async (req, res) => {
-  try {
-    const { product_id, discount_price, original_price, end_date, status } = req.body;
-    
-    const checkResult = await db.query('SELECT * FROM promotions WHERE id = $1', [req.params.id]);
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Promotion not found' });
-    }
-    
-    const result = await db.query(
-      `UPDATE promotions 
-       SET product_id = $1, discount_price = $2, original_price = $3, end_date = $4, status = $5, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $6
-       RETURNING *`,
-      [product_id, discount_price, original_price, end_date, status, req.params.id]
-    );
-    
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error updating promotion:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// DELETE promotion
-router.delete('/:id', async (req, res) => {
-  try {
-    const result = await db.query('DELETE FROM promotions WHERE id = $1 RETURNING *', [req.params.id]);
-    
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Promotion not found' });
-    }
-    
-    res.json({ message: 'Promotion deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting promotion:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ==================== KITS ====================
 
 // GET all kits
@@ -390,6 +286,112 @@ router.delete('/quantity/:id', async (req, res) => {
     res.json({ message: 'Quantity promotion deleted successfully' });
   } catch (error) {
     console.error('Error deleting quantity promotion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== GENERIC PRODUCT PROMOTIONS ====================
+
+// GET all promotions (admin)
+router.get('/', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT pr.*, p.name as product_name, p.price
+      FROM promotions pr
+      JOIN products p ON pr.product_id = p.id
+      ORDER BY pr.created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching promotions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// CREATE new product promotion
+router.post('/', async (req, res) => {
+  try {
+    const { product_id, discount_price, original_price, end_date, status } = req.body;
+    
+    if (!product_id || !discount_price || !original_price || !end_date) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    if (discount_price >= original_price) {
+      return res.status(400).json({ error: 'Discount price must be less than original price' });
+    }
+    
+    const result = await db.query(
+      `INSERT INTO promotions (product_id, discount_price, original_price, end_date, status)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [product_id, discount_price, original_price, end_date, status || 'Ativa']
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error creating promotion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET single promotion
+router.get('/:id', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT pr.*, p.name as product_name, p.price
+      FROM promotions pr
+      JOIN products p ON pr.product_id = p.id
+      WHERE pr.id = $1
+    `, [req.params.id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Promotion not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching promotion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// UPDATE promotion
+router.put('/:id', async (req, res) => {
+  try {
+    const { product_id, discount_price, original_price, end_date, status } = req.body;
+    
+    const checkResult = await db.query('SELECT * FROM promotions WHERE id = $1', [req.params.id]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Promotion not found' });
+    }
+    
+    const result = await db.query(
+      `UPDATE promotions 
+       SET product_id = $1, discount_price = $2, original_price = $3, end_date = $4, status = $5, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $6
+       RETURNING *`,
+      [product_id, discount_price, original_price, end_date, status, req.params.id]
+    );
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating promotion:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE promotion
+router.delete('/:id', async (req, res) => {
+  try {
+    const result = await db.query('DELETE FROM promotions WHERE id = $1 RETURNING *', [req.params.id]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Promotion not found' });
+    }
+    
+    res.json({ message: 'Promotion deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting promotion:', error);
     res.status(500).json({ error: error.message });
   }
 });

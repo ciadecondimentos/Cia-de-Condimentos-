@@ -8,7 +8,7 @@ const router = express.Router();
 router.get('/active', async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT p.*, pr.id as promotion_id, pr.discount_price, pr.original_price, pr.end_date
+      SELECT p.*, pr.id as promotion_id, pr.product_id, pr.discount_price, pr.original_price, pr.end_date
       FROM products p
       JOIN promotions pr ON p.id = pr.product_id
       WHERE pr.status = 'Ativa' AND pr.end_date > CURRENT_TIMESTAMP

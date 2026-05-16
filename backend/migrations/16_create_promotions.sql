@@ -12,6 +12,6 @@ CREATE TABLE IF NOT EXISTS promotions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_promotions_code ON promotions(code);
-CREATE INDEX idx_promotions_valid_until ON promotions(valid_until);
-CREATE INDEX idx_promotions_status ON promotions(status);
+CREATE INDEX IF NOT EXISTS idx_promotions_code ON promotions(code);
+CREATE INDEX IF NOT EXISTS idx_promotions_valid_until ON promotions(valid_until);
+CREATE INDEX IF NOT EXISTS idx_promotions_status ON promotions(status);

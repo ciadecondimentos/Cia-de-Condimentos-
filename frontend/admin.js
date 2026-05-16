@@ -1796,6 +1796,17 @@ function switchPromoTab(tab) {
   else if (tab === 'quantity') renderQuantityPromosAsync();
 }
 
+// Handle dynamic save button based on current promo tab
+function handleSavePromotion() {
+  if (currentPromoTab === 'products') {
+    saveProductPromo();
+  } else if (currentPromoTab === 'kits') {
+    saveKit();
+  } else if (currentPromoTab === 'quantity') {
+    saveQuantityPromo();
+  }
+}
+
 // ==================== PRODUCT PROMOTIONS ====================
 
 function renderProductPromotionsAsync() {
@@ -2145,6 +2156,25 @@ function renderKits(kits) {
 }
 
 function openAddKit() {
+  // Load products if not already loaded
+  if (allProducts.length === 0) {
+    fetch(`${API_BASE}/products`)
+      .then(res => res.json())
+      .then(products => {
+        allProducts = Array.isArray(products) ? products : (products.value || []);
+        buildKitModal();
+      })
+      .catch(error => {
+        console.error('Error loading products:', error);
+        showToast('Erro ao carregar produtos', 'error');
+      });
+    return;
+  }
+  
+  buildKitModal();
+}
+
+function buildKitModal() {
   const modal = document.getElementById('promotionModal');
   const title = document.getElementById('promotionModalTitle');
   const body = document.getElementById('promotionModalBody');
@@ -2171,7 +2201,7 @@ function openAddKit() {
       <input type="number" id="kitPrice" placeholder="0.00" step="0.01">
     </div>
     <div class="fg">
-      <label>Produtos *</label>
+      <label>Produtos (mínimo 2) *</label>
       <div style="max-height:300px; overflow-y:auto; border:2px solid #e8e0d4; padding:10px; border-radius:4px;">
         ${productOptions}
       </div>
@@ -2200,8 +2230,8 @@ function saveKit() {
     return;
   }
   
-  if (selectedProducts.length === 0) {
-    showToast('Selecione pelo menos um produto', 'error');
+  if (selectedProducts.length < 2) {
+    showToast('Selecione pelo menos 2 produtos para o kit', 'error');
     return;
   }
   
@@ -2342,6 +2372,25 @@ function renderQuantityPromos(promos) {
 }
 
 function openAddQuantityPromo() {
+  // Load products if not already loaded
+  if (allProducts.length === 0) {
+    fetch(`${API_BASE}/products`)
+      .then(res => res.json())
+      .then(products => {
+        allProducts = Array.isArray(products) ? products : (products.value || []);
+        buildQuantityPromoModal();
+      })
+      .catch(error => {
+        console.error('Error loading products:', error);
+        showToast('Erro ao carregar produtos', 'error');
+      });
+    return;
+  }
+  
+  buildQuantityPromoModal();
+}
+
+function buildQuantityPromoModal() {
   const modal = document.getElementById('promotionModal');
   const title = document.getElementById('promotionModalTitle');
   const body = document.getElementById('promotionModalBody');
@@ -2361,11 +2410,11 @@ function openAddQuantityPromo() {
     </div>
     <div class="fg">
       <label>Descrição</label>
-      <textarea id="qtyPromoDescription" placeholder="Ex: Compre 5 ou mais..." rows="2"></textarea>
+      <textarea id="qtyPromoDescription" placeholder="Ex: Compre 5 ou mais ganhe 10% de desconto..." rows="2"></textarea>
     </div>
     <div class="form-row-2">
       <div class="fg">
-        <label>Quantidade mínima *</label>
+        <label>A partir de quantas unidades? *</label>
         <input type="number" id="qtyPromoMinQty" placeholder="5" min="1">
       </div>
       <div class="fg">

@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS promotions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_promotions_product ON promotions(product_id);
-CREATE INDEX idx_promotions_end_date ON promotions(end_date);
-CREATE INDEX idx_promotions_status ON promotions(status);
+CREATE INDEX IF NOT EXISTS idx_promotions_product ON promotions(product_id);
+CREATE INDEX IF NOT EXISTS idx_promotions_end_date ON promotions(end_date);
+CREATE INDEX IF NOT EXISTS idx_promotions_status ON promotions(status);
 
 -- Create kits table
 CREATE TABLE IF NOT EXISTS product_kits (
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS product_kits (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_kits_status ON product_kits(status);
+CREATE INDEX IF NOT EXISTS idx_kits_status ON product_kits(status);
 
 -- Create junction table for kit products
 CREATE TABLE IF NOT EXISTS kit_products (
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS kit_products (
   UNIQUE(kit_id, product_id)
 );
 
-CREATE INDEX idx_kit_products_kit ON kit_products(kit_id);
-CREATE INDEX idx_kit_products_product ON kit_products(product_id);
+CREATE INDEX IF NOT EXISTS idx_kit_products_kit ON kit_products(kit_id);
+CREATE INDEX IF NOT EXISTS idx_kit_products_product ON kit_products(product_id);
 
 -- Create quantity promotions table
 CREATE TABLE IF NOT EXISTS quantity_promotions (
@@ -58,8 +58,8 @@ CREATE TABLE IF NOT EXISTS quantity_promotions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_qty_promos_end_date ON quantity_promotions(end_date);
-CREATE INDEX idx_qty_promos_status ON quantity_promotions(status);
+CREATE INDEX IF NOT EXISTS idx_qty_promos_end_date ON quantity_promotions(end_date);
+CREATE INDEX IF NOT EXISTS idx_qty_promos_status ON quantity_promotions(status);
 
 -- Create junction table for quantity promotions (can apply to specific categories or all products)
 CREATE TABLE IF NOT EXISTS quantity_promotion_products (
@@ -70,4 +70,4 @@ CREATE TABLE IF NOT EXISTS quantity_promotion_products (
   UNIQUE(qty_promo_id, product_id)
 );
 
-CREATE INDEX idx_qty_promo_products ON quantity_promotion_products(qty_promo_id);
+CREATE INDEX IF NOT EXISTS idx_qty_promo_products ON quantity_promotion_products(qty_promo_id);

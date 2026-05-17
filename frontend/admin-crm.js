@@ -388,10 +388,13 @@ async function openCrmCustomerDetail(customerId) {
 
       // Renderizar cards agrupados por data (em ordem decrescente)
       const sortedDates = Object.keys(purchasesByDate).sort().reverse();
+      let cardIndex = 0;
       
       sortedDates.forEach(dateKey => {
         const dateItems = purchasesByDate[dateKey];
         const dateFormatted = formatDateString(dateKey);
+        const orderId = `order_${customerId}_${cardIndex}`;
+        cardIndex++;
         
         // Calcular totais deste dia
         let dayTotal = 0;
@@ -409,6 +412,16 @@ async function openCrmCustomerDetail(customerId) {
           dayStatus = 'parcial';
         }
 
+        // Armazenar dados do pedido globalmente
+        crmOrdersData[orderId] = {
+          customerName: customer.full_name,
+          customerWhatsApp: customer.whatsapp,
+          purchaseDate: dateFormatted,
+          products: dateItems,
+          dayTotal: dayTotal,
+          dayStatus: dayStatus
+        };
+
         html += `
           <div style="background: #ffffff; border: 1px solid #e8e0d4; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
             <!-- Cabeçalho do Card -->
@@ -425,7 +438,7 @@ async function openCrmCustomerDetail(customerId) {
                   ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
                 </span>
               </div>
-              <button class="btn btn-sm btn-primary" onclick="sendOrderViaWhatsApp('${customer.full_name.replace(/'/g, "\\'")}', '${customer.whatsapp || ''}', '${dateFormatted}', ${JSON.stringify(dateItems)}, ${dayTotal}, '${dayStatus}')" 
+              <button class="btn btn-sm btn-primary" onclick="sendOrderViaWhatsApp('${orderId}')" 
                       title="Enviar pedido via WhatsApp" 
                       style="margin-left: 16px; white-space: nowrap; padding: 6px 12px;">
                 💬 WhatsApp
@@ -503,8 +516,20 @@ function formatDateString(dateString) {
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
 }
 
+// Estado global para armazenar dados de pedidos
+let crmOrdersData = {};
+
 // Helper: Enviar pedido via WhatsApp
-function sendOrderViaWhatsApp(customerName, customerWhatsApp, purchaseDate, products, dayTotal, dayStatus) {
+function sendOrderViaWhatsApp(orderId) {
+  const orderData = crmOrdersData[orderId];
+  
+  if (!orderData) {
+    showToast('Erro ao recuperar dados do pedido', 'error');
+    return;
+  }
+
+  const { customerName, customerWhatsApp, purchaseDate, products, dayTotal, dayStatus } = orderData;
+
   if (!customerWhatsApp) {
     showToast('Cliente não possui WhatsApp cadastrado', 'warning');
     return;
@@ -529,7 +554,8 @@ function sendOrderViaWhatsApp(customerName, customerWhatsApp, purchaseDate, prod
   const cleanWhatsApp = customerWhatsApp.replace(/\D/g, '');
   const whatsAppUrl = `https://wa.me/55${cleanWhatsApp}?text=${encodeURIComponent(message)}`;
   
-  console.log('Abrindo WhatsApp:', whatsAppUrl);
+  console.log('Enviando para WhatsApp:', cleanWhatsApp);
+  console.log('Mensagem:', message);
   window.open(whatsAppUrl, '_blank');
 }
 

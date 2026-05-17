@@ -360,7 +360,7 @@ async function openCrmCustomerDetail(customerId) {
           ${customer.address ? `<div style="margin-bottom: 8px;"><strong>Endereço:</strong> ${customer.address}, ${customer.neighborhood} - ${customer.city}</div>` : ''}
           ${customer.whatsapp ? `<div style="margin-bottom: 8px;"><strong>WhatsApp:</strong> <button class="btn btn-sm btn-secondary" onclick="window.open('https://wa.me/55${customer.whatsapp.replace(/\\D/g, '')}', '_blank')" style="margin-left: 8px;">💬 Conversar</button></div>` : ''}
           ${customer.phone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${customer.phone}</div>` : ''}
-          ${customer.birthday ? `<div style="margin-bottom: 8px;"><strong>Aniversário:</strong> ${new Date(customer.birthday).toLocaleDateString('pt-BR')}</div>` : ''}
+          ${customer.birthday ? `<div style="margin-bottom: 8px;"><strong>Aniversário:</strong> ${formatDateString(customer.birthday)}</div>` : ''}
           ${customer.is_vip ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ⭐ Cliente VIP</div>` : ''}
           ${customer.credit_limit > 0 ? `<div style="margin-bottom: 8px;"><strong>Limite de Crédito:</strong> R$ ${parseFloat(customer.credit_limit).toFixed(2)}</div>` : ''}
           ${customer.observations ? `<div style="margin-bottom: 8px;"><strong>Observações:</strong> ${customer.observations}</div>` : ''}
@@ -393,7 +393,7 @@ async function openCrmCustomerDetail(customerId) {
           <tbody>
             ${purchases.map(p => `
               <tr style="border-bottom: 1px solid #f4f0ea;">
-                <td style="padding: 8px;">${new Date(p.purchase_date).toLocaleDateString('pt-BR')}</td>
+                <td style="padding: 8px;">${formatDateString(p.purchase_date)}</td>
                 <td style="padding: 8px; font-weight: 700; color: var(--marrom);">${p.product_name}</td>
                 <td style="padding: 8px; text-align: center;">${p.quantity}</td>
                 <td style="padding: 8px; text-align: right;">R$ ${parseFloat(p.unit_price).toFixed(2)}</td>
@@ -430,81 +430,161 @@ function closeCrmDetailModal() {
 
 // ==================== PURCHASES MANAGEMENT ====================
 
-// Abrir modal para adicionar compra
-function openAddCrmPurchase(customerId) {
+// Estado para rastrear produtos selecionados e quantidades
+let crmSelectedProducts = {};
+
+// Helper: Função para obter data local em formato YYYY-MM-DD (sem timezone)
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper: Converter data string (YYYY-MM-DD) para exibição local sem timezone issues
+function formatDateString(dateString) {
+  if (!dateString) return '';
+  // Se vier no formato YYYY-MM-DD, usar diretamente
+  if (dateString.includes('T')) {
+    dateString = dateString.split('T')[0];
+  }
+  const [year, month, day] = dateString.split('-');
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+}
+
+// Abrir modal para adicionar compra (com múltiplos produtos)
+async function openAddCrmPurchase(customerId) {
   const modal = document.getElementById('crmPurchaseModal');
   const title = document.getElementById('crmPurchaseModalTitle');
   const body = document.getElementById('crmPurchaseModalBody');
 
-  title.textContent = '➕ Nova Compra';
+  title.textContent = '➕ Registrar Compra';
+  crmSelectedProducts = {}; // Limpar seleção anterior
 
-  body.innerHTML = `
-    <div class="fg">
-      <label>Nome do Produto *</label>
-      <input type="text" id="crmProdName" placeholder="Ex: Pimenta Dedo de Moça - 500g">
-    </div>
-    <div class="form-row-3">
-      <div class="fg">
-        <label>Quantidade *</label>
-        <input type="number" id="crmProdQty" placeholder="1" min="1" step="1">
+  try {
+    // Carregar produtos do banco
+    const response = await fetch(`${API_BASE}/products/admin/all`);
+    const products = await response.json();
+
+    let productsHtml = products.map(p => `
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;">
+        <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${p.price})">
+        <div style="flex: 1;">
+          <label for="crmProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
+          <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+        </div>
+        <div style="display: none;" id="crmProdQty-${p.id}-container" class="crm-qty-container">
+          <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
+          <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+        </div>
       </div>
-      <div class="fg">
-        <label>Valor Unitário (R$) *</label>
-        <input type="number" id="crmProdPrice" placeholder="0.00" min="0" step="0.01">
+    `).join('');
+
+    body.innerHTML = `
+      <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+        <div style="margin-bottom: 15px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 10px;">📦 Selecione os Produtos *</label>
+          ${productsHtml}
+        </div>
       </div>
-      <div class="fg">
-        <label>Total (R$)</label>
-        <input type="number" id="crmProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;">
+
+      <div style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #3498db;">
+        <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Total da Compra:</div>
+        <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">R$ <span id="crmGrandTotal">0.00</span></div>
       </div>
-    </div>
-    <div class="form-row-2">
-      <div class="fg">
-        <label>Data da Compra *</label>
-        <input type="date" id="crmPurchaseDate" value="${new Date().toISOString().split('T')[0]}">
+
+      <div class="form-row-2">
+        <div class="fg">
+          <label>Data da Compra *</label>
+          <input type="date" id="crmPurchaseDate" value="${getLocalDateString(new Date())}">
+        </div>
+        <div class="fg">
+          <label>Forma de Pagamento</label>
+          <select id="crmPaymentMethod">
+            <option value="">Não especificado</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="cartão-débito">Cartão - Débito</option>
+            <option value="cartão-crédito">Cartão - Crédito</option>
+            <option value="pix">PIX</option>
+            <option value="cheque">Cheque</option>
+            <option value="crediário">Crediário</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
       </div>
+
       <div class="fg">
-        <label>Forma de Pagamento</label>
-        <select id="crmPaymentMethod">
-          <option value="">Não especificado</option>
-          <option value="dinheiro">Dinheiro</option>
-          <option value="cartão-débito">Cartão - Débito</option>
-          <option value="cartão-crédito">Cartão - Crédito</option>
-          <option value="pix">PIX</option>
-          <option value="cheque">Cheque</option>
-          <option value="crediário">Crediário</option>
-          <option value="outro">Outro</option>
+        <label>Status do Pagamento</label>
+        <select id="crmPaymentStatus">
+          <option value="pendente">Pendente</option>
+          <option value="pago">Pago</option>
+          <option value="parcial">Parcial</option>
         </select>
       </div>
-    </div>
-    <div class="fg">
-      <label>Status do Pagamento</label>
-      <select id="crmPaymentStatus">
-        <option value="pendente">Pendente</option>
-        <option value="pago">Pago</option>
-        <option value="parcial">Parcial</option>
-      </select>
-    </div>
-    <div class="fg">
-      <label>Observações</label>
-      <textarea id="crmPurchaseNotes" placeholder="Anotações sobre esta compra..."></textarea>
-    </div>
-  `;
 
-  // Calcular total automaticamente
-  document.getElementById('crmProdQty').addEventListener('input', calculateCrmTotal);
-  document.getElementById('crmProdPrice').addEventListener('input', calculateCrmTotal);
+      <div class="fg">
+        <label>Observações</label>
+        <textarea id="crmPurchaseNotes" placeholder="Anotações sobre estas compras..."></textarea>
+      </div>
+    `;
 
-  document.getElementById('crmPurchaseModal').dataset.customerId = customerId;
-  modal.classList.add('open');
+    document.getElementById('crmPurchaseModal').dataset.customerId = customerId;
+    delete document.getElementById('crmPurchaseModal').dataset.purchaseId;
+    modal.classList.add('open');
+  } catch (error) {
+    console.error('Erro ao carregar produtos:', error);
+    showToast('Erro ao carregar produtos', 'error');
+  }
 }
 
-// Calcular total da compra
-function calculateCrmTotal() {
-  const qty = parseFloat(document.getElementById('crmProdQty').value) || 0;
-  const price = parseFloat(document.getElementById('crmProdPrice').value) || 0;
-  const total = qty * price;
-  document.getElementById('crmProdTotal').value = total.toFixed(2);
+// Alternar seleção de produto e exibir/ocultar campo de quantidade
+function toggleCrmProduct(productId, productName, productPrice) {
+  const checkbox = document.getElementById(`crmProd-${productId}`);
+  const qtyContainer = document.getElementById(`crmProdQty-${productId}-container`);
+
+  if (checkbox.checked) {
+    crmSelectedProducts[productId] = {
+      id: productId,
+      name: productName,
+      price: productPrice,
+      quantity: 1
+    };
+    qtyContainer.style.display = 'inline-flex';
+  } else {
+    delete crmSelectedProducts[productId];
+    qtyContainer.style.display = 'none';
+  }
+
+  calculateCrmGrandTotal();
 }
+
+// Calcular total geral de toda a compra
+function calculateCrmGrandTotal() {
+  let grandTotal = 0;
+
+  Object.values(crmSelectedProducts).forEach(product => {
+    const qtyInput = document.getElementById(`crmProdQty-${product.id}`);
+    const quantity = parseInt(qtyInput.value) || 0;
+    const subtotal = quantity * product.price;
+
+    // Atualizar subtotal do produto
+    const subtotalSpan = document.getElementById(`crmProdSubtotal-${product.id}`);
+    if (subtotalSpan) {
+      subtotalSpan.textContent = `R$ ${subtotal.toFixed(2)}`;
+    }
+
+    // Adicionar ao total geral
+    crmSelectedProducts[product.id].quantity = quantity;
+    grandTotal += subtotal;
+  });
+
+  // Atualizar display do total geral
+  const grandTotalSpan = document.getElementById('crmGrandTotal');
+  if (grandTotalSpan) {
+    grandTotalSpan.textContent = grandTotal.toFixed(2);
+  }
+}
+
 
 // Abrir modal para editar compra
 async function openEditCrmPurchase(customerId, purchaseId) {
@@ -578,8 +658,8 @@ async function openEditCrmPurchase(customerId, purchaseId) {
     `;
 
     // Calcular total automaticamente
-    document.getElementById('crmProdQty').addEventListener('input', calculateCrmTotal);
-    document.getElementById('crmProdPrice').addEventListener('input', calculateCrmTotal);
+    document.getElementById('crmProdQty').addEventListener('input', calculateCrmTotalSingleProduct);
+    document.getElementById('crmProdPrice').addEventListener('input', calculateCrmTotalSingleProduct);
 
     document.getElementById('crmPurchaseModal').dataset.customerId = customerId;
     document.getElementById('crmPurchaseModal').dataset.purchaseId = purchaseId;
@@ -590,60 +670,132 @@ async function openEditCrmPurchase(customerId, purchaseId) {
   }
 }
 
+// Calcular total para edição de compra única
+function calculateCrmTotalSingleProduct() {
+  const qty = parseFloat(document.getElementById('crmProdQty').value) || 0;
+  const price = parseFloat(document.getElementById('crmProdPrice').value) || 0;
+  const total = qty * price;
+  document.getElementById('crmProdTotal').value = total.toFixed(2);
+}
 // Fechar modal de compra
 function closeCrmPurchaseModal() {
   document.getElementById('crmPurchaseModal').classList.remove('open');
   delete document.getElementById('crmPurchaseModal').dataset.customerId;
   delete document.getElementById('crmPurchaseModal').dataset.purchaseId;
+  crmSelectedProducts = {}; // Limpar seleção
 }
 
-// Salvar compra
+// Salvar compra(s)
 async function saveCrmPurchase() {
-  const productName = document.getElementById('crmProdName').value.trim();
-  const quantity = parseInt(document.getElementById('crmProdQty').value);
-  const unitPrice = parseFloat(document.getElementById('crmProdPrice').value);
-  const purchaseDate = document.getElementById('crmPurchaseDate').value;
+  const purchaseId = document.getElementById('crmPurchaseModal').dataset.purchaseId;
 
-  if (!productName || !quantity || !unitPrice || !purchaseDate) {
-    showToast('Preench todos os campos obrigatórios', 'warning');
+  // Se está editando uma compra individual
+  if (purchaseId) {
+    const productName = document.getElementById('crmProdName').value.trim();
+    const quantity = parseInt(document.getElementById('crmProdQty').value);
+    const unitPrice = parseFloat(document.getElementById('crmProdPrice').value);
+    const purchaseDate = document.getElementById('crmPurchaseDate').value;
+
+    if (!productName || !quantity || !unitPrice || !purchaseDate) {
+      showToast('Preencha todos os campos obrigatórios', 'warning');
+      return;
+    }
+
+    const customerId = document.getElementById('crmPurchaseModal').dataset.customerId;
+
+    const payload = {
+      product_name: productName,
+      quantity,
+      unit_price: unitPrice,
+      purchase_date: purchaseDate,
+      payment_method: document.getElementById('crmPaymentMethod').value || null,
+      payment_status: document.getElementById('crmPaymentStatus').value || 'pendente',
+      notes: document.getElementById('crmPurchaseNotes').value || null
+    };
+
+    console.log('Frontend - Editando compra, data:', purchaseDate);
+    console.log('Frontend - Payload para editar:', payload);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/crm/customers/${customerId}/purchases/${purchaseId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) throw new Error('Erro ao atualizar');
+
+      showToast('Compra atualizada!', 'success');
+      closeCrmPurchaseModal();
+      openCrmCustomerDetail(customerId);
+    } catch (error) {
+      console.error('Erro ao atualizar compra:', error);
+      showToast('Erro ao atualizar compra', 'error');
+    }
     return;
   }
 
+  // Se está registrando nova(s) compra(s) com múltiplos produtos
+  if (Object.keys(crmSelectedProducts).length === 0) {
+    showToast('Selecione pelo menos um produto', 'warning');
+    return;
+  }
+
+  const purchaseDate = document.getElementById('crmPurchaseDate').value;
+  if (!purchaseDate) {
+    showToast('Selecione a data da compra', 'warning');
+    return;
+  }
+
+  console.log('Frontend - Data do date picker (nova compra):', purchaseDate);
+
   const customerId = document.getElementById('crmPurchaseModal').dataset.customerId;
-  const purchaseId = document.getElementById('crmPurchaseModal').dataset.purchaseId;
-
-  const payload = {
-    product_name: productName,
-    quantity,
-    unit_price: unitPrice,
-    purchase_date: purchaseDate,
-    payment_method: document.getElementById('crmPaymentMethod').value || null,
-    payment_status: document.getElementById('crmPaymentStatus').value || 'pendente',
-    notes: document.getElementById('crmPurchaseNotes').value || null
-  };
-
-  const method = purchaseId ? 'PUT' : 'POST';
-  const url = purchaseId
-    ? `${API_BASE}/crm/customers/${customerId}/purchases/${purchaseId}`
-    : `${API_BASE}/crm/customers/${customerId}/purchases`;
+  const paymentMethod = document.getElementById('crmPaymentMethod').value || null;
+  const paymentStatus = document.getElementById('crmPaymentStatus').value || 'pendente';
+  const notes = document.getElementById('crmPurchaseNotes').value || null;
 
   try {
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // Salvar cada produto selecionado como uma compra separada
+    const savePromises = Object.values(crmSelectedProducts).map(product => {
+      const payload = {
+        product_name: product.name,
+        quantity: product.quantity,
+        unit_price: product.price,
+        purchase_date: purchaseDate,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        notes: notes
+      };
+
+      console.log('Frontend - Enviando payload:', payload);
+
+      return fetch(
+        `${API_BASE}/crm/customers/${customerId}/purchases`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
     });
 
-    if (!response.ok) throw new Error('Erro ao salvar');
+    const responses = await Promise.all(savePromises);
+    const allSuccess = responses.every(r => r.ok);
 
-    showToast(purchaseId ? 'Compra atualizada!' : 'Compra registrada!', 'success');
+    if (!allSuccess) {
+      throw new Error('Erro ao salvar algumas compras');
+    }
+
+    const totalProducts = Object.keys(crmSelectedProducts).length;
+    showToast(`✓ ${totalProducts} compra(s) registrada(s) com sucesso!`, 'success');
     closeCrmPurchaseModal();
-    
-    // Recarregar detalhes do cliente
     openCrmCustomerDetail(customerId);
   } catch (error) {
-    console.error('Erro ao salvar compra:', error);
-    showToast('Erro ao salvar compra', 'error');
+    console.error('Erro ao salvar compras:', error);
+    showToast('Erro ao registrar compras', 'error');
   }
 }
 

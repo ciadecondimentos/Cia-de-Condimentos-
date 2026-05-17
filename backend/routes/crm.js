@@ -264,20 +264,28 @@ router.post('/customers/:id/purchases', async (req, res) => {
       product_name, quantity, unit_price, purchase_date, payment_method, payment_status, notes
     } = req.body;
 
+    console.log('POST /purchases recebido - purchase_date:', purchase_date, 'tipo:', typeof purchase_date);
+
     if (!product_name || !quantity || !unit_price || !purchase_date) {
       return res.status(400).json({ error: 'Campos obrigatórios não preenchidos' });
     }
 
     const total_price = quantity * unit_price;
 
+    // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
+    const purchaseDateOnly = purchase_date.split('T')[0];
+    
+    console.log('Date extraída:', purchaseDateOnly);
+
     const result = await db.query(
       `INSERT INTO crm_purchases 
        (customer_id, product_name, quantity, unit_price, total_price, purchase_date, payment_method, payment_status, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, product_name, quantity, unit_price, total_price, purchase_date, payment_method, payment_status || 'pendente', notes]
+      [id, product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status || 'pendente', notes]
     );
 
+    console.log('Compra salva:', result.rows[0]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Erro ao registrar compra:', error);
@@ -293,7 +301,14 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
       product_name, quantity, unit_price, purchase_date, payment_method, payment_status, notes
     } = req.body;
 
+    console.log('PUT /purchases/:id - purchase_date recebido:', purchase_date);
+
     let total_price = unit_price * quantity;
+
+    // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
+    const purchaseDateOnly = purchase_date ? purchase_date.split('T')[0] : null;
+    
+    console.log('PUT - Date extraída:', purchaseDateOnly);
 
     const result = await db.query(
       `UPDATE crm_purchases 
@@ -308,7 +323,7 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
            updated_at = NOW()
        WHERE id = $9 AND customer_id = $10
        RETURNING *`,
-      [product_name, quantity, unit_price, total_price, purchase_date, payment_method, payment_status, notes, purchaseId, id]
+      [product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
     );
 
     if (result.rows.length === 0) {

@@ -425,6 +425,11 @@ async function openCrmCustomerDetail(customerId) {
                   ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
                 </span>
               </div>
+              <button class="btn btn-sm btn-primary" onclick="sendOrderViaWhatsApp('${customer.full_name.replace(/'/g, "\\'")}', '${customer.whatsapp || ''}', '${dateFormatted}', ${JSON.stringify(dateItems)}, ${dayTotal}, '${dayStatus}')" 
+                      title="Enviar pedido via WhatsApp" 
+                      style="margin-left: 16px; white-space: nowrap; padding: 6px 12px;">
+                💬 WhatsApp
+              </button>
             </div>
 
             <!-- Produtos do dia -->
@@ -496,6 +501,36 @@ function formatDateString(dateString) {
   }
   const [year, month, day] = dateString.split('-');
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+}
+
+// Helper: Enviar pedido via WhatsApp
+function sendOrderViaWhatsApp(customerName, customerWhatsApp, purchaseDate, products, dayTotal, dayStatus) {
+  if (!customerWhatsApp) {
+    showToast('Cliente não possui WhatsApp cadastrado', 'warning');
+    return;
+  }
+
+  // Formatar a mensagem de forma profissional
+  let message = `*📦 PEDIDO DE COMPRA*\n\n`;
+  message += `*Cliente:* ${customerName}\n`;
+  message += `*Data do Pedido:* ${purchaseDate}\n`;
+  message += `*Status do Pagamento:* ${dayStatus === 'pago' ? '✓ Pago' : dayStatus === 'parcial' ? '◐ Parcial' : '○ Pendente'}\n\n`;
+  
+  message += `*📝 Produtos:*\n`;
+  products.forEach(p => {
+    message += `• ${p.product_name}\n`;
+    message += `  Qtd: ${p.quantity} | R$ ${parseFloat(p.unit_price).toFixed(2)} | Total: R$ ${parseFloat(p.total_price).toFixed(2)}\n`;
+  });
+  
+  message += `\n*💰 Total da Compra:* R$ ${dayTotal.toFixed(2)}\n`;
+  message += `\n_Pedido enviado via Cia de Condimentos - Administrador_`;
+
+  // Limpar WhatsApp: remover caracteres especiais e garantir formato correto
+  const cleanWhatsApp = customerWhatsApp.replace(/\D/g, '');
+  const whatsAppUrl = `https://wa.me/55${cleanWhatsApp}?text=${encodeURIComponent(message)}`;
+  
+  console.log('Abrindo WhatsApp:', whatsAppUrl);
+  window.open(whatsAppUrl, '_blank');
 }
 
 // Abrir modal para adicionar compra (com múltiplos produtos)

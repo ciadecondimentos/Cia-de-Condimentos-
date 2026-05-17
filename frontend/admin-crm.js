@@ -376,43 +376,89 @@ async function openCrmCustomerDetail(customerId) {
     if (purchases.length === 0) {
       html += '<div style="text-align: center; padding: 20px; color: #aaa;">Nenhuma compra registrada</div>';
     } else {
-      html += `
-        <table style="width: 100%; font-size: 12px;">
-          <thead>
-            <tr style="background: #f4f0ea;">
-              <th style="text-align: left; padding: 10px 8px;">Data</th>
-              <th style="text-align: left; padding: 10px 8px;">Produto</th>
-              <th style="text-align: center; padding: 10px 8px;">Qty</th>
-              <th style="text-align: right; padding: 10px 8px;">Unitário</th>
-              <th style="text-align: right; padding: 10px 8px;">Total</th>
-              <th style="text-align: center; padding: 10px 8px;">Pagamento</th>
-              <th style="text-align: center; padding: 10px 8px;">Status</th>
-              <th style="text-align: center; padding: 10px 8px;">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${purchases.map(p => `
-              <tr style="border-bottom: 1px solid #f4f0ea;">
-                <td style="padding: 8px;">${formatDateString(p.purchase_date)}</td>
-                <td style="padding: 8px; font-weight: 700; color: var(--marrom);">${p.product_name}</td>
-                <td style="padding: 8px; text-align: center;">${p.quantity}</td>
-                <td style="padding: 8px; text-align: right;">R$ ${parseFloat(p.unit_price).toFixed(2)}</td>
-                <td style="padding: 8px; text-align: right; font-weight: 700; color: var(--vermelho);">R$ ${parseFloat(p.total_price).toFixed(2)}</td>
-                <td style="padding: 8px; text-align: center; font-size: 11px;">${p.payment_method || '-'}</td>
-                <td style="padding: 8px; text-align: center;">
-                  <span class="status-pill s-${p.payment_status?.toLowerCase() || 'pendente'}" style="font-size: 10px;">
-                    ${p.payment_status === 'pago' ? '✓' : p.payment_status === 'parcial' ? '◐' : '○'} ${p.payment_status || 'pendente'}
-                  </span>
-                </td>
-                <td style="padding: 8px; text-align: center;">
-                  <button class="btn btn-sm btn-ghost" onclick="openEditCrmPurchase(${customerId}, ${p.id})" title="Editar" style="padding: 4px 8px; font-size: 11px;">✏️</button>
-                  <button class="btn btn-sm btn-danger" onclick="deleteCrmPurchase(${customerId}, ${p.id})" title="Deletar" style="padding: 4px 8px; font-size: 11px; margin-left: 4px;">🗑️</button>
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      `;
+      // Agrupar compras por data
+      const purchasesByDate = {};
+      purchases.forEach(p => {
+        const dateKey = p.purchase_date;
+        if (!purchasesByDate[dateKey]) {
+          purchasesByDate[dateKey] = [];
+        }
+        purchasesByDate[dateKey].push(p);
+      });
+
+      // Renderizar cards agrupados por data (em ordem decrescente)
+      const sortedDates = Object.keys(purchasesByDate).sort().reverse();
+      
+      sortedDates.forEach(dateKey => {
+        const dateItems = purchasesByDate[dateKey];
+        const dateFormatted = formatDateString(dateKey);
+        
+        // Calcular totais deste dia
+        let dayTotal = 0;
+        let dayQty = 0;
+        dateItems.forEach(item => {
+          dayTotal += parseFloat(item.total_price);
+          dayQty += item.quantity;
+        });
+
+        // Status mais crítico do dia (pendente > parcial > pago)
+        let dayStatus = 'pago';
+        if (dateItems.some(p => p.payment_status === 'pendente')) {
+          dayStatus = 'pendente';
+        } else if (dateItems.some(p => p.payment_status === 'parcial')) {
+          dayStatus = 'parcial';
+        }
+
+        html += `
+          <div style="background: #ffffff; border: 1px solid #e8e0d4; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+            <!-- Cabeçalho do Card -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #f4f0ea;">
+              <div>
+                <div style="font-size: 13px; font-weight: 700; color: var(--marrom);">📅 ${dateFormatted}</div>
+                <div style="font-size: 11px; color: #999; margin-top: 4px;">
+                  ${dateItems.length} produto${dateItems.length !== 1 ? 's' : ''} • ${dayQty} unidade${dayQty !== 1 ? 's' : ''}
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${dayTotal.toFixed(2)}</div>
+                <span class="status-pill s-${dayStatus}" style="font-size: 10px; margin-top: 4px; display: inline-block;">
+                  ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
+                </span>
+              </div>
+            </div>
+
+            <!-- Produtos do dia -->
+            <div style="space-y: 8px;">
+              ${dateItems.map((p, idx) => `
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; ${idx < dateItems.length - 1 ? 'border-bottom: 1px solid #f4f0ea;' : ''}">
+                  <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--marrom); margin-bottom: 4px;">
+                      ${p.product_name}
+                      <span style="font-weight: 400; color: #999;"> (${p.quantity}x)</span>
+                    </div>
+                    <div style="font-size: 11px; color: #999;">
+                      ${p.payment_method ? `${p.payment_method}` : 'Não especificado'}
+                      ${p.payment_status && p.payment_status !== dayStatus ? ` • ${p.payment_status}` : ''}
+                    </div>
+                  </div>
+                  <div style="text-align: right; min-width: 120px;">
+                    <div style="font-size: 12px; color: #666;">
+                      R$ ${parseFloat(p.unit_price).toFixed(2)} × ${p.quantity}
+                    </div>
+                    <div style="font-weight: 700; color: var(--vermelho); margin-top: 2px;">
+                      R$ ${parseFloat(p.total_price).toFixed(2)}
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 4px; margin-left: 12px;">
+                    <button class="btn btn-sm btn-ghost" onclick="openEditCrmPurchase(${customerId}, ${p.id})" title="Editar" style="padding: 4px 8px; font-size: 12px;">✏️</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCrmPurchase(${customerId}, ${p.id})" title="Deletar" style="padding: 4px 8px; font-size: 12px;">🗑️</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      });
     }
 
     body.innerHTML = html;

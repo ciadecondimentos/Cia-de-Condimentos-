@@ -438,10 +438,10 @@ async function openCrmCustomerDetail(customerId) {
                   ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
                 </span>
               </div>
-              <button class="btn btn-sm btn-primary" onclick="sendOrderViaWhatsApp('${orderId}')" 
+              <button class="btn btn-sm btn-success" onclick="sendOrderViaWhatsApp('${orderId}')" 
                       title="Enviar pedido via WhatsApp" 
                       style="margin-left: 16px; white-space: nowrap; padding: 6px 12px;">
-                💬 WhatsApp
+                ENVIAR PARA O WHATSAPP
               </button>
             </div>
 
@@ -536,18 +536,18 @@ function sendOrderViaWhatsApp(orderId) {
   }
 
   // Formatar a mensagem de forma profissional
-  let message = `*📦 PEDIDO DE COMPRA*\n\n`;
+  let message = `*PEDIDO DE COMPRA*\n\n`;
   message += `*Cliente:* ${customerName}\n`;
   message += `*Data do Pedido:* ${purchaseDate}\n`;
-  message += `*Status do Pagamento:* ${dayStatus === 'pago' ? '✓ Pago' : dayStatus === 'parcial' ? '◐ Parcial' : '○ Pendente'}\n\n`;
+  message += `*Status do Pagamento:* ${dayStatus === 'pago' ? 'Pago' : dayStatus === 'parcial' ? 'Parcial' : 'Pendente'}\n\n`;
   
-  message += `*📝 Produtos:*\n`;
+  message += `*Produtos:*\n`;
   products.forEach(p => {
     message += `• ${p.product_name}\n`;
     message += `  Qtd: ${p.quantity} | R$ ${parseFloat(p.unit_price).toFixed(2)} | Total: R$ ${parseFloat(p.total_price).toFixed(2)}\n`;
   });
   
-  message += `\n*💰 Total da Compra:* R$ ${dayTotal.toFixed(2)}\n`;
+  message += `\n*Total da Compra:* R$ ${dayTotal.toFixed(2)}\n`;
   message += `\n_Pedido enviado via Cia de Condimentos - Administrador_`;
 
   // Limpar WhatsApp: remover caracteres especiais e garantir formato correto

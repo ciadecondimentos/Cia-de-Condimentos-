@@ -956,7 +956,13 @@ tr:hover td { background: #faf7f2; }
     <div class="topbar-right">
       <span class="topbar-badge">🟢 Sistema Online</span>
       <button class="refresh-btn" onclick="reloadAll()">↻ Atualizar</button>
-      <div class="admin-avatar">A</div>
+      <div class="admin-avatar" title="Menu do Administrador" onclick="toggleAdminMenu()" style="position: relative;">
+        A
+        <div id="adminMenu" style="display: none; position: absolute; top: 45px; right: 0; background: white; border: 1px solid #e0e0e0; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; min-width: 180px; overflow: hidden;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 12px; color: #999;">Administrador</div>
+          <button onclick="handleLogout()" style="width: 100%; padding: 12px 16px; border: none; background: none; cursor: pointer; font-size: 14px; color: #333; text-align: left; transition: all 0.2s; border-top: 1px solid #f0f0f0;" onmouseover="this.style.backgroundColor='#f5f5f5'" onmouseout="this.style.backgroundColor='transparent'">🚪 Sair</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1254,6 +1260,58 @@ tr:hover td { background: #faf7f2; }
 
   </div>
 </main>
+
+<!-- PROTEÇÃO DE AUTENTICAÇÃO -->
+<script>
+// Verificar autenticação antes de carregar a página
+(function() {
+  const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+  
+  if (!token) {
+    // Redirecionar para login se não houver token
+    window.location.href = '/login.html';
+    return;
+  }
+  
+  // Validar token com o servidor (opcional, para maior segurança)
+  // fetch('http://localhost:3000/api/auth/verify', {
+  //   headers: { 'Authorization': `Bearer ${token}` }
+  // }).then(res => {
+  //   if (!res.ok) throw new Error('Token inválido');
+  // }).catch(() => {
+  //   localStorage.removeItem('adminToken');
+  //   sessionStorage.removeItem('adminToken');
+  //   window.location.href = '/login.html';
+  // });
+})();
+
+// Função global de logout
+function handleLogout() {
+  if (confirm('Tem certeza que deseja fazer logout?')) {
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminEmail');
+    sessionStorage.removeItem('adminToken');
+    window.location.href = '/login.html';
+  }
+}
+
+// Função para alternar menu do admin
+function toggleAdminMenu() {
+  const menu = document.getElementById('adminMenu');
+  if (menu) {
+    menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+// Fechar menu ao clicar fora
+document.addEventListener('click', function(e) {
+  const avatar = document.querySelector('.admin-avatar');
+  const menu = document.getElementById('adminMenu');
+  if (avatar && menu && !avatar.contains(e.target) && !menu.contains(e.target)) {
+    menu.style.display = 'none';
+  }
+});
+</script>
 
 <script src="admin.js"></script>
 <script src="admin-crm.js"></script>

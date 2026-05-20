@@ -76,7 +76,7 @@ router.get('/:id', async (req, res) => {
 // POST create product (admin)
 router.post('/', async (req, res) => {
   try {
-    const { name, category, price, stock, description, images, barcode, sku, weight, origin, brand, expiry, active } = req.body;
+    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active } = req.body;
 
     if (!name || price === undefined || stock === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });

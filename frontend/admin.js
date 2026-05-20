@@ -626,11 +626,13 @@ function saveProduct() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(productToSave)
     })
-    .then(res => {
+    .then(async res => {
+      const data = await res.json();
       if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+        console.error('❌ Backend error response:', data);
+        throw new Error(data.error || `HTTP error! status: ${res.status}`);
       }
-      return res.json();
+      return data;
     })
     .then(data => {
       if (data.error) {
@@ -643,8 +645,8 @@ function saveProduct() {
       }
     })
     .catch(error => {
-      console.error('Error saving product:', error);
-      showToast('Erro ao salvar produto: ' + error.message, 'error');
+      console.error('❌ Error saving product:', error);
+      showToast('❌ Erro ao salvar produto: ' + error.message, 'error');
     });
   };
   

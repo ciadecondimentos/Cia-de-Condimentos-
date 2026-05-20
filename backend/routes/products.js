@@ -78,18 +78,28 @@ router.post('/', async (req, res) => {
   try {
     const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active } = req.body;
 
+    console.log('📦 Criando produto:', { name, category, price, stock, description, cod, active });
+
     if (!name || price === undefined || stock === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+
+    // Garantir tipos corretos
+    const finalPrice = parseFloat(price);
+    const finalStock = parseInt(stock) || 0;
+    const finalActive = active !== false && active !== 'false';
+
+    console.log('📊 Valores finais:', { name, finalPrice, finalStock, finalActive });
 
     const result = await db.query(
       `INSERT INTO products (name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
-      [name, category || null, price, stock, description || '', barcode || '', cod || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', active !== false]
+      [name, category || null, finalPrice, finalStock, description || '', barcode || '', cod || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', finalActive]
     );
 
     const product = result.rows[0];
+    console.log('✅ Produto criado com ID:', product.id);
 
     // Save images if provided
     if (images && Array.isArray(images) && images.length > 0) {
@@ -106,8 +116,9 @@ router.post('/', async (req, res) => {
 
     res.status(201).json(product);
   } catch (error) {
-    console.error('Error creating product:', error);
-    res.status(500).json({ error: 'Failed to create product' });
+    console.error('❌ Erro ao criar produto:', error.message);
+    console.error('   Stack:', error.stack);
+    res.status(500).json({ error: 'Failed to create product: ' + error.message });
   }
 });
 
@@ -288,6 +299,45 @@ router.delete('/:id', async (req, res) => {
       error: errorMessage,
       details: error.message,
       code: error.code
+    });
+  }
+});
+
+// DEBUG: Test endpoint to check table structure
+router.get('/debug/schema', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT column_name, data_type, is_nullable, column_default
+      FROM information_schema.columns
+      WHERE table_name = 'products'
+      ORDER BY ordinal_position
+    `);
+    res.json({
+      message: 'Products table schema',
+      columns: result.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DEBUG: Test insert
+router.post('/debug/test-insert', async (req, res) => {
+  try {
+    console.log('🧪 Test insert endpoint called');
+    const result = await db.query(
+      `INSERT INTO products (name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      ['Teste Produto', 'Temperos', 10.50, 100, 'Produto teste', 'BAR123', 'COD123', '100g', 'Brasil', 'Cia. Condimentos', '2027-01-01', true]
+    );
+    res.json({ success: true, product: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Test insert error:', error);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code,
+      detail: error.detail
     });
   }
 });

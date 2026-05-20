@@ -658,6 +658,17 @@ function saveProduct() {
     active: status,
     description
   };
+
+  console.log('📦 Enviando para backend:', productData);
+  console.log('   Tipos:', {
+    name: typeof name,
+    cod: typeof cod,
+    category: typeof category,
+    price: typeof price,
+    stock: typeof stock,
+    active: typeof status,
+    description: typeof description
+  });
   
   // ✅ NOVO: Upload com Cloudinary
   if (fileInput && fileInput.files.length > 0) {

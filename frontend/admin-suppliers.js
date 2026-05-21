@@ -8,6 +8,27 @@ const suppliersState = {
   filters: 'all'
 };
 
+// ===== HELPER FUNCTIONS FOR DATE HANDLING (from CRM) =====
+// Helper: Função para obter data local em formato YYYY-MM-DD (sem timezone)
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper: Converter data string (YYYY-MM-DD) para exibição local sem timezone issues
+function formatDateString(dateString) {
+  if (!dateString) return '';
+  // Se vier no formato YYYY-MM-DD, usar diretamente
+  if (dateString.includes('T')) {
+    dateString = dateString.split('T')[0];
+  }
+  const [year, month, day] = dateString.split('-');
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+}
+// =========================================================
+
 // GET: Listar fornecedores
 async function loadSuppliers(filter = 'all') {
   try {
@@ -391,7 +412,7 @@ async function openSupplierDetail(supplierId) {
           <tbody>
             ${purchases.map(p => `
               <tr style="border-bottom: 1px solid #f4f0ea;">
-                <td style="padding: 8px;">${new Date(p.purchase_date).toLocaleDateString('pt-BR')}</td>
+                <td style="padding: 8px;">${formatDateString(p.purchase_date)}</td>
                 <td style="padding: 8px; font-weight: 700; color: var(--marrom);">${p.product_name}</td>
                 <td style="padding: 8px; text-align: center;">${p.quantity}</td>
                 <td style="padding: 8px; text-align: right;">R$ ${parseFloat(p.unit_price).toFixed(2)}</td>
@@ -458,7 +479,7 @@ function openAddSupplierPurchase(supplierId) {
     <div class="form-row-2">
       <div class="fg">
         <label>Data da Compra *</label>
-        <input type="date" id="supplierPurchaseDate" value="${new Date().toISOString().split('T')[0]}">
+        <input type="date" id="supplierPurchaseDate" value="${getLocalDateString(new Date())}">
       </div>
       <div class="fg">
         <label>Forma de Pagamento</label>

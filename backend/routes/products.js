@@ -179,7 +179,12 @@ router.delete('/:id/images/:imageId', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, price, stock, description, images, barcode, sku, weight, origin, brand, expiry, active } = req.body;
+    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active } = req.body;
+
+    // Garantir tipos corretos
+    const finalPrice = price !== undefined ? parseFloat(price) : undefined;
+    const finalStock = stock !== undefined ? parseInt(stock) : undefined;
+    const finalActive = active !== undefined ? (active !== false && active !== 'false') : undefined;
 
     const result = await db.query(
       `UPDATE products 
@@ -197,7 +202,7 @@ router.put('/:id', async (req, res) => {
            active = COALESCE($12, active)
        WHERE id = $13
        RETURNING *`,
-      [name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active, id]
+      [name, category, finalPrice, finalStock, description, barcode, cod, weight, origin, brand, expiry, finalActive, id]
     );
 
     if (result.rows.length === 0) {
@@ -225,8 +230,8 @@ router.put('/:id', async (req, res) => {
 
     res.json(product);
   } catch (error) {
-    console.error('Error updating product:', error);
-    res.status(500).json({ error: 'Failed to update product' });
+    console.error('Error updating product:', error.message);
+    res.status(500).json({ error: 'Failed to update product: ' + error.message });
   }
 });
 

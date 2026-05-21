@@ -60,6 +60,12 @@ app.use(cors(corsOptions));
 // Handle preflight requests
 app.options('*', cors(corsOptions));
 
+// Log todas as requisições
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
@@ -177,28 +183,42 @@ app.use('/api/crm', crmRoutes);
 app.use('/api/suppliers', suppliersRoutes);
 app.use('/api/promotions', promotionsRoutes);
 
-// Tratamento de erros geral
-app.use((err, req, res, next) => {
-  res.setHeader('Content-Type', 'application/json');
-
-  // TODO: Adicionar tratamento de multer quando implementar uploads com Cloudinary
-  // if (err instanceof multer.MulterError) {
-  //   return res.status(400).json({ error: 'Erro no upload: ' + err.message });
-  // }
-  
-  if (err) {
-    console.error('Erro interno:', err);
-    return res.status(500).json({ error: 'Erro interno do servidor' });
+// Health check endpoint (antes do error handler)
+app.get('/api/health', async (req, res) => {
+  try {
+    // Verificar conexão com banco de dados
+    const dbCheck = await db.query('SELECT NOW()');
+    res.json({ 
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: 'connected',
+      dbTime: dbCheck.rows[0]
+    });
+  } catch (error) {
+    console.error('❌ Database health check failed:', error.message);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: 'disconnected',
+      error: error.message
+    });
   }
-  next();
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// Tratamento de erros geral (SEMPRE por último)
+app.use((err, req, res, next) => {
+  res.setHeader('Content-Type', 'application/json');
+  console.error('🔴 Erro não tratado:', err.message);
+  console.error('   Stack:', err.stack);
+  res.status(err.status || 500).json({ 
+    error: err.message || 'Erro interno do servidor',
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });
 

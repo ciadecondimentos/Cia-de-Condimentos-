@@ -39,12 +39,14 @@ router.get('/', async (req, res) => {
 // GET all products including inactive (admin only)
 router.get('/admin/all', async (req, res) => {
   try {
+    console.log('📦 Fetching all products (admin)...');
     const result = await db.query('SELECT * FROM products ORDER BY id DESC');
+    console.log(`✅ Found ${result.rows.length} products`);
     const products = await enrichProductsWithImages(result.rows);
     res.json(products);
   } catch (error) {
-    console.error('Error fetching all products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    console.error('❌ Error fetching all products:', error.message);
+    res.status(500).json({ error: 'Failed to fetch products: ' + error.message });
   }
 });
 

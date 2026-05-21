@@ -471,7 +471,6 @@ async function openSupplierDetail(supplierId) {
         `;
       });
     }
-    }
 
     body.innerHTML = html;
     modal.classList.add('open');

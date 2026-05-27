@@ -38,8 +38,8 @@ function renderCrmCustomersTable() {
     html = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #aaa;">Nenhum cliente cadastrado</td></tr>`;
   } else {
     html = crmState.customers.map(customer => {
-      const debtAmount = customer.stats?.pending || 0;
-      const totalSpent = customer.stats?.total_spent || 0;
+      const debtAmount = safeNumber(customer.stats?.pending, 0);
+      const totalSpent = safeNumber(customer.stats?.total_spent, 0);
       const isDebtor = debtAmount > 0;
       
       return `
@@ -57,8 +57,8 @@ function renderCrmCustomersTable() {
           <td data-label="Situação" style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
             ${isDebtor ? '💔 Devedor' : '✓ Adimplente'}
           </td>
-          <td data-label="Total Gasto" style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+          <td data-label="Total Gasto" style="text-align: right;">R$ ${formatMoney(totalSpent)}</td>
+          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${formatMoney(debtAmount)}</td>
           <td data-label="Compras">${customer.stats?.total_purchases || 0} compras</td>
           <td data-label="Ações">
             <button class="btn btn-sm btn-ghost" onclick="openCrmCustomerDetail(${customer.id})" title="Ver detalhes">👁️</button>
@@ -314,43 +314,43 @@ async function openCrmCustomerDetail(customerId) {
     title.textContent = `📊 ${customer.full_name}`;
 
     // Dashboard do cliente
-    const monthRevenue = parseFloat(periodStats?.this_month || 0);
-    const yearRevenue = parseFloat(periodStats?.this_year || 0);
-    const avgTicket = parseFloat(stats?.average_ticket || 0);
-    const pendingAmount = parseFloat(stats?.pending || 0);
-    const paidAmount = parseFloat(stats?.paid || 0);
+    const monthRevenue = safeNumber(periodStats?.this_month, 0);
+    const yearRevenue = safeNumber(periodStats?.this_year, 0);
+    const avgTicket = safeNumber(stats?.average_ticket, 0);
+    const pendingAmount = safeNumber(stats?.pending, 0);
+    const paidAmount = safeNumber(stats?.paid, 0);
     
     let html = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--vermelho);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total Comprado</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${parseFloat(stats?.total_spent || 0).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${formatMoney(stats?.total_spent, '0.00')}</div>
         </div>
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--amarelo);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Número de Compras</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${stats?.total_purchases || 0}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${safeNumber(stats?.total_purchases, 0)}</div>
         </div>
         <div style="background: #d4edda; padding: 16px; border-radius: 8px; border-left: 4px solid #27ae60;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Pago</div>
-          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${parseFloat(paidAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${formatMoney(paidAmount)}</div>
         </div>
         <div style="background: #fff3cd; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Em Aberto</div>
-          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${parseFloat(pendingAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${formatMoney(pendingAmount)}</div>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(avgTicket).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(avgTicket)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Ticket Médio</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(monthRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(monthRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Mês</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(yearRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(yearRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Ano</div>
         </div>
       </div>
@@ -363,7 +363,7 @@ async function openCrmCustomerDetail(customerId) {
           ${customer.phone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${customer.phone}</div>` : ''}
           ${customer.birthday ? `<div style="margin-bottom: 8px;"><strong>Aniversário:</strong> ${formatDateString(customer.birthday)}</div>` : ''}
           ${customer.is_vip ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ⭐ Cliente VIP</div>` : ''}
-          ${customer.credit_limit > 0 ? `<div style="margin-bottom: 8px;"><strong>Limite de Crédito:</strong> R$ ${parseFloat(customer.credit_limit).toFixed(2)}</div>` : ''}
+          ${customer.credit_limit > 0 ? `<div style="margin-bottom: 8px;"><strong>Limite de Crédito:</strong> R$ ${formatMoney(customer.credit_limit)}</div>` : ''}
           ${customer.observations ? `<div style="margin-bottom: 8px;"><strong>Observações:</strong> ${customer.observations}</div>` : ''}
         </div>
       </div>
@@ -401,8 +401,8 @@ async function openCrmCustomerDetail(customerId) {
         let dayTotal = 0;
         let dayQty = 0;
         dateItems.forEach(item => {
-          dayTotal += parseFloat(item.total_price);
-          dayQty += item.quantity;
+          dayTotal += safeNumber(item.total_price, 0);
+          dayQty += safeNumber(item.quantity, 0);
         });
 
         // Status mais crítico do dia (pendente > parcial > pago)
@@ -479,10 +479,10 @@ async function openCrmCustomerDetail(customerId) {
                   </div>
                   <div style="text-align: right; min-width: 120px;">
                     <div style="font-size: 12px; color: #666;">
-                      R$ ${parseFloat(p.unit_price).toFixed(2)} × ${p.quantity}
+                      R$ ${formatMoney(item.unit_price)} × ${item.quantity}
                     </div>
                     <div style="font-weight: 700; color: var(--vermelho); margin-top: 2px;">
-                      R$ ${parseFloat(p.total_price).toFixed(2)}
+                      R$ ${formatMoney(item.total_price)}
                     </div>
                   </div>
                   <div style="display: flex; gap: 4px; margin-left: 12px;" onclick="event.stopPropagation();">

@@ -170,8 +170,8 @@ function fetchDashboardStats() {
     .then(orders => {
       document.getElementById('dash-orders').textContent = orders.length;
       // APENAS PEDIDOS PAGOS - dados reais para receita
-      const totalRevenue = orders.filter(o => o.payment_status === 'Pago').reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-      document.getElementById('dash-revenue').textContent = `R$ ${parseFloat(totalRevenue).toFixed(2)}`;
+      const totalRevenue = orders.filter(o => o.payment_status === 'Pago').reduce((sum, o) => sum + safeNumber(o.total, 0), 0);
+      document.getElementById('dash-revenue').textContent = `R$ ${formatMoney(totalRevenue)}`;
       const pending = orders.filter(o => o.status === 'Pendente').length;
       document.getElementById('dash-pending').textContent = pending;
     })
@@ -1445,7 +1445,7 @@ function exportCustomers() {
           customer.state || 'N/A',
           customer.zip || 'N/A',
           customer.total_orders || 0,
-          customer.total_spent ? parseFloat(customer.total_spent).toFixed(2) : '0.00',
+          formatMoney(customer.total_spent),
           customer.notes || ''
         ];
       });
@@ -1510,16 +1510,16 @@ async function loadReportData(days) {
     });
 
     // Calculate stats
-    const totalSold = paidOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+    const totalSold = paidOrders.reduce((sum, order) => sum + safeNumber(order.total, 0), 0);
     const totalOrders = paidOrders.length;
     const averageTicket = totalOrders > 0 ? totalSold / totalOrders : 0;
 
     // Update stats display
     const container = document.getElementById('reportStats');
     const stats = [
-      { label: 'Total Vendido', value: `R$ ${totalSold.toFixed(2)}`, icon: '💰' },
+      { label: 'Total Vendido', value: `R$ ${formatMoney(totalSold)}`, icon: '💰' },
       { label: 'Total de Pedidos', value: totalOrders, icon: '📦' },
-      { label: 'Ticket Médio', value: `R$ ${averageTicket.toFixed(2)}`, icon: '📊' }
+      { label: 'Ticket Médio', value: `R$ ${formatMoney(averageTicket)}`, icon: '📊' }
     ];
 
     container.innerHTML = stats.map(stat => `
@@ -1600,7 +1600,7 @@ function renderCategoryReport(orders, productMap) {
       order.items.forEach(item => {
         const product = productMap[item.product_id];
         const category = product ? (product.category || 'Sem categoria') : 'Desconhecido';
-        const itemTotal = (item.quantity * item.price);
+        const itemTotal = (safeNumber(item.quantity, 0) * safeNumber(item.price, 0));
         
         if (!salesByCategory[category]) {
           salesByCategory[category] = 0;
@@ -1624,14 +1624,14 @@ function renderCategoryReport(orders, productMap) {
   
   let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
   sortedCategories.forEach(([category, total]) => {
-    const percentage = (total / maxSale) * 100;
+    const percentage = maxSale > 0 ? (total / maxSale) * 100 : 0;
     html += `
       <div style="display: flex; align-items: center; gap: 12px;">
         <div style="flex: 0 0 100px; font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${category}</div>
         <div style="flex: 1; height: 24px; background: #f0e8d8; border-radius: 4px; overflow: hidden;">
           <div style="height: 100%; width: ${percentage}%; background: linear-gradient(to right, var(--marrom), #d4a574); transition: width 0.3s;"></div>
         </div>
-        <div style="flex: 0 0 80px; text-align: right; font-weight: 600; color: var(--marrom);">R$ ${total.toFixed(2)}</div>
+        <div style="flex: 0 0 80px; text-align: right; font-weight: 600; color: var(--marrom);">R$ ${formatMoney(total)}</div>
       </div>
     `;
   });
@@ -1652,7 +1652,7 @@ function renderPaymentReport(orders) {
       paymentMethods[method] = { count: 0, total: 0 };
     }
     paymentMethods[method].count++;
-    paymentMethods[method].total += parseFloat(order.total || 0);
+    paymentMethods[method].total += safeNumber(order.total, 0);
   });
   
   const methodEmojis = {
@@ -1663,9 +1663,13 @@ function renderPaymentReport(orders) {
     'Desconhecido': '📦'
   };
   
+  // Calcular total geral para porcentagem
+  const grandTotal = orders.reduce((s, o) => s + safeNumber(o.total, 0), 0);
+  
   let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
   Object.entries(paymentMethods).forEach(([method, data]) => {
     const emoji = methodEmojis[method] || '💰';
+    const percentage = grandTotal > 0 ? ((data.total / grandTotal) * 100).toFixed(0) : 0;
     html += `
       <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0e8d8;">
         <div>
@@ -1673,8 +1677,8 @@ function renderPaymentReport(orders) {
           <div style="font-size: 11px; color: #bbb;">${data.count} pedido${data.count !== 1 ? 's' : ''}</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-weight: 600; color: var(--marrom);">R$ ${data.total.toFixed(2)}</div>
-          <div style="font-size: 11px; color: #999;">${((data.total / orders.reduce((s, o) => s + parseFloat(o.total || 0), 0)) * 100).toFixed(0)}%</div>
+          <div style="font-weight: 600; color: var(--marrom);">R$ ${formatMoney(data.total)}</div>
+          <div style="font-size: 11px; color: #999;">${percentage}%</div>
         </div>
       </div>
     `;
@@ -1713,7 +1717,7 @@ function exportReports() {
       });
 
       // Calculate statistics
-      const totalSold = filteredOrders.reduce((sum, order) => sum + parseFloat(order.total || 0), 0);
+      const totalSold = filteredOrders.reduce((sum, order) => sum + safeNumber(order.total, 0), 0);
       const totalOrders = filteredOrders.length;
       const averageTicket = totalOrders > 0 ? totalSold / totalOrders : 0;
 
@@ -1723,9 +1727,9 @@ function exportReports() {
       csvContent += `Data de Geração: ${new Date().toLocaleDateString('pt-BR')}\n\n`;
       
       csvContent += 'RESUMO EXECUTIVO\n';
-      csvContent += `Total Vendido,R$ ${totalSold.toFixed(2)}\n`;
+      csvContent += `Total Vendido,R$ ${formatMoney(totalSold)}\n`;
       csvContent += `Total de Pedidos,${totalOrders}\n`;
-      csvContent += `Ticket Médio,R$ ${averageTicket.toFixed(2)}\n\n`;
+      csvContent += `Ticket Médio,R$ ${formatMoney(averageTicket)}\n\n`;
 
       // Sales by category
       csvContent += 'VENDAS POR CATEGORIA\n';
@@ -1742,7 +1746,7 @@ function exportReports() {
           order.items.forEach(item => {
             const product = productMap[item.product_id];
             const category = product ? (product.category || 'Sem categoria') : 'Desconhecido';
-            const itemTotal = (item.quantity * item.price);
+            const itemTotal = (safeNumber(item.quantity, 0) * safeNumber(item.price, 0));
             
             if (!salesByCategory[category]) {
               salesByCategory[category] = 0;
@@ -1757,7 +1761,7 @@ function exportReports() {
         .slice(0, 10); // Top 10 categories
 
       sortedCategories.forEach(([category, total]) => {
-        csvContent += `"${category}",${total.toFixed(2)}\n`;
+        csvContent += `"${category}",${formatMoney(total)}\n`;
       });
 
       csvContent += '\n\nPEDIDOS NO PERÍODO\n';
@@ -1769,7 +1773,7 @@ function exportReports() {
         const status = order.status || 'Pendente';
         const paymentStatus = order.payment_status || 'Pendente';
         const paymentMethod = order.payment_method || 'N/A';
-        const total = parseFloat(order.total || 0).toFixed(2);
+        const total = formatMoney(order.total);
         
         csvContent += `"${orderNumber}","${order.customer_name || 'N/A'}","${order.customer_phone || 'N/A'}","${orderDate}","${total}","${paymentMethod}","${paymentStatus}","${status}"\n`;
       });

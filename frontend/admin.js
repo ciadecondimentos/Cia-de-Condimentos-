@@ -10,6 +10,22 @@ const BACKEND_BASE = (window.location.hostname === 'localhost' || window.locatio
 // Global variable to track current report period
 let currentReportPeriod = '7';
 
+// ==================== HELPER FUNCTIONS ====================
+// Função para fazer parse seguro de valores numéricos (evita NaN)
+function safeNumber(value, defaultValue = 0) {
+  if (value === null || value === undefined || value === '') {
+    return defaultValue;
+  }
+  const num = parseFloat(value);
+  return isNaN(num) ? defaultValue : num;
+}
+
+// Função para formatar número com 2 casas decimais (evita NaN na exibição)
+function formatMoney(value, defaultValue = '0.00') {
+  const num = safeNumber(value, 0);
+  return num.toFixed(2);
+}
+
 // ==================== IMAGE URL HANDLER ====================
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';

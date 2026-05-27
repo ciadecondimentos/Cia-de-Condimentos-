@@ -1,5 +1,19 @@
 // ==================== CRM CLIENTS MANAGEMENT ====================
 
+// Funções helper para valores seguros (evita NaN)
+function safeNumber(value, defaultValue = 0) {
+  if (value === null || value === undefined || value === '') {
+    return defaultValue;
+  }
+  const num = parseFloat(value);
+  return isNaN(num) ? defaultValue : num;
+}
+
+function formatMoney(value, defaultValue = '0.00') {
+  const num = safeNumber(value, 0);
+  return num.toFixed(2);
+}
+
 // Estado global do CRM
 const crmState = {
   currentCustomerId: null,

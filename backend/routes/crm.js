@@ -47,10 +47,10 @@ router.get('/customers', async (req, res) => {
     const customers = await Promise.all(result.rows.map(async (customer) => {
       const statsResult = await db.query(`
         SELECT 
-          COUNT(*) as total_purchases,
-          COALESCE(SUM(total_price), 0) as total_spent,
-          COALESCE(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END), 0) as paid,
-          COALESCE(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END), 0) as pending,
+          COUNT(*)::integer as total_purchases,
+          COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
+          COALESCE(CAST(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as paid,
+          COALESCE(CAST(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as pending,
           MAX(purchase_date) as last_purchase
         FROM crm_purchases 
         WHERE customer_id = $1
@@ -91,11 +91,11 @@ router.get('/customers/:id', async (req, res) => {
     // Estatísticas
     const statsResult = await db.query(`
       SELECT 
-        COUNT(*) as total_purchases,
-        COALESCE(SUM(total_price), 0) as total_spent,
-        COALESCE(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END), 0) as paid,
-        COALESCE(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END), 0) as pending,
-        AVG(total_price) as average_ticket,
+        COUNT(*)::integer as total_purchases,
+        COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
+        COALESCE(CAST(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as paid,
+        COALESCE(CAST(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as pending,
+        COALESCE(CAST(AVG(total_price) AS NUMERIC(15,2)), 0) as average_ticket,
         MAX(purchase_date) as last_purchase,
         MIN(purchase_date) as first_purchase
       FROM crm_purchases 
@@ -105,11 +105,11 @@ router.get('/customers/:id', async (req, res) => {
     // Cálculos mensais/anuais
     const yearResult = await db.query(`
       SELECT 
-        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM NOW()) 
+        COALESCE(CAST(SUM(CASE WHEN EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM NOW()) 
                    AND EXTRACT(MONTH FROM purchase_date) = EXTRACT(MONTH FROM NOW()) 
-                   THEN total_price ELSE 0 END), 0) as this_month,
-        COALESCE(SUM(CASE WHEN EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM NOW()) 
-                   THEN total_price ELSE 0 END), 0) as this_year
+                   THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as this_month,
+        COALESCE(CAST(SUM(CASE WHEN EXTRACT(YEAR FROM purchase_date) = EXTRACT(YEAR FROM NOW()) 
+                   THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as this_year
       FROM crm_purchases 
       WHERE customer_id = $1
     `, [id]);

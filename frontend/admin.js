@@ -1177,6 +1177,8 @@ function deleteOrder(id) {
         } else {
           showToast('Pedido deletado com sucesso!');
           renderOrdersTableAsync();
+          loadDashboard(); // Atualizar receita total
+          renderSalesChart(currentReportPeriod || 'week'); // Atualizar gráfico
         }
       })
       .catch(err => {

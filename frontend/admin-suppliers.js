@@ -821,6 +821,8 @@ async function saveSupplierPurchase() {
       showToast('Compra atualizada!', 'success');
       closeSupplierPurchaseModal();
       openSupplierDetail(supplierId);
+      // Atualizar dashboards automaticamente
+      if (typeof loadDashboard === 'function') loadDashboard();
     } catch (error) {
       console.error('Erro ao atualizar compra:', error);
       showToast('Erro ao atualizar compra', 'error');
@@ -879,6 +881,8 @@ async function saveSupplierPurchase() {
     showToast(`✓ ${totalProducts} compra(s) registrada(s) com sucesso!`, 'success');
     closeSupplierPurchaseModal();
     openSupplierDetail(supplierId);
+    // Atualizar dashboards automaticamente
+    if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
     console.error('Erro ao salvar compras:', error);
     showToast('Erro ao registrar compras', 'error');
@@ -903,6 +907,8 @@ async function deleteSupplierPurchase(supplierId, purchaseId) {
     
     // Recarregar detalhes do fornecedor
     openSupplierDetail(supplierId);
+    // Atualizar dashboards automaticamente
+    if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
     console.error('Erro ao deletar compra:', error);
     showToast('Erro ao deletar compra', 'error');

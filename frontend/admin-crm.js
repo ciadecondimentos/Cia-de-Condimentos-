@@ -1113,6 +1113,8 @@ async function saveCrmPurchase() {
       showToast('Compra atualizada!', 'success');
       closeCrmPurchaseModal();
       openCrmCustomerDetail(customerId);
+      // Atualizar dashboards automaticamente
+      if (typeof loadDashboard === 'function') loadDashboard();
     } catch (error) {
       console.error('Erro ao atualizar compra:', error);
       showToast('Erro ao atualizar compra', 'error');
@@ -1175,6 +1177,8 @@ async function saveCrmPurchase() {
     showToast(`✓ ${totalProducts} compra(s) registrada(s) com sucesso!`, 'success');
     closeCrmPurchaseModal();
     openCrmCustomerDetail(customerId);
+    // Atualizar dashboards automaticamente
+    if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
     console.error('Erro ao salvar compras:', error);
     showToast('Erro ao registrar compras', 'error');
@@ -1199,6 +1203,8 @@ async function deleteCrmPurchase(customerId, purchaseId) {
     
     // Recarregar detalhes do cliente
     openCrmCustomerDetail(customerId);
+    // Atualizar dashboards automaticamente
+    if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
     console.error('Erro ao deletar compra:', error);
     showToast('Erro ao deletar compra', 'error');

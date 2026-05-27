@@ -314,10 +314,11 @@ async function openCrmCustomerDetail(customerId) {
     title.textContent = `📊 ${customer.full_name}`;
 
     // Dashboard do cliente
-    const monthRevenue = periodStats?.this_month || 0;
-    const yearRevenue = periodStats?.this_year || 0;
-    const avgTicket = stats?.average_ticket || 0;
-    const pendingAmount = stats?.pending || 0;
+    const monthRevenue = parseFloat(periodStats?.this_month || 0);
+    const yearRevenue = parseFloat(periodStats?.this_year || 0);
+    const avgTicket = parseFloat(stats?.average_ticket || 0);
+    const pendingAmount = parseFloat(stats?.pending || 0);
+    const paidAmount = parseFloat(stats?.paid || 0);
     const paidAmount = stats?.paid || 0;
     
     let html = `

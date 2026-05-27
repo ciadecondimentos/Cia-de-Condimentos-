@@ -95,7 +95,7 @@ router.get('/customers/:id', async (req, res) => {
         COALESCE(SUM(total_price), 0) as total_spent,
         COALESCE(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END), 0) as pending,
-        AVG(total_price) as average_ticket,
+        COALESCE(AVG(total_price), 0) as average_ticket,
         MAX(purchase_date) as last_purchase,
         MIN(purchase_date) as first_purchase
       FROM crm_purchases 

@@ -305,9 +305,14 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
 
     console.log('PUT /purchases/:id - purchase_date recebido:', purchase_date);
 
-    const parsedQuantity = parseFloat(quantity || 0);
-    const parsedUnitPrice = parseFloat(unit_price || 0);
-    let total_price = parsedUnitPrice * parsedQuantity;
+    const parsedQuantity = quantity ? parseFloat(quantity) : null;
+    const parsedUnitPrice = unit_price ? parseFloat(unit_price) : null;
+    
+    // Recalcular total_price apenas se quantity ou unit_price foram fornecidos
+    let total_price = null;
+    if (parsedQuantity !== null && parsedUnitPrice !== null) {
+      total_price = parsedUnitPrice * parsedQuantity;
+    }
 
     // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
     const purchaseDateOnly = purchase_date ? purchase_date.split('T')[0] : null;
@@ -319,7 +324,7 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
        SET product_name = COALESCE($1, product_name),
            quantity = COALESCE($2, quantity),
            unit_price = COALESCE($3, unit_price),
-           total_price = $4,
+           total_price = COALESCE($4, total_price),
            purchase_date = COALESCE($5, purchase_date),
            payment_method = COALESCE($6, payment_method),
            payment_status = COALESCE($7, payment_status),
@@ -327,12 +332,20 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
            updated_at = NOW()
        WHERE id = $9 AND customer_id = $10
        RETURNING *`,
-      [product_name, parsedQuantity || null, parsedUnitPrice || null, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
+      [product_name, parsedQuantity, parsedUnitPrice, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Compra não encontrada' });
     }
+
+    console.log('Compra atualizada com sucesso:', {
+      id: result.rows[0].id,
+      quantity: result.rows[0].quantity,
+      unit_price: result.rows[0].unit_price,
+      total_price: result.rows[0].total_price,
+      payment_status: result.rows[0].payment_status
+    });
 
     res.json(result.rows[0]);
   } catch (error) {

@@ -270,7 +270,9 @@ router.post('/customers/:id/purchases', async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios não preenchidos' });
     }
 
-    const total_price = quantity * unit_price;
+    const parsedQuantity = parseFloat(quantity);
+    const parsedUnitPrice = parseFloat(unit_price);
+    const total_price = parsedQuantity * parsedUnitPrice;
 
     // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
     const purchaseDateOnly = purchase_date.split('T')[0];
@@ -282,7 +284,7 @@ router.post('/customers/:id/purchases', async (req, res) => {
        (customer_id, product_name, quantity, unit_price, total_price, purchase_date, payment_method, payment_status, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status || 'pendente', notes]
+      [id, product_name, parsedQuantity, parsedUnitPrice, total_price, purchaseDateOnly, payment_method, payment_status || 'pendente', notes]
     );
 
     console.log('Compra salva:', result.rows[0]);
@@ -303,7 +305,9 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
 
     console.log('PUT /purchases/:id - purchase_date recebido:', purchase_date);
 
-    let total_price = unit_price * quantity;
+    const parsedQuantity = parseFloat(quantity || 0);
+    const parsedUnitPrice = parseFloat(unit_price || 0);
+    let total_price = parsedUnitPrice * parsedQuantity;
 
     // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
     const purchaseDateOnly = purchase_date ? purchase_date.split('T')[0] : null;
@@ -323,7 +327,7 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
            updated_at = NOW()
        WHERE id = $9 AND customer_id = $10
        RETURNING *`,
-      [product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
+      [product_name, parsedQuantity || null, parsedUnitPrice || null, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
     );
 
     if (result.rows.length === 0) {

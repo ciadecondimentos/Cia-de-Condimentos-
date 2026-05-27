@@ -319,7 +319,6 @@ async function openCrmCustomerDetail(customerId) {
     const avgTicket = parseFloat(stats?.average_ticket || 0);
     const pendingAmount = parseFloat(stats?.pending || 0);
     const paidAmount = parseFloat(stats?.paid || 0);
-    const paidAmount = stats?.paid || 0;
     
     let html = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">

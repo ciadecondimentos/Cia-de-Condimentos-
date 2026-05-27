@@ -51,10 +51,42 @@ async function loadSuppliers(filter = 'all') {
     suppliersState.suppliers = suppliers;
     suppliersState.filters = filter;
     renderSuppliersTable();
+    updateSuppliersDashboard(); // Atualizar métricas do dashboard
   } catch (error) {
     console.error('Erro ao carregar fornecedores:', error);
     showToast('Erro ao carregar fornecedores', 'error');
   }
+}
+
+// Atualizar dashboard com métricas globais de fornecedores
+function updateSuppliersDashboard() {
+  const suppliers = suppliersState.suppliers;
+  
+  // Calcular métricas
+  let totalSuppliers = suppliers.length;
+  let totalBought = 0;
+  let totalPending = 0;
+  let debtors = 0;
+  
+  suppliers.forEach(s => {
+    const stats = s.stats || {};
+    totalBought += safeNumber(stats.total_spent || 0);
+    totalPending += safeNumber(stats.pending || 0);
+    if (safeNumber(stats.pending || 0) > 0) {
+      debtors++;
+    }
+  });
+  
+  // Atualizar elementos do DOM
+  const totalEl = document.getElementById('suppliers-total');
+  const totalBoughtEl = document.getElementById('suppliers-total-bought');
+  const totalPendingEl = document.getElementById('suppliers-total-pending');
+  const debtorsEl = document.getElementById('suppliers-debtors');
+  
+  if (totalEl) totalEl.textContent = totalSuppliers;
+  if (totalBoughtEl) totalBoughtEl.textContent = `R$ ${parseFloat(totalBought).toFixed(2)}`;
+  if (totalPendingEl) totalPendingEl.textContent = `R$ ${parseFloat(totalPending).toFixed(2)}`;
+  if (debtorsEl) debtorsEl.textContent = debtors;
 }
 
 // Renderizar tabela de fornecedores

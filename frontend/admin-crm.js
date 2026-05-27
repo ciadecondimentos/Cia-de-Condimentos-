@@ -27,10 +27,39 @@ async function loadCrmCustomers(filter = 'all') {
     crmState.customers = customers;
     crmState.filters = filter;
     renderCrmCustomersTable();
+    updateCrmDashboard(); // Atualizar métricas do dashboard
   } catch (error) {
     console.error('Erro ao carregar clientes:', error);
     showToast('Erro ao carregar clientes', 'error');
   }
+}
+
+// Atualizar dashboard com métricas globais do CRM
+function updateCrmDashboard() {
+  const customers = crmState.customers;
+  
+  // Calcular métricas
+  let totalCustomers = customers.length;
+  let vipCustomers = customers.filter(c => c.is_vip).length;
+  let totalSpent = 0;
+  let totalPending = 0;
+  
+  customers.forEach(c => {
+    const stats = c.stats || {};
+    totalSpent += safeNumber(stats.total_spent || 0);
+    totalPending += safeNumber(stats.pending || 0);
+  });
+  
+  // Atualizar elementos do DOM
+  const totalCustomersEl = document.getElementById('crm-total-customers');
+  const vipCustomersEl = document.getElementById('crm-vip-customers');
+  const totalSpentEl = document.getElementById('crm-total-spent');
+  const totalPendingEl = document.getElementById('crm-total-pending');
+  
+  if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
+  if (vipCustomersEl) vipCustomersEl.textContent = vipCustomers;
+  if (totalSpentEl) totalSpentEl.textContent = `R$ ${parseFloat(totalSpent).toFixed(2)}`;
+  if (totalPendingEl) totalPendingEl.textContent = `R$ ${parseFloat(totalPending).toFixed(2)}`;
 }
 
 // Renderizar tabela de clientes

@@ -40,6 +40,31 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// ==================== QUANTITY CONTROLS ====================
+function incrementQty(inputId) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    const currentValue = parseInt(input.value) || 1;
+    input.value = currentValue + 1;
+    // Trigger change event for calculations
+    input.dispatchEvent(new Event('change'));
+    input.dispatchEvent(new Event('input'));
+  }
+}
+
+function decrementQty(inputId) {
+  const input = document.getElementById(inputId);
+  if (input) {
+    const currentValue = parseInt(input.value) || 1;
+    if (currentValue > 1) {
+      input.value = currentValue - 1;
+      // Trigger change event for calculations
+      input.dispatchEvent(new Event('change'));
+      input.dispatchEvent(new Event('input'));
+    }
+  }
+}
+
 // ==================== PAGE NAVIGATION ====================
 function showPage(pageId, buttonElement) {
   // Hide all pages

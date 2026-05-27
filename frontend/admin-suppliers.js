@@ -8,6 +8,9 @@ const suppliersState = {
   filters: 'all'
 };
 
+// Estado para rastrear produtos selecionados e quantidades
+let suppliersSelectedProducts = {};
+
 // ===== HELPER FUNCTIONS FOR DATE HANDLING (from CRM) =====
 // Helper: Função para obter data local em formato YYYY-MM-DD (sem timezone)
 function getLocalDateString(date) {
@@ -487,73 +490,183 @@ function closeSupplierDetailModal() {
 
 // ==================== PURCHASES MANAGEMENT ====================
 
-// Abrir modal para adicionar compra
-function openAddSupplierPurchase(supplierId) {
+// Alternar seleção de produto e exibir/ocultar campo de quantidade
+function toggleSupplierProduct(productId, productName, productPrice) {
+  const checkbox = document.getElementById(`supplierProd-${productId}`);
+  const qtyContainer = document.getElementById(`supplierProdQty-${productId}-container`);
+
+  if (checkbox.checked) {
+    suppliersSelectedProducts[productId] = {
+      id: productId,
+      name: productName,
+      price: productPrice,
+      quantity: 1
+    };
+    qtyContainer.style.display = 'inline-flex';
+  } else {
+    delete suppliersSelectedProducts[productId];
+    qtyContainer.style.display = 'none';
+  }
+
+  calculateSupplierGrandTotal();
+}
+
+// Calcular total geral de toda a compra
+function calculateSupplierGrandTotal() {
+  let grandTotal = 0;
+
+  Object.values(suppliersSelectedProducts).forEach(product => {
+    const qtyInput = document.getElementById(`supplierProdQty-${product.id}`);
+    const quantity = parseInt(qtyInput.value) || 0;
+    const subtotal = quantity * product.price;
+
+    // Atualizar subtotal do produto
+    const subtotalSpan = document.getElementById(`supplierProdSubtotal-${product.id}`);
+    if (subtotalSpan) {
+      subtotalSpan.textContent = `R$ ${subtotal.toFixed(2)}`;
+    }
+
+    // Adicionar ao total geral
+    suppliersSelectedProducts[product.id].quantity = quantity;
+    grandTotal += subtotal;
+  });
+
+  // Atualizar display do total geral
+  const grandTotalSpan = document.getElementById('supplierGrandTotal');
+  if (grandTotalSpan) {
+    grandTotalSpan.textContent = grandTotal.toFixed(2);
+  }
+}
+
+// ==================== PURCHASES MODAL ====================
+
+// Abrir modal para adicionar compra (com múltiplos produtos)
+async function openAddSupplierPurchase(supplierId) {
   const modal = document.getElementById('supplierPurchaseModal');
   const title = document.getElementById('supplierPurchaseModalTitle');
   const body = document.getElementById('supplierPurchaseModalBody');
 
-  title.textContent = '➕ Nova Compra';
+  title.textContent = '➕ Registrar Compra';
+  suppliersSelectedProducts = {}; // Limpar seleção anterior
 
-  body.innerHTML = `
-    <div class="fg">
-      <label>Nome do Produto *</label>
-      <input type="text" id="supplierProdName" placeholder="Ex: Pimenta Dedo de Moça - 500g">
-    </div>
-    <div class="form-row-3">
-      <div class="fg">
-        <label>Quantidade *</label>
-        <input type="number" id="supplierProdQty" placeholder="1" min="1" step="1">
-      </div>
-      <div class="fg">
-        <label>Valor Unitário (R$) *</label>
-        <input type="number" id="supplierProdPrice" placeholder="0.00" min="0" step="0.01">
-      </div>
-      <div class="fg">
-        <label>Total (R$)</label>
-        <input type="number" id="supplierProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;">
-      </div>
-    </div>
-    <div class="form-row-2">
-      <div class="fg">
-        <label>Data da Compra *</label>
-        <input type="date" id="supplierPurchaseDate" value="${getLocalDateString(new Date())}">
-      </div>
-      <div class="fg">
-        <label>Forma de Pagamento</label>
-        <select id="supplierPaymentMethod">
-          <option value="">Não especificado</option>
-          <option value="dinheiro">Dinheiro</option>
-          <option value="cartão-débito">Cartão - Débito</option>
-          <option value="cartão-crédito">Cartão - Crédito</option>
-          <option value="pix">PIX</option>
-          <option value="cheque">Cheque</option>
-          <option value="crediário">Crediário</option>
-          <option value="outro">Outro</option>
-        </select>
-      </div>
-    </div>
-    <div class="fg">
-      <label>Status do Pagamento</label>
-      <select id="supplierPaymentStatus">
-        <option value="pendente">Pendente</option>
-        <option value="pago">Pago</option>
-        <option value="parcial">Parcial</option>
-      </select>
-    </div>
-    <div class="fg">
-      <label>Observações</label>
-      <textarea id="supplierPurchaseNotes" placeholder="Anotações sobre esta compra..."></textarea>
-    </div>
-  `;
+  try {
+    // Carregar produtos do banco
+    const response = await fetch(`${API_BASE}/products/admin/all`);
+    const products = await response.json();
 
-  // Calcular total automaticamente
-  document.getElementById('supplierProdQty').addEventListener('input', calculateSupplierTotal);
-  document.getElementById('supplierProdPrice').addEventListener('input', calculateSupplierTotal);
+    let productsHtml = products.map(p => `
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="supplier-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
+        <input type="checkbox" id="supplierProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleSupplierProduct(${p.id}, '${p.name}', ${p.price})">
+        <div style="flex: 1;">
+          <label for="supplierProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
+          <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+        </div>
+        <div style="display: none;" id="supplierProdQty-${p.id}-container" class="supplier-qty-container">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button onclick="decrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+            <input type="number" id="supplierProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateSupplierGrandTotal()" oninput="calculateSupplierGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+            <button onclick="incrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+            <span id="supplierProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
 
-  document.getElementById('supplierPurchaseModal').dataset.supplierId = supplierId;
-  modal.classList.add('open');
+    body.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; display: block; margin-bottom: 8px;">🔍 Pesquisar Produtos</label>
+        <input type="text" id="supplierProductSearch" placeholder="Digite o nome do produto..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        <div style="font-size: 12px; color: #999; margin-top: 4px;" id="supplierSearchResults">Mostrando ${products.length} produto(s)</div>
+      </div>
+
+      <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+        <div style="margin-bottom: 15px;">
+          <label style="font-weight: 600; display: block; margin-bottom: 10px;">📦 Selecione os Produtos *</label>
+          <div id="supplierProductsList">
+            ${productsHtml}
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #f0f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 2px solid #3498db;">
+        <div style="font-size: 14px; color: #666; margin-bottom: 8px;">Total da Compra:</div>
+        <div style="font-size: 24px; font-weight: 700; color: #2c3e50;">R$ <span id="supplierGrandTotal">0.00</span></div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="fg">
+          <label>Data da Compra *</label>
+          <input type="date" id="supplierPurchaseDate" value="${getLocalDateString(new Date())}">
+        </div>
+        <div class="fg">
+          <label>Forma de Pagamento</label>
+          <select id="supplierPaymentMethod">
+            <option value="">Não especificado</option>
+            <option value="dinheiro">Dinheiro</option>
+            <option value="cartão-débito">Cartão - Débito</option>
+            <option value="cartão-crédito">Cartão - Crédito</option>
+            <option value="pix">PIX</option>
+            <option value="cheque">Cheque</option>
+            <option value="crediário">Crediário</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-2">
+        <div class="fg">
+          <label>Status do Pagamento</label>
+          <select id="supplierPaymentStatus">
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+            <option value="parcial">Parcial</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Observações</label>
+          <textarea id="supplierPurchaseNotes" placeholder="Anotações sobre estas compras..."></textarea>
+        </div>
+      </div>
+    `;
+
+    // Adicionar evento de busca
+    document.getElementById('supplierProductSearch').addEventListener('input', (e) => {
+      filterSupplierProducts(e.target.value, products.length);
+    });
+
+    document.getElementById('supplierPurchaseModal').dataset.supplierId = supplierId;
+    delete document.getElementById('supplierPurchaseModal').dataset.purchaseId;
+    modal.classList.add('open');
+  } catch (error) {
+    console.error('Erro ao carregar produtos:', error);
+    showToast('Erro ao carregar produtos', 'error');
+  }
 }
+
+// Filtrar produtos por busca
+function filterSupplierProducts(query, totalProducts) {
+  const items = document.querySelectorAll('.supplier-product-item');
+  let visibleCount = 0;
+
+  items.forEach(item => {
+    const productName = item.dataset.productName || '';
+    const matches = productName.includes(query.toLowerCase());
+    item.style.display = matches ? 'flex' : 'none';
+    if (matches) visibleCount++;
+  });
+
+  // Atualizar contador de resultados
+  const searchResults = document.getElementById('supplierSearchResults');
+  if (searchResults) {
+    if (query.trim()) {
+      searchResults.textContent = `${visibleCount} de ${totalProducts} produto(s) encontrado(s)`;
+    } else {
+      searchResults.textContent = `Mostrando ${totalProducts} produto(s)`;
+    }
+  }
+}
+
+
 
 // Calcular total da compra
 function calculateSupplierTotal() {
@@ -590,7 +703,11 @@ async function openEditSupplierPurchase(supplierId, purchaseId) {
       <div class="form-row-3">
         <div class="fg">
           <label>Quantidade *</label>
-          <input type="number" id="supplierProdQty" placeholder="1" min="1" step="1" value="${purchase.quantity}">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button onclick="decrementQty('supplierProdQty')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+            <input type="number" id="supplierProdQty" placeholder="1" min="1" step="1" value="${purchase.quantity}" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+            <button onclick="incrementQty('supplierProdQty')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+          </div>
         </div>
         <div class="fg">
           <label>Valor Unitário (R$) *</label>
@@ -652,55 +769,113 @@ function closeSupplierPurchaseModal() {
   document.getElementById('supplierPurchaseModal').classList.remove('open');
   delete document.getElementById('supplierPurchaseModal').dataset.supplierId;
   delete document.getElementById('supplierPurchaseModal').dataset.purchaseId;
+  suppliersSelectedProducts = {}; // Limpar seleção
 }
 
-// Salvar compra
+// Salvar compra(s)
 async function saveSupplierPurchase() {
-  const productName = document.getElementById('supplierProdName').value.trim();
-  const quantity = parseInt(document.getElementById('supplierProdQty').value);
-  const unitPrice = parseFloat(document.getElementById('supplierProdPrice').value);
-  const purchaseDate = document.getElementById('supplierPurchaseDate').value;
+  const purchaseId = document.getElementById('supplierPurchaseModal').dataset.purchaseId;
 
-  if (!productName || !quantity || !unitPrice || !purchaseDate) {
-    showToast('Preench todos os campos obrigatórios', 'warning');
+  // Se está editando uma compra individual
+  if (purchaseId) {
+    const productName = document.getElementById('supplierProdName').value.trim();
+    const quantity = parseInt(document.getElementById('supplierProdQty').value);
+    const unitPrice = parseFloat(document.getElementById('supplierProdPrice').value);
+    const purchaseDate = document.getElementById('supplierPurchaseDate').value;
+
+    if (!productName || !quantity || !unitPrice || !purchaseDate) {
+      showToast('Preencha todos os campos obrigatórios', 'warning');
+      return;
+    }
+
+    const supplierId = document.getElementById('supplierPurchaseModal').dataset.supplierId;
+
+    const payload = {
+      product_name: productName,
+      quantity,
+      unit_price: unitPrice,
+      purchase_date: purchaseDate,
+      payment_method: document.getElementById('supplierPaymentMethod').value || null,
+      payment_status: document.getElementById('supplierPaymentStatus').value || 'pendente',
+      notes: document.getElementById('supplierPurchaseNotes').value || null
+    };
+
+    try {
+      const response = await fetch(
+        `${API_BASE}/suppliers/${supplierId}/purchases/${purchaseId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      if (!response.ok) throw new Error('Erro ao atualizar');
+
+      showToast('Compra atualizada!', 'success');
+      closeSupplierPurchaseModal();
+      openSupplierDetail(supplierId);
+    } catch (error) {
+      console.error('Erro ao atualizar compra:', error);
+      showToast('Erro ao atualizar compra', 'error');
+    }
+    return;
+  }
+
+  // Se está registrando nova(s) compra(s) com múltiplos produtos
+  if (Object.keys(suppliersSelectedProducts).length === 0) {
+    showToast('Selecione pelo menos um produto', 'warning');
+    return;
+  }
+
+  const purchaseDate = document.getElementById('supplierPurchaseDate').value;
+  if (!purchaseDate) {
+    showToast('Selecione a data da compra', 'warning');
     return;
   }
 
   const supplierId = document.getElementById('supplierPurchaseModal').dataset.supplierId;
-  const purchaseId = document.getElementById('supplierPurchaseModal').dataset.purchaseId;
-
-  const payload = {
-    product_name: productName,
-    quantity,
-    unit_price: unitPrice,
-    purchase_date: purchaseDate,
-    payment_method: document.getElementById('supplierPaymentMethod').value || null,
-    payment_status: document.getElementById('supplierPaymentStatus').value || 'pendente',
-    notes: document.getElementById('supplierPurchaseNotes').value || null
-  };
-
-  const method = purchaseId ? 'PUT' : 'POST';
-  const url = purchaseId
-    ? `${API_BASE}/suppliers/${supplierId}/purchases/${purchaseId}`
-    : `${API_BASE}/suppliers/${supplierId}/purchases`;
+  const paymentMethod = document.getElementById('supplierPaymentMethod').value || null;
+  const paymentStatus = document.getElementById('supplierPaymentStatus').value || 'pendente';
+  const notes = document.getElementById('supplierPurchaseNotes').value || null;
 
   try {
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    // Salvar cada produto selecionado como uma compra separada
+    const savePromises = Object.values(suppliersSelectedProducts).map(product => {
+      const payload = {
+        product_name: product.name,
+        quantity: product.quantity,
+        unit_price: product.price,
+        purchase_date: purchaseDate,
+        payment_method: paymentMethod,
+        payment_status: paymentStatus,
+        notes: notes
+      };
+
+      return fetch(
+        `${API_BASE}/suppliers/${supplierId}/purchases`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }
+      );
     });
 
-    if (!response.ok) throw new Error('Erro ao salvar');
+    const responses = await Promise.all(savePromises);
+    const allSuccess = responses.every(r => r.ok);
 
-    showToast(purchaseId ? 'Compra atualizada!' : 'Compra registrada!', 'success');
+    if (!allSuccess) {
+      throw new Error('Erro ao salvar algumas compras');
+    }
+
+    const totalProducts = Object.keys(suppliersSelectedProducts).length;
+    showToast(`✓ ${totalProducts} compra(s) registrada(s) com sucesso!`, 'success');
     closeSupplierPurchaseModal();
-    
-    // Recarregar detalhes do fornecedor
     openSupplierDetail(supplierId);
   } catch (error) {
-    console.error('Erro ao salvar compra:', error);
-    showToast('Erro ao salvar compra', 'error');
+    console.error('Erro ao salvar compras:', error);
+    showToast('Erro ao registrar compras', 'error');
   }
 }
 

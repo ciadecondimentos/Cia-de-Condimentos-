@@ -412,6 +412,9 @@ async function openCrmCustomerDetail(customerId) {
           dayStatus = 'parcial';
         }
 
+        // Verificar se há PIX pendente neste dia
+        const hasPixPending = dateItems.some(p => p.payment_method === 'pix' && p.payment_status === 'pendente');
+
         // Armazenar dados do pedido globalmente
         crmOrdersData[orderId] = {
           customerName: customer.full_name,
@@ -443,6 +446,13 @@ async function openCrmCustomerDetail(customerId) {
                       style="margin-left: 16px; white-space: nowrap; padding: 6px 12px;">
                 ENVIAR PARA O WHATSAPP
               </button>
+              ${hasPixPending ? 
+                `<button class="btn btn-sm btn-primary" onclick="generateCrmPixQrCode('${orderId}')" 
+                        title="Gerar Código PIX" 
+                        style="margin-left: 8px; white-space: nowrap; padding: 6px 12px;">
+                  💳 GERAR CÓDIGO PIX
+                </button>` 
+                : ''}
             </div>
 
             <!-- Produtos do dia -->
@@ -490,6 +500,221 @@ async function openCrmCustomerDetail(customerId) {
 // Fechar modal de detalhes
 function closeCrmDetailModal() {
   document.getElementById('crmDetailModal').classList.remove('open');
+}
+
+// ==================== PIX QR CODE GENERATION ====================
+
+// Variável para armazenar dados do PIX gerado
+let crmCurrentPixData = null;
+let crmCurrentOrderId = null;
+
+// Gerar QR code PIX para pedido do CRM
+async function generateCrmPixQrCode(orderId) {
+  if (!orderId || !crmOrdersData[orderId]) {
+    showToast('Erro: Pedido não encontrado', 'error');
+    return;
+  }
+
+  const orderData = crmOrdersData[orderId];
+  
+  // Abrir modal de carregamento
+  const modal = document.getElementById('crmPixQrModal');
+  if (modal) modal.classList.add('open');
+  
+  // Atualizar informações do cliente e valor
+  document.getElementById('crmPixClientName').textContent = orderData.customerName;
+  document.getElementById('crmPixAmount').textContent = `R$ ${orderData.dayTotal.toFixed(2)}`;
+  document.getElementById('crmPixQrCode').innerHTML = '⏳ Gerando QR Code...';
+  document.getElementById('crmPixCode').value = '';
+  
+  crmCurrentOrderId = orderId;
+  
+  try {
+    console.log('📝 Gerando PIX para CRM...', { amount: orderData.dayTotal });
+    
+    // Chamar API de pagamento PIX (mesma do site)
+    const response = await fetch(API_BASE + '/payments/pix', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: null,
+        amount: orderData.dayTotal,
+        description: 'Pagamento - Cia de Condimentos (Pedido Admin)',
+        payerEmail: 'admin@condimentos.com',
+        payerPhone: orderData.customerWhatsApp || ''
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Erro ao gerar PIX');
+    }
+
+    const pixData = await response.json();
+    console.log('✅ PIX gerado com sucesso:', pixData);
+    
+    // Armazenar dados do PIX
+    crmCurrentPixData = {
+      mp_payment_id: pixData.mp_payment_id,
+      qr_code: pixData.qr_code,
+      qr_code_base64: pixData.qr_code_base64,
+      status: pixData.status,
+      amount: pixData.amount
+    };
+
+    // Exibir QR code
+    const qrCodeDiv = document.getElementById('crmPixQrCode');
+    if (pixData.qr_code_base64) {
+      qrCodeDiv.innerHTML = `<img src="data:image/png;base64,${pixData.qr_code_base64}" style="width: 100%; height: auto; border-radius: 8px;">`;
+    } else {
+      qrCodeDiv.innerHTML = '❌ Erro ao carregar QR Code';
+    }
+
+    // Exibir código PIX
+    const pixCodeInput = document.getElementById('crmPixCode');
+    if (pixData.qr_code) {
+      pixCodeInput.value = pixData.qr_code;
+    }
+
+    showToast('✅ Código PIX gerado com sucesso!', 'success');
+    
+  } catch (error) {
+    console.error('❌ Erro ao gerar PIX:', error);
+    showToast(`Erro ao gerar PIX: ${error.message}`, 'error');
+    document.getElementById('crmPixQrCode').innerHTML = `❌ ${error.message}`;
+  }
+}
+
+// Fechar modal de PIX QR code
+function closeCrmPixQrModal() {
+  const modal = document.getElementById('crmPixQrModal');
+  if (modal) modal.classList.remove('open');
+  crmCurrentPixData = null;
+  crmCurrentOrderId = null;
+}
+
+// Copiar código PIX para clipboard
+function copyCrmPixCode() {
+  const input = document.getElementById('crmPixCode');
+  if (!input.value) {
+    showToast('Nenhum código PIX para copiar', 'warning');
+    return;
+  }
+  
+  input.select();
+  document.execCommand('copy');
+  showToast('✅ Código PIX copiado!', 'success');
+}
+
+// Baixar QR Code como imagem
+function downloadCrmPixQrCode() {
+  if (!crmCurrentPixData || !crmCurrentPixData.qr_code_base64) {
+    showToast('❌ QR Code não disponível', 'error');
+    return;
+  }
+
+  try {
+    // Converter base64 para blob
+    const byteCharacters = atob(crmCurrentPixData.qr_code_base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+
+    // Criar link de download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qr-code-pix-${new Date().getTime()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    showToast('✅ QR Code baixado com sucesso!', 'success');
+  } catch (error) {
+    console.error('Erro ao baixar QR Code:', error);
+    showToast('Erro ao baixar QR Code', 'error');
+  }
+}
+
+// Enviar PIX via WhatsApp
+function sendCrmPixViaWhatsApp() {
+  if (!crmCurrentOrderId || !crmOrdersData[crmCurrentOrderId] || !crmCurrentPixData) {
+    showToast('Erro: Dados de PIX não encontrados', 'error');
+    return;
+  }
+
+  const orderData = crmOrdersData[crmCurrentOrderId];
+  const whatsapp = orderData.customerWhatsApp?.replace(/\D/g, '') || '';
+  
+  if (!whatsapp) {
+    showToast('❌ Cliente não tem WhatsApp cadastrado', 'error');
+    return;
+  }
+
+  try {
+    // Pegar a imagem do QR code
+    const qrImage = document.querySelector('#crmPixQrCode img');
+    
+    if (qrImage && qrImage.src) {
+      // Converter imagem para blob para copiar para clipboard
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        canvas.toBlob(async (blob) => {
+          try {
+            // Tentar copiar a imagem para clipboard (suporta navegadores modernos)
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                'image/png': blob
+              })
+            ]);
+            console.log('✅ Imagem QR Code copiada para clipboard');
+          } catch (clipboardErr) {
+            console.log('ℹ️ Clipboard para imagem não suportado, continue com o texto');
+          }
+          
+          // Preparar mensagem com código PIX
+          const message = `Olá! 👋\n\nGostaria de compartilhar o código PIX para o seu pagamento.\n\n💰 *Valor:* R$ ${orderData.dayTotal.toFixed(2)}\n📅 *Data:* ${orderData.purchaseDate}\n\n*Código PIX:*\n${crmCurrentPixData.qr_code}\n\nEscaneie o QR code acima ou copie e cole o código na seu banco para efetuar o pagamento.`;
+          
+          // Abrir WhatsApp
+          const whatsappUrl = `https://wa.me/55${whatsapp}?text=${encodeURIComponent(message)}`;
+          window.open(whatsappUrl, '_blank');
+          
+          showToast('✅ WhatsApp aberto! A imagem foi copiada (cole com Ctrl+V)', 'success');
+        }, 'image/png');
+      };
+      
+      img.onerror = () => {
+        // Se não conseguir carregar a imagem, enviar apenas o texto
+        const message = `Olá! 👋\n\nGostaria de compartilhar o código PIX para o seu pagamento.\n\n💰 *Valor:* R$ ${orderData.dayTotal.toFixed(2)}\n📅 *Data:* ${orderData.purchaseDate}\n\n*Código PIX:*\n${crmCurrentPixData.qr_code}\n\nEscaneie o QR code acima ou copie e cole o código na seu banco para efetuar o pagamento.`;
+        const whatsappUrl = `https://wa.me/55${whatsapp}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+        showToast('✅ WhatsApp aberto com código PIX!', 'success');
+      };
+      
+      img.src = qrImage.src;
+    } else {
+      // Se não houver imagem no DOM, enviar apenas o texto
+      const message = `Olá! 👋\n\nGostaria de compartilhar o código PIX para o seu pagamento.\n\n💰 *Valor:* R$ ${orderData.dayTotal.toFixed(2)}\n📅 *Data:* ${orderData.purchaseDate}\n\n*Código PIX:*\n${crmCurrentPixData.qr_code}\n\nEscaneie o QR code acima ou copie e cole o código na seu banco para efetuar o pagamento.`;
+      const whatsappUrl = `https://wa.me/55${whatsapp}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+      showToast('✅ WhatsApp aberto com código PIX!', 'success');
+    }
+  } catch (error) {
+    console.error('Erro ao enviar via WhatsApp:', error);
+    showToast('Erro ao processar', 'error');
+  }
 }
 
 // ==================== PURCHASES MANAGEMENT ====================
@@ -574,24 +799,36 @@ async function openAddCrmPurchase(customerId) {
     const products = await response.json();
 
     let productsHtml = products.map(p => `
-      <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="crm-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
         <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${p.price})">
         <div style="flex: 1;">
           <label for="crmProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
           <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
         </div>
         <div style="display: none;" id="crmProdQty-${p.id}-container" class="crm-qty-container">
-          <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 70px; padding: 6px; border: 1px solid #ddd; border-radius: 4px;">
-          <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button onclick="decrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+            <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+            <button onclick="incrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+            <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+          </div>
         </div>
       </div>
     `).join('');
 
     body.innerHTML = `
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight: 600; display: block; margin-bottom: 8px;">🔍 Pesquisar Produtos</label>
+        <input type="text" id="crmProductSearch" placeholder="Digite o nome do produto..." style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+        <div style="font-size: 12px; color: #999; margin-top: 4px;" id="crmSearchResults">Mostrando ${products.length} produto(s)</div>
+      </div>
+
       <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
         <div style="margin-bottom: 15px;">
           <label style="font-weight: 600; display: block; margin-bottom: 10px;">📦 Selecione os Produtos *</label>
-          ${productsHtml}
+          <div id="crmProductsList">
+            ${productsHtml}
+          </div>
         </div>
       </div>
 
@@ -634,6 +871,11 @@ async function openAddCrmPurchase(customerId) {
         <textarea id="crmPurchaseNotes" placeholder="Anotações sobre estas compras..."></textarea>
       </div>
     `;
+
+    // Adicionar evento de busca
+    document.getElementById('crmProductSearch').addEventListener('input', (e) => {
+      filterCrmProducts(e.target.value, products.length);
+    });
 
     document.getElementById('crmPurchaseModal').dataset.customerId = customerId;
     delete document.getElementById('crmPurchaseModal').dataset.purchaseId;
@@ -692,6 +934,29 @@ function calculateCrmGrandTotal() {
   }
 }
 
+// Filtrar produtos por busca
+function filterCrmProducts(query, totalProducts) {
+  const items = document.querySelectorAll('.crm-product-item');
+  let visibleCount = 0;
+
+  items.forEach(item => {
+    const productName = item.dataset.productName || '';
+    const matches = productName.includes(query.toLowerCase());
+    item.style.display = matches ? 'flex' : 'none';
+    if (matches) visibleCount++;
+  });
+
+  // Atualizar contador de resultados
+  const searchResults = document.getElementById('crmSearchResults');
+  if (searchResults) {
+    if (query.trim()) {
+      searchResults.textContent = `${visibleCount} de ${totalProducts} produto(s) encontrado(s)`;
+    } else {
+      searchResults.textContent = `Mostrando ${totalProducts} produto(s)`;
+    }
+  }
+}
+
 
 // Abrir modal para editar compra
 async function openEditCrmPurchase(customerId, purchaseId) {
@@ -720,7 +985,11 @@ async function openEditCrmPurchase(customerId, purchaseId) {
       <div class="form-row-3">
         <div class="fg">
           <label>Quantidade *</label>
-          <input type="number" id="crmProdQty" placeholder="1" min="1" step="1" value="${purchase.quantity}">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button onclick="decrementQty('crmProdQty')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+            <input type="number" id="crmProdQty" placeholder="1" min="1" step="1" value="${purchase.quantity}" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+            <button onclick="incrementQty('crmProdQty')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+          </div>
         </div>
         <div class="fg">
           <label>Valor Unitário (R$) *</label>

@@ -39,6 +39,7 @@ const corsOptions = {
       'https://ciadecondimento.netlify.app',
       'https://ciadecondimentosteste.netlify.app',
       'https://ciadecondimentos.netlify.app',
+      'https://ciadecondimentoseespeciarias.netlify.app',
       'https://cia-de-condimentos.onrender.com',
       process.env.FRONTEND_URL
     ].filter(Boolean);
@@ -236,7 +237,7 @@ const PORT = process.env.PORT || 3000;
       console.log(`✅ Server listening on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Backend URL: ${process.env.BACKEND_URL || `http://localhost:${PORT}`}`);
-      console.log(`🌐 CORS enabled for: https://ciadecondimentosteste.netlify.app, localhost:*`);
+      console.log(`🌐 CORS enabled for: https://ciadecondimentoseespeciarias.netlify.app, localhost:*, e outros domínios`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

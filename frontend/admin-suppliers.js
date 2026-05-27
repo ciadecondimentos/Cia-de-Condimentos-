@@ -1,19 +1,5 @@
 // ==================== SUPPLIERS MANAGEMENT ====================
 
-// Funções helper para valores seguros (evita NaN)
-function safeNumber(value, defaultValue = 0) {
-  if (value === null || value === undefined || value === '') {
-    return defaultValue;
-  }
-  const num = parseFloat(value);
-  return isNaN(num) ? defaultValue : num;
-}
-
-function formatMoney(value, defaultValue = '0.00') {
-  const num = safeNumber(value, 0);
-  return num.toFixed(2);
-}
-
 // Estado global dos fornecedores
 const suppliersState = {
   currentSupplierId: null,
@@ -26,6 +12,12 @@ const suppliersState = {
 let suppliersSelectedProducts = {};
 
 // ===== HELPER FUNCTIONS FOR DATE HANDLING (from CRM) =====
+// Helper: Converter valor para número seguramente
+function safeNumber(value) {
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+
 // Helper: Função para obter data local em formato YYYY-MM-DD (sem timezone)
 function getLocalDateString(date) {
   const year = date.getFullYear();
@@ -76,8 +68,8 @@ function renderSuppliersTable() {
     html = `<tr><td colspan="7" style="text-align: center; padding: 40px; color: #aaa;">Nenhum fornecedor cadastrado</td></tr>`;
   } else {
     html = suppliersState.suppliers.map(supplier => {
-      const debtAmount = safeNumber(supplier.stats?.pending, 0);
-      const totalSpent = safeNumber(supplier.stats?.total_spent, 0);
+      const debtAmount = supplier.stats?.pending || 0;
+      const totalSpent = supplier.stats?.total_spent || 0;
       const isDebtor = debtAmount > 0;
       
       return `
@@ -95,8 +87,8 @@ function renderSuppliersTable() {
           <td data-label="Situação" style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
             ${isDebtor ? '💔 Devedor' : '✓ Em dia'}
           </td>
-          <td data-label="Total Comprado" style="text-align: right;">R$ ${formatMoney(totalSpent)}</td>
-          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${formatMoney(debtAmount)}</td>
+          <td data-label="Total Comprado" style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
+          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
           <td data-label="Ações">
             <button class="btn btn-sm btn-ghost" onclick="openSupplierDetail(${supplier.id})" title="Ver detalhes">👁️</button>
             <button class="btn btn-sm btn-ghost" onclick="openEditSupplier(${supplier.id})" title="Editar">✏️</button>
@@ -349,43 +341,43 @@ async function openSupplierDetail(supplierId) {
     title.textContent = `📊 ${supplier.company_name}`;
 
     // Dashboard do fornecedor
-    const monthRevenue = safeNumber(periodStats?.this_month, 0);
-    const yearRevenue = safeNumber(periodStats?.this_year, 0);
-    const avgTicket = safeNumber(stats?.average_ticket, 0);
-    const pendingAmount = safeNumber(stats?.pending, 0);
-    const paidAmount = safeNumber(stats?.paid, 0);
+    const monthRevenue = periodStats?.this_month || 0;
+    const yearRevenue = periodStats?.this_year || 0;
+    const avgTicket = stats?.average_ticket || 0;
+    const pendingAmount = stats?.pending || 0;
+    const paidAmount = stats?.paid || 0;
     
     let html = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--vermelho);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total Comprado</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${formatMoney(stats?.total_spent, '0.00')}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${parseFloat(stats?.total_spent || 0).toFixed(2)}</div>
         </div>
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--amarelo);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Número de Compras</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${safeNumber(stats?.total_purchases, 0)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${stats?.total_purchases || 0}</div>
         </div>
         <div style="background: #d4edda; padding: 16px; border-radius: 8px; border-left: 4px solid #27ae60;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Pago</div>
-          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${formatMoney(paidAmount)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${parseFloat(paidAmount).toFixed(2)}</div>
         </div>
         <div style="background: #fff3cd; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Em Aberto</div>
-          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${formatMoney(pendingAmount)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${parseFloat(pendingAmount).toFixed(2)}</div>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(avgTicket)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(avgTicket).toFixed(2)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Ticket Médio</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(monthRevenue)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(monthRevenue).toFixed(2)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Mês</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${formatMoney(yearRevenue)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(yearRevenue).toFixed(2)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Ano</div>
         </div>
       </div>
@@ -433,8 +425,8 @@ async function openSupplierDetail(supplierId) {
         let dayTotal = 0;
         let dayQty = 0;
         dateItems.forEach(item => {
-          dayTotal += safeNumber(item.total_price, 0);
-          dayQty += safeNumber(item.quantity, 0);
+          dayTotal += parseFloat(item.total_price);
+          dayQty += item.quantity;
         });
 
         // Status mais crítico do dia (pendente > parcial > pago)
@@ -456,7 +448,7 @@ async function openSupplierDetail(supplierId) {
                 </div>
               </div>
               <div style="text-align: right;">
-                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${formatMoney(dayTotal)}</div>
+                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${dayTotal.toFixed(2)}</div>
                 <span class="status-pill s-${dayStatus}" style="font-size: 10px; margin-top: 4px; display: inline-block;">
                   ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
                 </span>
@@ -470,12 +462,12 @@ async function openSupplierDetail(supplierId) {
                   <div style="flex: 1;">
                     <div style="font-weight: 700; color: var(--marrom); font-size: 12px;">${item.product_name}</div>
                     <div style="font-size: 10px; color: #999; margin-top: 2px;">
-                      ${item.quantity} unid. × R$ ${formatMoney(item.unit_price)}
+                      ${item.quantity} unid. × R$ ${parseFloat(item.unit_price).toFixed(2)}
                       ${item.payment_method ? ` • ${item.payment_method}` : ''}
                     </div>
                   </div>
                   <div style="text-align: right; margin-left: 12px;">
-                    <div style="font-weight: 700; color: var(--vermelho); font-size: 12px;">R$ ${formatMoney(item.total_price)}</div>
+                    <div style="font-weight: 700; color: var(--vermelho); font-size: 12px;">R$ ${parseFloat(item.total_price).toFixed(2)}</div>
                   </div>
                   <div style="margin-left: 12px;">
                     <button class="btn btn-sm btn-ghost" onclick="openEditSupplierPurchase(${supplierId}, ${item.id})" title="Editar" style="padding: 4px 8px; font-size: 11px;">✏️</button>
@@ -729,7 +721,7 @@ async function openEditSupplierPurchase(supplierId, purchaseId) {
         </div>
         <div class="fg">
           <label>Total (R$)</label>
-          <input type="number" id="supplierProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${formatMoney(purchase.total_price, '0.00')}">
+          <input type="number" id="supplierProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${parseFloat(purchase.total_price || 0).toFixed(2)}">
         </div>
       </div>
       <div class="form-row-2">
@@ -793,8 +785,8 @@ async function saveSupplierPurchase() {
   // Se está editando uma compra individual
   if (purchaseId) {
     const productName = document.getElementById('supplierProdName').value.trim();
-    const quantity = safeNumber(document.getElementById('supplierProdQty').value, 0);
-    const unitPrice = safeNumber(document.getElementById('supplierProdPrice').value, 0);
+    const quantity = parseInt(document.getElementById('supplierProdQty').value);
+    const unitPrice = parseFloat(document.getElementById('supplierProdPrice').value);
     const purchaseDate = document.getElementById('supplierPurchaseDate').value;
 
     if (!productName || !quantity || !unitPrice || !purchaseDate) {
@@ -962,8 +954,8 @@ function searchSuppliers(query) {
         <td style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
           ${isDebtor ? '💔 Devedor' : '✓ Em dia'}
         </td>
-        <td style="text-align: right;">R$ ${formatMoney(totalSpent)}</td>
-        <td style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${formatMoney(debtAmount)}</td>
+        <td style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
+        <td style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
         <td>
           <button class="btn btn-sm btn-ghost" onclick="openSupplierDetail(${supplier.id})" title="Ver detalhes">👁️</button>
           <button class="btn btn-sm btn-ghost" onclick="openEditSupplier(${supplier.id})" title="Editar">✏️</button>
@@ -976,50 +968,7 @@ function searchSuppliers(query) {
   tbody.innerHTML = html;
 }
 
-// ==================== SUPPLIERS DASHBOARD ====================
-
-// Carregar e exibir dashboards dos fornecedores
-function loadSuppliersDashboard() {
-  if (!suppliersState.suppliers || suppliersState.suppliers.length === 0) {
-    // Se os fornecedores não estão carregados, carregar primeiro
-    fetch(`${API_BASE}/suppliers`)
-      .then(res => res.json())
-      .then(suppliers => {
-        suppliersState.suppliers = suppliers;
-        renderSuppliersDashboard(suppliers);
-      })
-      .catch(error => {
-        console.error('Erro ao carregar fornecedores para dashboard:', error);
-        renderSuppliersDashboardEmpty();
-      });
-  } else {
-    renderSuppliersDashboard(suppliersState.suppliers);
-  }
-}
-
-function renderSuppliersDashboard(suppliers) {
-  // Calcular estatísticas
-  const totalSuppliers = suppliers.length;
-  const totalBought = suppliers.reduce((sum, s) => sum + safeNumber(s.stats?.total_spent, 0), 0);
-  const totalPending = suppliers.reduce((sum, s) => sum + safeNumber(s.stats?.pending, 0), 0);
-  const debtorCount = suppliers.filter(s => safeNumber(s.stats?.pending, 0) > 0).length;
-
-  // Atualizar os elementos do dashboard
-  document.getElementById('suppliers-total').textContent = totalSuppliers.toString();
-  document.getElementById('suppliers-total-bought').textContent = `R$ ${formatMoney(totalBought)}`;
-  document.getElementById('suppliers-total-pending').textContent = `R$ ${formatMoney(totalPending)}`;
-  document.getElementById('suppliers-debtors').textContent = debtorCount.toString();
-}
-
-function renderSuppliersDashboardEmpty() {
-  document.getElementById('suppliers-total').textContent = '0';
-  document.getElementById('suppliers-total-bought').textContent = 'R$ 0,00';
-  document.getElementById('suppliers-total-pending').textContent = 'R$ 0,00';
-  document.getElementById('suppliers-debtors').textContent = '0';
-}
-
 // Inicializar fornecedores quando a página for carregada
 function initializeSuppliers() {
   loadSuppliers('all');
-  loadSuppliersDashboard();
 }

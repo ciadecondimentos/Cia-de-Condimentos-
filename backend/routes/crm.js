@@ -95,7 +95,7 @@ router.get('/customers/:id', async (req, res) => {
         COALESCE(SUM(total_price), 0) as total_spent,
         COALESCE(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END), 0) as paid,
         COALESCE(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END), 0) as pending,
-        COALESCE(AVG(total_price), 0) as average_ticket,
+        AVG(total_price) as average_ticket,
         MAX(purchase_date) as last_purchase,
         MIN(purchase_date) as first_purchase
       FROM crm_purchases 
@@ -270,9 +270,7 @@ router.post('/customers/:id/purchases', async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios não preenchidos' });
     }
 
-    const parsedQuantity = parseFloat(quantity);
-    const parsedUnitPrice = parseFloat(unit_price);
-    const total_price = parsedQuantity * parsedUnitPrice;
+    const total_price = quantity * unit_price;
 
     // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
     const purchaseDateOnly = purchase_date.split('T')[0];
@@ -284,7 +282,7 @@ router.post('/customers/:id/purchases', async (req, res) => {
        (customer_id, product_name, quantity, unit_price, total_price, purchase_date, payment_method, payment_status, notes) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
        RETURNING *`,
-      [id, product_name, parsedQuantity, parsedUnitPrice, total_price, purchaseDateOnly, payment_method, payment_status || 'pendente', notes]
+      [id, product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status || 'pendente', notes]
     );
 
     console.log('Compra salva:', result.rows[0]);
@@ -305,14 +303,7 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
 
     console.log('PUT /purchases/:id - purchase_date recebido:', purchase_date);
 
-    const parsedQuantity = quantity ? parseFloat(quantity) : null;
-    const parsedUnitPrice = unit_price ? parseFloat(unit_price) : null;
-    
-    // Recalcular total_price apenas se quantity ou unit_price foram fornecidos
-    let total_price = null;
-    if (parsedQuantity !== null && parsedUnitPrice !== null) {
-      total_price = parsedUnitPrice * parsedQuantity;
-    }
+    let total_price = unit_price * quantity;
 
     // Corrigir problema de timezone: extrair apenas a data (YYYY-MM-DD) sem converter para UTC
     const purchaseDateOnly = purchase_date ? purchase_date.split('T')[0] : null;
@@ -324,7 +315,7 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
        SET product_name = COALESCE($1, product_name),
            quantity = COALESCE($2, quantity),
            unit_price = COALESCE($3, unit_price),
-           total_price = COALESCE($4, total_price),
+           total_price = $4,
            purchase_date = COALESCE($5, purchase_date),
            payment_method = COALESCE($6, payment_method),
            payment_status = COALESCE($7, payment_status),
@@ -332,20 +323,12 @@ router.put('/customers/:id/purchases/:purchaseId', async (req, res) => {
            updated_at = NOW()
        WHERE id = $9 AND customer_id = $10
        RETURNING *`,
-      [product_name, parsedQuantity, parsedUnitPrice, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
+      [product_name, quantity, unit_price, total_price, purchaseDateOnly, payment_method, payment_status, notes, purchaseId, id]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Compra não encontrada' });
     }
-
-    console.log('Compra atualizada com sucesso:', {
-      id: result.rows[0].id,
-      quantity: result.rows[0].quantity,
-      unit_price: result.rows[0].unit_price,
-      total_price: result.rows[0].total_price,
-      payment_status: result.rows[0].payment_status
-    });
 
     res.json(result.rows[0]);
   } catch (error) {

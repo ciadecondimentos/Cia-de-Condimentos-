@@ -49,22 +49,6 @@ let paymentPollingFailures = 0;
 let paymentPollingStartTime = null;
 let paymentPollingInterval_ms = 2000; // Começa a cada 2s, pode aumentar com backoff
 
-// ==================== HELPER FUNCTIONS ====================
-// Função para fazer parse seguro de valores numéricos (evita NaN)
-function safeNumber(value, defaultValue = 0) {
-  if (value === null || value === undefined || value === '') {
-    return defaultValue;
-  }
-  const num = parseFloat(value);
-  return isNaN(num) ? defaultValue : num;
-}
-
-// Função para formatar número com 2 casas decimais (evita NaN na exibição)
-function formatMoney(value, defaultValue = '0.00') {
-  const num = safeNumber(value, 0);
-  return num.toFixed(2);
-}
-
 // Função para formatar valores em moeda
 function formatCurrency(value) {
   const num = parseFloat(value) || 0;
@@ -1799,11 +1783,11 @@ function createWaitingForPaymentModal() {
         '<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
           '<small style="color: #666;">💡 <strong>Dica:</strong> Você pode voltar à tela de pagamento para copiar o código PIX se necessário.</small>' +
         '</div>' +
-        '<div class="button-container-flex" style="margin-top: 16px;">' +
-          '<button onclick="goBackToPixPayment()" style="background: var(--marrom); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; min-height: 44px;">' +
+        '<div style="display: flex; gap: 8px; margin-top: 16px;">' +
+          '<button onclick="goBackToPixPayment()" style="flex: 1; background: var(--marrom); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
             '← Voltar ao PIX' +
           '</button>' +
-          '<button onclick="testConfirmPayment()" style="background: #27a745; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; min-height: 44px;">' +
+          '<button onclick="testConfirmPayment()" style="flex: 1; background: #27a745; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
             '🧪 Testar Confirmação' +
           '</button>' +
         '</div>' +
@@ -1905,9 +1889,9 @@ function createPaymentConfirmedModal() {
     return;
   }
   
-  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 9999; position: fixed; inset: 0; align-items: center; justify-content: center; padding: 16px;">' +
+  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 9999; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 0;">' +
     '<div class="modal-overlay" style="position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.8); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
-    '<div class="modal-content payment-confirmed-content" style="width: 100%; height: auto; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 9999; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden; max-width: 480px;">' +
+    '<div class="modal-content payment-confirmed-content" style="width: 100%; height: 100%; max-height: 100vh; border-radius: 0; box-shadow: none; z-index: 9999; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden; max-width: 100%;">' +
       '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 24px 20px; text-align: center; border-radius: 0; flex-shrink: 0;">' +
         '<div style="font-size: 64px; margin-bottom: 12px; animation: bounce 0.6s ease-in-out; line-height: 1;">✅</div>' +
         '<h1 style="margin: 0; font-size: 26px; font-weight: 900; line-height: 1.2;">Pagamento<br>Confirmado!</h1>' +

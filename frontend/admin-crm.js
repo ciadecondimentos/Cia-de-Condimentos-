@@ -1333,7 +1333,7 @@ async function openAddCrmPurchase(customerId) {
 
     let productsHtml = products.map(p => `
       <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="crm-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
-        <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${p.price})">
+        <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${parseFloat(p.price)}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${parseFloat(p.price)})">
         <div style="flex: 1;">
           <label for="crmProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
           <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
@@ -1428,7 +1428,7 @@ function toggleCrmProduct(productId, productName, productPrice) {
     crmSelectedProducts[productId] = {
       id: productId,
       name: productName,
-      price: productPrice,
+      price: parseFloat(productPrice),
       quantity: 1
     };
     qtyContainer.style.display = 'inline-flex';
@@ -1447,7 +1447,8 @@ function calculateCrmGrandTotal() {
   Object.values(crmSelectedProducts).forEach(product => {
     const qtyInput = document.getElementById(`crmProdQty-${product.id}`);
     const quantity = parseInt(qtyInput.value) || 0;
-    const subtotal = quantity * product.price;
+    const price = parseFloat(product.price) || 0;
+    const subtotal = quantity * price;
 
     // Atualizar subtotal do produto
     const subtotalSpan = document.getElementById(`crmProdSubtotal-${product.id}`);
@@ -1671,8 +1672,8 @@ async function saveCrmPurchase() {
     const savePromises = Object.values(crmSelectedProducts).map(product => {
       const payload = {
         product_name: product.name,
-        quantity: product.quantity,
-        unit_price: product.price,
+        quantity: parseInt(product.quantity) || 0,
+        unit_price: parseFloat(product.price) || 0,
         purchase_date: purchaseDate,
         payment_method: paymentMethod,
         payment_status: paymentStatus,

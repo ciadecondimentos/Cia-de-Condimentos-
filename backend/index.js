@@ -39,6 +39,7 @@ const corsOptions = {
       'https://ciadecondimento.netlify.app',
       'https://ciadecondimentosteste.netlify.app',
       'https://ciadecondimentos.netlify.app',
+      'https://ciadecondimentoseespeciarias.netlify.app',
       'https://cia-de-condimentos.onrender.com',
       process.env.FRONTEND_URL
     ].filter(Boolean);

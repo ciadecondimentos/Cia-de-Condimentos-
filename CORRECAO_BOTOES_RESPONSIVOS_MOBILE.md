@@ -81,7 +81,7 @@ Selecione modo mobile (Ctrl+Shift+M)
 ```
 
 ### Opção 2: Testar no site ao vivo
-1. Abra https://condimento.netlify.app no mobile
+1. Abra https://ciadecondimentoseespeciarias.netlify.app no mobile
 2. Adicione produtos ao carrinho
 3. Clique em "Finalizar Compra"
 4. Selecione PIX

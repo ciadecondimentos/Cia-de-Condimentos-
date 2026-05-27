@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste - Botões Responsivos Mobile</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: 'Lato', sans-serif;
+      background: #FFF8E7;
+      color: #3E2723;
+      padding: 20px;
+    }
+    
+    .test-container {
+      max-width: 480px;
+      margin: 0 auto;
+      border: 2px solid #A71A14;
+      border-radius: 12px;
+      padding: 20px;
+      background: white;
+    }
+    
+    h2 {
+      text-align: center;
+      color: #A71A14;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    
+    .modal-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #fafafa;
+      border-top: 1px solid #e0e0e0;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .modal-footer button {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+      min-height: 44px;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .whatsapp-btn {
+      background: #25d366;
+      color: white;
+    }
+    
+    .close-btn {
+      background: #3E2723;
+      color: white;
+    }
+    
+    .pix-btn {
+      background: #A71A14;
+      color: white;
+    }
+    
+    .copy-btn {
+      background: #F5C518;
+      color: #3E2723;
+    }
+    
+    .pix-code-container {
+      background: #f5f5f5;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: stretch;
+    }
+    
+    .pix-code-container code {
+      font-family: monospace;
+      font-size: 11px;
+      color: #3E2723;
+      word-break: break-all;
+      background: white;
+      padding: 8px;
+      border-radius: 4px;
+      max-height: 50px;
+      overflow-y: auto;
+    }
+    
+    .qr-code {
+      width: 200px;
+      height: 200px;
+      background: #f0e8d0;
+      border-radius: 8px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 60px;
+      color: #999;
+    }
+    
+    .device-label {
+      text-align: center;
+      font-size: 11px;
+      color: #999;
+      margin-top: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    @media (max-width: 479px) {
+      body { padding: 12px; }
+      .test-container { padding: 16px; }
+      h2 { font-size: 16px; margin-bottom: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<h1 style="text-align: center; color: #A71A14; margin-bottom: 30px; font-size: 24px;">🧪 Teste Responsivo Mobile</h1>
+
+<!-- Modal de Confirmação de PIX -->
+<div class="test-container">
+  <h2>✓ Modal de Confirmação PIX</h2>
+  <div style="margin-bottom: 16px;">
+    <p style="font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">Valor Total</p>
+    <div style="font-size: 28px; font-weight: 900; color: #A71A14;">R$ 150,00</div>
+  </div>
+  
+  <div class="modal-footer">
+    <button class="pix-btn">✓ Gerar QR Code</button>
+    <button class="close-btn">Voltar</button>
+  </div>
+  <div class="device-label">Mobile (< 480px)</div>
+</div>
+
+<!-- Modal com QR Code -->
+<div class="test-container">
+  <h2>📱 Modal QR Code PIX</h2>
+  <div class="qr-code">🔲 QR</div>
+  
+  <div class="pix-code-container">
+    <span style="font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px;">Código PIX (Cópia e Cola):</span>
+    <code>00020126580014br.gov.bcb.pix000136xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx52040000530398654061234.565802BR5913Example6009ExampleCidade62410503***63041D3D</code>
+    <button class="copy-btn">📋 Copiar</button>
+  </div>
+  
+  <div class="modal-footer">
+    <button class="close-btn">✕ Cancelar Pagamento</button>
+  </div>
+  <div class="device-label">Mobile (< 480px)</div>
+</div>
+
+<!-- Modal de Confirmação de Pagamento -->
+<div class="test-container">
+  <h2>✅ Pagamento Confirmado</h2>
+  <div style="margin-bottom: 16px; padding: 14px; background: #f0f8f0; border-radius: 8px;">
+    <p style="font-size: 12px; color: #666; margin: 0 0 6px 0;">Número do Pedido</p>
+    <p style="font-size: 24px; font-weight: 900; color: #3E2723; margin: 0; word-break: break-word;">PED-2026-05-001</p>
+  </div>
+  
+  <div style="margin-bottom: 16px; padding: 14px; background: #f0f8f0; border-radius: 8px;">
+    <p style="font-size: 12px; color: #666; margin: 0 0 6px 0;">Valor Pago</p>
+    <p style="font-size: 24px; font-weight: 900; color: #27a745; margin: 0;">R$ 250,75</p>
+  </div>
+  
+  <div class="modal-footer">
+    <button class="whatsapp-btn">💬 WhatsApp</button>
+    <button class="close-btn">Fechar</button>
+  </div>
+  <div class="device-label">Mobile (< 480px)</div>
+</div>
+
+<hr style="margin: 30px 0; border: 1px solid #e0e0e0;">
+
+<h2 style="text-align: center; color: #999; font-size: 14px; margin: 30px 0;">
+  📱 Abra este arquivo em um smartphone ou use Ctrl+Shift+I (DevTools) → Modo Mobile para testar
+</h2>
+
+<div style="background: #f0e8d0; padding: 16px; border-radius: 8px; text-align: center; color: #3E2723; font-size: 12px; line-height: 1.6;">
+  <strong>Checklist de Responsividade:</strong><br>
+  ✓ Botões ocupam 100% da largura<br>
+  ✓ Botões têm altura mínima de 44px (mobile-friendly)<br>
+  ✓ Nenhum overflow horizontal<br>
+  ✓ Espaçamento adequado entre elementos<br>
+  ✓ Fonte legível em mobile<br>
+  ✓ Código PIX com scroll vertical (não horizontal)<br>
+  ✓ Todos os botões clicáveis e tocáveis<br>
+</div>
+
+</body>
+</html>

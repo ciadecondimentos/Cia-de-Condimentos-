@@ -1783,11 +1783,11 @@ function createWaitingForPaymentModal() {
         '<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin: 16px 0; border-left: 4px solid var(--verde);">' +
           '<small style="color: #666;">💡 <strong>Dica:</strong> Você pode voltar à tela de pagamento para copiar o código PIX se necessário.</small>' +
         '</div>' +
-        '<div style="display: flex; gap: 8px; margin-top: 16px;">' +
-          '<button onclick="goBackToPixPayment()" style="flex: 1; background: var(--marrom); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
+        '<div class="button-container-flex" style="margin-top: 16px;">' +
+          '<button onclick="goBackToPixPayment()" style="background: var(--marrom); color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; min-height: 44px;">' +
             '← Voltar ao PIX' +
           '</button>' +
-          '<button onclick="testConfirmPayment()" style="flex: 1; background: #27a745; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px;">' +
+          '<button onclick="testConfirmPayment()" style="background: #27a745; color: white; border: none; padding: 12px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; min-height: 44px;">' +
             '🧪 Testar Confirmação' +
           '</button>' +
         '</div>' +
@@ -1889,9 +1889,9 @@ function createPaymentConfirmedModal() {
     return;
   }
   
-  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 9999; position: fixed; inset: 0; align-items: flex-end; justify-content: center; padding: 0;">' +
+  var html = '<div id="paymentConfirmedModal" class="modal payment-confirmed-modal open" style="display: flex !important; z-index: 9999; position: fixed; inset: 0; align-items: center; justify-content: center; padding: 16px;">' +
     '<div class="modal-overlay" style="position: fixed; inset: 0; z-index: 9998; background: rgba(0,0,0,0.8); cursor: pointer;" onclick="closePaymentConfirmedModal()"></div>' +
-    '<div class="modal-content payment-confirmed-content" style="width: 100%; height: 100%; max-height: 100vh; border-radius: 0; box-shadow: none; z-index: 9999; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden; max-width: 100%;">' +
+    '<div class="modal-content payment-confirmed-content" style="width: 100%; height: auto; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); z-index: 9999; display: flex; flex-direction: column; background: white; position: relative; overflow: hidden; max-width: 480px;">' +
       '<div style="background: linear-gradient(135deg, #27a745 0%, #20c997 100%); color: white; padding: 24px 20px; text-align: center; border-radius: 0; flex-shrink: 0;">' +
         '<div style="font-size: 64px; margin-bottom: 12px; animation: bounce 0.6s ease-in-out; line-height: 1;">✅</div>' +
         '<h1 style="margin: 0; font-size: 26px; font-weight: 900; line-height: 1.2;">Pagamento<br>Confirmado!</h1>' +

@@ -687,7 +687,7 @@ tr:hover td { background: #faf7f2; }
 
 /* MODAL */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 500; display: none; align-items: center; justify-content: center; padding: 20px; }
-.modal-overlay.open { display: flex; }
+.modal-overlay.open { display: flex !important; }
 .modal { background: white; border-radius: 12px; max-width: 640px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; animation: modalIn 0.25s ease; overflow: hidden; }
 @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 .modal-header { background: var(--vermelho); padding: 20px 28px; color: white; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
@@ -1228,6 +1228,30 @@ tr:hover td { background: #faf7f2; }
         <button class="btn btn-primary" onclick="openAddCrmCustomer()">+ Novo Cliente</button>
       </div>
 
+      <!-- DASHBOARD CRM -->
+      <div class="stats-grid" id="crmDashboard" style="margin-bottom: 32px;">
+        <div class="stat-card yellow">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="crm-total-customers">0</div>
+          <div class="stat-label">Total de Clientes</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-value" id="crm-vip-customers">0</div>
+          <div class="stat-label">Clientes VIP</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="crm-total-spent">R$ 0</div>
+          <div class="stat-label">Total Gasto</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">💔</div>
+          <div class="stat-value" id="crm-total-pending">R$ 0</div>
+          <div class="stat-label">Em Aberto</div>
+        </div>
+      </div>
+
       <div class="table-toolbar" style="margin-bottom: 20px;">
         <div class="search-box">
           <input type="text" placeholder="Buscar cliente, cidade, telefone..." id="crmSearch" oninput="searchCrmCustomers(this.value)">
@@ -1262,6 +1286,30 @@ tr:hover td { background: #faf7f2; }
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">🏭 Central de Fornecedores</h2>
         <button class="btn btn-primary" onclick="openAddSupplier()">+ Novo Fornecedor</button>
+      </div>
+
+      <!-- DASHBOARD SUPPLIERS -->
+      <div class="stats-grid" id="suppliersDashboard" style="margin-bottom: 32px;">
+        <div class="stat-card yellow">
+          <div class="stat-icon">🏭</div>
+          <div class="stat-value" id="suppliers-total">0</div>
+          <div class="stat-label">Total de Fornecedores</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">🛒</div>
+          <div class="stat-value" id="suppliers-total-bought">R$ 0</div>
+          <div class="stat-label">Total Comprado</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">💔</div>
+          <div class="stat-value" id="suppliers-total-pending">R$ 0</div>
+          <div class="stat-label">Em Aberto</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-value" id="suppliers-debtors">0</div>
+          <div class="stat-label">Fornecedores em Débito</div>
+        </div>
       </div>
 
       <div class="table-toolbar" style="margin-bottom: 20px;">

@@ -687,6 +687,31 @@
     footer { padding: 40px 60px; }
   }
 
+  /* Responsive Button Containers */
+  .button-container-flex {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .button-container-flex button {
+    flex: 1;
+    min-width: 100px;
+  }
+  
+  @media (max-width: 480px) {
+    .button-container-flex {
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .button-container-flex button {
+      flex: unset;
+      width: 100%;
+      min-width: unset;
+    }
+  }
+
   /* Touch Device Optimizations */
   @media (hover: none) and (pointer: coarse) {
     /* Increase button sizes for touch */
@@ -737,6 +762,216 @@
 
   /* Ensure no button overflow */
   button { word-wrap: break-word; overflow-wrap: break-word; }
+
+  /* ===== RESPONSIVE MODALS & BUTTONS ===== */
+  
+  /* PIX Modal and Payment Buttons - Mobile */
+  @media (max-width: 479px) {
+    /* Payment Confirmed Modal - Full screen mobile with proper padding */
+    #paymentConfirmedModal {
+      align-items: center !important;
+      padding: 16px !important;
+    }
+    
+    #paymentConfirmedModal .payment-confirmed-content {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 90vh !important;
+      max-width: 100% !important;
+      margin: 0 auto !important;
+      border-radius: 12px !important;
+    }
+    
+    /* Confirmation header - adjust for mobile */
+    #paymentConfirmedModal > div[style*="background: linear-gradient"] {
+      padding: 16px !important;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    
+    #paymentConfirmedModal > div[style*="background: linear-gradient"] div:first-child {
+      font-size: 48px !important;
+      margin-bottom: 8px !important;
+    }
+    
+    #paymentConfirmedModal > div[style*="background: linear-gradient"] h1 {
+      font-size: 22px !important;
+      margin: 0 !important;
+      font-weight: 900 !important;
+      line-height: 1.2 !important;
+    }
+    
+    #paymentConfirmedModal > div[style*="background: linear-gradient"] p {
+      font-size: 12px !important;
+      margin: 6px 0 0 0 !important;
+      opacity: 0.95 !important;
+      font-weight: 600 !important;
+    }
+    
+    #paymentConfirmedModal .payment-confirmed-body {
+      max-height: calc(90vh - 180px) !important;
+      padding: 16px !important;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    #paymentConfirmedModal .payment-confirmed-footer {
+      padding: 12px 16px !important;
+      gap: 8px !important;
+    }
+    
+    #paymentConfirmedModal button {
+      width: 100% !important;
+      padding: 12px 16px !important;
+      font-size: 14px !important;
+      min-height: 44px !important;
+      margin-bottom: 0 !important;
+      white-space: normal;
+      word-break: break-word;
+    }
+    
+    #paymentConfirmedModal .payment-confirmed-footer > button {
+      margin-bottom: 8px !important;
+    }
+    
+    #paymentConfirmedModal .payment-confirmed-footer > button:last-child {
+      margin-bottom: 0 !important;
+    }
+    
+    /* Order ID and Amount - responsive text */
+    #confirmedOrderId {
+      font-size: 24px !important;
+    }
+    
+    #confirmedAmount {
+      font-size: 24px !important;
+    }
+    
+    /* PIX Confirm Modal */
+    #pixConfirmInner {
+      max-width: 95vw !important;
+    }
+    
+    #pixConfirmInner .modal-body {
+      padding: 20px 16px !important;
+    }
+    
+    /* PIX QR Modal */
+    #pixQrInner {
+      max-width: 95vw !important;
+    }
+    
+    #pixQrInner .modal-body {
+      padding: 20px 16px !important;
+    }
+    
+    /* QR Code size - adjust for mobile screen */
+    #pixQrCode {
+      width: 200px !important;
+      height: 200px !important;
+    }
+    
+    /* PIX Code container with copy button - stack vertically */
+    #pixQrInner .modal-body > div[style*="background: #f5f5f5"] {
+      padding: 12px !important;
+    }
+    
+    #pixQrInner .modal-body > div[style*="display: flex"][style*="justify-content: space-between"] {
+      flex-direction: column !important;
+      gap: 8px !important;
+      align-items: stretch !important;
+    }
+    
+    #pixQrInner .modal-body code {
+      font-size: 11px !important;
+      max-height: 50px !important;
+    }
+    
+    #pixQrInner .modal-body button {
+      padding: 8px 12px !important;
+      font-size: 12px !important;
+      min-height: 40px;
+      width: 100% !important;
+    }
+    
+    /* All buttons in PIX modals - full width and responsive */
+    #pixConfirmInner button,
+    #pixQrInner button {
+      width: 100% !important;
+      padding: 12px 16px !important;
+      font-size: 14px !important;
+      min-height: 44px;
+      margin-bottom: 8px !important;
+    }
+    
+    #pixConfirmInner button:last-child,
+    #pixQrInner button:last-child {
+      margin-bottom: 0 !important;
+    }
+    
+    /* Payment Confirmed Modal - WhatsApp button */
+    .payment-confirmed-content {
+      width: 95vw !important;
+      max-width: 95vw !important;
+    }
+    
+    .payment-confirmed-footer button {
+      width: 100% !important;
+      padding: 12px 16px !important;
+      font-size: 14px !important;
+      min-height: 44px !important;
+      margin-bottom: 8px !important;
+    }
+    
+    .payment-confirmed-footer button:last-child {
+      margin-bottom: 0 !important;
+    }
+    
+    /* Value displays - make font smaller for mobile */
+    #pixTotalAmount {
+      font-size: 28px !important;
+    }
+  }
+  
+  /* PIX Modal Tablet */
+  @media (min-width: 480px) and (max-width: 767px) {
+    #pixConfirmInner,
+    #pixQrInner {
+      max-width: 90vw !important;
+    }
+    
+    #pixQrCode {
+      width: 220px !important;
+      height: 220px !important;
+    }
+    
+    #pixQrInner .modal-body > div[style*="display: flex"][style*="justify-content: space-between"] {
+      flex-direction: column !important;
+      gap: 8px !important;
+    }
+    
+    #pixQrInner .modal-body code {
+      font-size: 12px !important;
+    }
+  }
+  
+  /* ===== HORIZONTAL OVERFLOW PREVENTION ===== */
+  /* Ensure modal footer buttons don't create horizontal scroll */
+  .payment-confirmed-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible;
+  }
+  
+  .payment-confirmed-footer button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    word-break: break-word;
+    white-space: normal;
+    overflow: visible;
+  }
+
 </style>
 </head>
 <body>

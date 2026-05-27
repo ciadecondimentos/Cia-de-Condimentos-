@@ -962,7 +962,50 @@ function searchSuppliers(query) {
   tbody.innerHTML = html;
 }
 
+// ==================== SUPPLIERS DASHBOARD ====================
+
+// Carregar e exibir dashboards dos fornecedores
+function loadSuppliersDashboard() {
+  if (!suppliersState.suppliers || suppliersState.suppliers.length === 0) {
+    // Se os fornecedores não estão carregados, carregar primeiro
+    fetch(`${API_BASE}/suppliers`)
+      .then(res => res.json())
+      .then(suppliers => {
+        suppliersState.suppliers = suppliers;
+        renderSuppliersDashboard(suppliers);
+      })
+      .catch(error => {
+        console.error('Erro ao carregar fornecedores para dashboard:', error);
+        renderSuppliersDashboardEmpty();
+      });
+  } else {
+    renderSuppliersDashboard(suppliersState.suppliers);
+  }
+}
+
+function renderSuppliersDashboard(suppliers) {
+  // Calcular estatísticas
+  const totalSuppliers = suppliers.length;
+  const totalBought = suppliers.reduce((sum, s) => sum + (parseFloat(s.stats?.total_spent || 0)), 0);
+  const totalPending = suppliers.reduce((sum, s) => sum + (parseFloat(s.stats?.pending || 0)), 0);
+  const debtorCount = suppliers.filter(s => (parseFloat(s.stats?.pending || 0)) > 0).length;
+
+  // Atualizar os elementos do dashboard
+  document.getElementById('suppliers-total').textContent = totalSuppliers.toString();
+  document.getElementById('suppliers-total-bought').textContent = `R$ ${totalBought.toFixed(2)}`;
+  document.getElementById('suppliers-total-pending').textContent = `R$ ${totalPending.toFixed(2)}`;
+  document.getElementById('suppliers-debtors').textContent = debtorCount.toString();
+}
+
+function renderSuppliersDashboardEmpty() {
+  document.getElementById('suppliers-total').textContent = '0';
+  document.getElementById('suppliers-total-bought').textContent = 'R$ 0,00';
+  document.getElementById('suppliers-total-pending').textContent = 'R$ 0,00';
+  document.getElementById('suppliers-debtors').textContent = '0';
+}
+
 // Inicializar fornecedores quando a página for carregada
 function initializeSuppliers() {
   loadSuppliers('all');
+  loadSuppliersDashboard();
 }

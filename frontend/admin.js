@@ -92,7 +92,8 @@ function showPage(pageId, buttonElement) {
     'promotions': 'Promoções',
     'customers': 'Clientes',
     'reports': 'Relatórios',
-    'crm': 'Central de Clientes'
+    'crm': 'Central de Clientes',
+    'suppliers': 'Central de Fornecedores'
   };
   
   document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';

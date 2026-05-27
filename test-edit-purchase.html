@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Editar Compra</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal.open {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+            z-index: 1001;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 2px solid #e8e0d4;
+            background: linear-gradient(135deg, #f39c12 0%, #d97706 100%);
+            color: white;
+            border-radius: 8px 8px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .modal-header button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 20px 0;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e8e0d4;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            padding-top: 20px;
+            border-top: 2px solid #e8e0d4;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .info-box {
+            background: #fff9f0;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #f39c12;
+            margin-bottom: 20px;
+        }
+
+        .console-log {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste - Botão de Editar Compra</h1>
+
+        <div class="card">
+            <div>
+                <h3>Compra do Cliente - 26/05/2026</h3>
+                <p>Total: R$ 3.50 | Status: PENDENTE</p>
+            </div>
+            <button class="btn btn-warning" onclick="testOpenEditCrmPurchaseDay('order_1_0', 1, '2026-05-26')">✏️ EDITAR COMPRA</button>
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Instruções:</strong>
+            <p>Clique no botão "✏️ EDITAR COMPRA" acima e verifique se a modal abre corretamente.</p>
+            <p>Abra o console (F12) para ver os logs de debug.</p>
+        </div>
+
+        <div class="console-log" id="console-output">
+            <strong style="color: #ff6b6b;">🔴 Console:</strong><br>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="crmEditPurchaseDayModal" class="modal">
+        <div class="modal-overlay" onclick="closeCrmEditPurchaseDayModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="crmEditPurchaseDayTitle">✏️ Editar Compra</h2>
+                <button onclick="closeCrmEditPurchaseDayModal()">✕</button>
+            </div>
+            <div id="crmEditPurchaseDayBody">
+                <!-- Será preenchido pela função JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCrmEditPurchaseDayModal()">Cancelar</button>
+                <button class="btn btn-success" onclick="saveCrmEditPurchaseDay()">💾 Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock API_BASE
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Função para logar no console local
+        function logToConsole(message) {
+            const console_output = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            console_output.innerHTML += `<span style="color: #90ee90;">[${timestamp}]</span> ${message}<br>`;
+            console_output.scrollTop = console_output.scrollHeight;
+        }
+
+        // Mock para showToast
+        function showToast(message, type = 'info') {
+            logToConsole(`📢 Toast: ${message}`);
+            alert(message);
+        }
+
+        // Mock para formatDateString
+        function formatDateString(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pt-BR');
+        }
+
+        // Mock de dados do cliente
+        const mockCustomerData = {
+            customer: {
+                id: 1,
+                full_name: 'João Silva',
+                whatsapp: '11999999999'
+            },
+            purchases: [
+                {
+                    id: 1,
+                    product_name: 'Edu Guedes',
+                    quantity: 1,
+                    unit_price: '2.50',
+                    total_price: '2.50',
+                    payment_method: 'pix',
+                    payment_status: 'pendente',
+                    purchase_date: '2026-05-26'
+                },
+                {
+                    id: 2,
+                    product_name: 'Erva Doce',
+                    quantity: 1,
+                    unit_price: '1.00',
+                    total_price: '1.00',
+                    payment_method: 'pix',
+                    payment_status: 'pendente',
+                    purchase_date: '2026-05-26'
+                }
+            ]
+        };
+
+        // Função de teste
+        async function testOpenEditCrmPurchaseDay(orderId, customerId, purchaseDate) {
+            try {
+                logToConsole(`✅ openEditCrmPurchaseDay chamado com: orderId=${orderId}, customerId=${customerId}, purchaseDate=${purchaseDate}`);
+                
+                // Simular fetch
+                const data = mockCustomerData;
+                const customer = data.customer;
+                const purchases = data.purchases || [];
+                logToConsole(`✅ Dados do cliente carregados: ${customer.full_name} (${purchases.length} compras)`);
+
+                // Filtrar compras do dia
+                const dayPurchases = purchases.filter(p => p.purchase_date === purchaseDate);
+                logToConsole(`✅ Compras do dia filtradas: ${dayPurchases.length} itens`);
+                
+                if (!dayPurchases.length) {
+                    showToast('Nenhuma compra encontrada para este dia', 'warning');
+                    return;
+                }
+
+                // Calcular totais
+                let dayTotal = 0;
+                dayPurchases.forEach(p => {
+                    dayTotal += parseFloat(p.total_price || 0);
+                });
+                logToConsole(`💰 Total do dia: R$ ${dayTotal.toFixed(2)}`);
+
+                const modal = document.getElementById('crmEditPurchaseDayModal');
+                const body = document.getElementById('crmEditPurchaseDayBody');
+                const title = document.getElementById('crmEditPurchaseDayTitle');
+                
+                const dateFormatted = formatDateString(purchaseDate);
+                title.textContent = `✏️ Editar Compra - ${customer.full_name} (${dateFormatted})`;
+
+                // Determinar status
+                let dayStatus = 'pago';
+                if (dayPurchases.some(p => p.payment_status === 'pendente')) {
+                    dayStatus = 'pendente';
+                } else if (dayPurchases.some(p => p.payment_status === 'parcial')) {
+                    dayStatus = 'parcial';
+                }
+
+                let html = `
+                    <div style="background: #fff9f0; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12; margin-bottom: 24px;">
+                        <div><strong>👤 Cliente:</strong> ${customer.full_name}</div>
+                        <div><strong>📅 Data:</strong> ${dateFormatted}</div>
+                        <div><strong>📊 Total:</strong> R$ ${dayTotal.toFixed(2)}</div>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label>Status de Pagamento</label>
+                        <select id="editDayPaymentStatus">
+                            <option value="pendente" ${dayStatus === 'pendente' ? 'selected' : ''}>○ PENDENTE</option>
+                            <option value="parcial" ${dayStatus === 'parcial' ? 'selected' : ''}>◐ PARCIAL</option>
+                            <option value="pago" ${dayStatus === 'pago' ? 'selected' : ''}>✓ PAGO</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label>Método de Pagamento</label>
+                        <select id="editDayPaymentMethod">
+                            <option value="">-- Selecionar --</option>
+                            <option value="dinheiro">💵 Dinheiro</option>
+                            <option value="cartao">💳 Cartão</option>
+                            <option value="pix">📱 PIX</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 24px;">
+                        <label>Observações</label>
+                        <textarea id="editDayNotes" placeholder="Adicione notas..."></textarea>
+                    </div>
+
+                    <h3 style="margin-bottom: 12px;">📦 Produtos</h3>
+                    ${dayPurchases.map(p => `
+                        <div style="background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                            <strong>${p.product_name}</strong> (${p.quantity}x) - R$ ${parseFloat(p.total_price).toFixed(2)}
+                        </div>
+                    `).join('')}
+                `;
+
+                body.innerHTML = html;
+                modal.classList.add('open');
+                logToConsole(`✅ Modal aberta com sucesso!`);
+            } catch (error) {
+                logToConsole(`❌ Erro: ${error.message}`);
+                showToast('Erro ao abrir modal: ' + error.message, 'error');
+            }
+        }
+
+        function closeCrmEditPurchaseDayModal() {
+            logToConsole('🔴 Modal fechada');
+            const modal = document.getElementById('crmEditPurchaseDayModal');
+            if (modal) modal.classList.remove('open');
+        }
+
+        function saveCrmEditPurchaseDay() {
+            const paymentStatus = document.getElementById('editDayPaymentStatus')?.value;
+            const paymentMethod = document.getElementById('editDayPaymentMethod')?.value;
+            const notes = document.getElementById('editDayNotes')?.value;
+
+            logToConsole(`💾 Salvando: Status=${paymentStatus}, Método=${paymentMethod}, Notas=${notes}`);
+            showToast('✅ Compra atualizada com sucesso!');
+            closeCrmEditPurchaseDayModal();
+        }
+
+        // Log inicial
+        logToConsole('🟢 Página carregada com sucesso');
+        logToConsole('Clique no botão "✏️ EDITAR COMPRA" para testar');
+    </script>
+</body>
+</html>

@@ -931,9 +931,11 @@ async function syncCrmPixFromBackend() {
       // PIX ativo no backend
       const pixData = data.pix;
       
-      // Verificar se é diferente do PIX atual
-      if (!crmCurrentPixData || crmCurrentPixData.mp_payment_id !== pixData.mp_payment_id) {
-        console.log('🔄 Sincronizando PIX do backend:', pixData.mp_payment_id);
+      // ✅ NUNCA sobrescrever um PIX já ativo
+      // Se já há um PIX em crmCurrentPixData, manter o mesmo durante a 1 hora
+      if (!crmCurrentPixData) {
+        // Só sincronizar se NÃO houver PIX ativo
+        console.log('🔄 Sincronizando PIX do backend (nenhum ativo):', pixData.mp_payment_id);
         
         // Restaurar PIX do backend
         crmCurrentPixData = {
@@ -954,6 +956,13 @@ async function syncCrmPixFromBackend() {
         startCrmPixPolling(pixData.mp_payment_id, { dayTotal: pixData.amount });
         
         console.log('✅ PIX sincronizado do backend e restaurado');
+      } else if (crmCurrentPixData.mp_payment_id === pixData.mp_payment_id) {
+        // Mesmo PIX, apenas verificar se foi confirmado ou expirou
+        console.log('ℹ️  Mesmo PIX ativo, mantendo:', crmCurrentPixData.mp_payment_id);
+      } else {
+        // PIX diferente no backend, mas já temos um ativo
+        // NÃO sobrescrever! Manter o PIX local até expirar/confirmar
+        console.log('⚠️  PIX diferente no backend, mas mantendo o atual:', crmCurrentPixData.mp_payment_id);
       }
     } else if (crmCurrentPixData) {
       // Backend diz que não há PIX, mas frontend tem
@@ -996,21 +1005,34 @@ function setupCrmPixStorageListener() {
       if (event.newValue) {
         try {
           const pixData = JSON.parse(event.newValue);
-          console.log('✅ PIX sincronizado de outra aba:', pixData.mp_payment_id);
+          console.log('✅ PIX detectado do storage event:', pixData.mp_payment_id);
           
-          // Restaurar o PIX
-          crmCurrentPixData = pixData;
-          crmCurrentOrderId = pixData.orderId;
-          
-          // Mostrar FAB
-          showCrmPixFab();
-          updateCrmPixFabCounter(pixData.expires_at);
-          
-          // Preencher modal se estiver aberta
-          fillCrmPixModalWithData();
-          
-          // Reiniciar polling
-          startCrmPixPolling(pixData.mp_payment_id, { dayTotal: pixData.amount });
+          // ✅ NUNCA sobrescrever um PIX já ativo
+          if (!crmCurrentPixData) {
+            // Nenhum PIX ativo, sincronizar
+            console.log('🔄 Sincronizando PIX de outra aba (nenhum ativo)');
+            crmCurrentPixData = pixData;
+            crmCurrentOrderId = pixData.orderId;
+            
+            // Mostrar FAB
+            showCrmPixFab();
+            updateCrmPixFabCounter(pixData.expires_at);
+            
+            // Preencher modal se estiver aberta
+            fillCrmPixModalWithData();
+            
+            // Reiniciar polling
+            startCrmPixPolling(pixData.mp_payment_id, { dayTotal: pixData.amount });
+          } else if (crmCurrentPixData.mp_payment_id === pixData.mp_payment_id) {
+            // Mesmo PIX, apenas sincronizar dados se mudou
+            console.log('ℹ️  Mesmo PIX de outra aba, sincronizando dados:', crmCurrentPixData.mp_payment_id);
+            crmCurrentPixData = pixData;
+            fillCrmPixModalWithData();
+          } else {
+            // PIX diferente em outra aba, mas já temos um ativo
+            // NÃO sobrescrever! A outra aba gerou um novo PIX, mas mantemos o nosso
+            console.log('⚠️  Outra aba gerou PIX diferente, mantendo o atual:', crmCurrentPixData.mp_payment_id);
+          }
         } catch (error) {
           console.warn('❌ Erro ao processar storage event:', error);
         }

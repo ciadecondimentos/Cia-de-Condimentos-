@@ -16,7 +16,8 @@ const crmState = {
   currentCustomerId: null,
   customers: [],
   currentPurchases: [],
-  filters: 'all'
+  filters: 'all',
+  activePix: null  // ✅ NOVO: Rastrear PIX ativo
 };
 
 // GET: Listar clientes
@@ -643,6 +644,9 @@ async function generateCrmPixQrCode(orderId) {
 
     showToast('✅ Código PIX gerado com sucesso!', 'success');
 
+    // ✅ NOVO: Salvar PIX em localStorage
+    saveCrmPixToStorage();
+
     // ✅ NOVO: Iniciar polling automático para verificar se o PIX foi pago
     startCrmPixPolling(pixData.mp_payment_id, orderData);
     
@@ -690,6 +694,9 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
         // ✅ Esconder FAB PIX
         hideCrmPixFab();
         
+        // ✅ Limpar PIX do localStorage
+        clearCrmPixFromStorage();
+        
         // Mostrar mensagem de sucesso
         showToast('✅ Pagamento confirmado! Atualizando histórico...', 'success');
 
@@ -711,6 +718,9 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
         
         // ✅ Esconder FAB PIX
         hideCrmPixFab();
+        
+        // ✅ Limpar PIX do localStorage
+        clearCrmPixFromStorage();
         
         showToast('⏰ Código PIX expirou. Gere um novo se necessário.', 'warning');
       }
@@ -898,6 +908,76 @@ function sendCrmPixViaWhatsApp() {
 }
 
 // ==================== FLOATING ACTION BUTTON (FAB) PIX ====================
+
+// ✅ Salvar PIX ativo em localStorage
+function saveCrmPixToStorage() {
+  if (crmCurrentPixData && crmCurrentOrderId) {
+    const pixData = {
+      ...crmCurrentPixData,
+      orderId: crmCurrentOrderId,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem('crmActivePix', JSON.stringify(pixData));
+    console.log('💾 PIX salvo em localStorage:', pixData.mp_payment_id);
+  }
+}
+
+// ✅ Carregar PIX do localStorage
+function loadCrmPixFromStorage() {
+  try {
+    const stored = localStorage.getItem('crmActivePix');
+    if (!stored) return null;
+    
+    const pixData = JSON.parse(stored);
+    console.log('📂 PIX carregado do localStorage:', pixData.mp_payment_id);
+    return pixData;
+  } catch (error) {
+    console.warn('❌ Erro ao carregar PIX do localStorage:', error);
+    return null;
+  }
+}
+
+// ✅ Limpar PIX do localStorage
+function clearCrmPixFromStorage() {
+  localStorage.removeItem('crmActivePix');
+  console.log('🗑️  PIX removido do localStorage');
+}
+
+// ✅ Verificar PIX ao abrir a página
+function checkCrmPixOnPageLoad() {
+  const pixData = loadCrmPixFromStorage();
+  if (!pixData) return;
+  
+  const now = new Date();
+  const expiresAt = new Date(pixData.expires_at);
+  
+  console.log('🔍 Verificando PIX armazenado...');
+  
+  // Se expirou
+  if (now > expiresAt) {
+    console.log('⏰ PIX expirou');
+    clearCrmPixFromStorage();
+    showToast('⏰ O PIX gerado anteriormente expirou. Gere um novo pagamento.', 'warning');
+    return;
+  }
+  
+  // Restaurar dados do PIX
+  crmCurrentPixData = pixData;
+  crmCurrentOrderId = pixData.orderId;
+  
+  console.log('✅ PIX restaurado:', pixData.mp_payment_id);
+  
+  // Mostrar FAB com contador
+  showCrmPixFab();
+  updateCrmPixFabCounter(pixData.expires_at);
+  
+  // Reiniciar polling para verificar confirmação
+  startCrmPixPolling(pixData.mp_payment_id, {
+    dayTotal: pixData.amount
+  });
+  
+  showToast('✅ Pagamento anterior restaurado. Aguardando confirmação...', 'info');
+}
 
 // ✅ Mostrar FAB quando há PIX ativo
 function showCrmPixFab() {
@@ -1767,5 +1847,8 @@ function searchCrmCustomers(query) {
 
 // Inicializar CRM quando a página for carregada
 function initializeCrm() {
+  // ✅ NOVO: Verificar se há PIX anterior
+  checkCrmPixOnPageLoad();
+  
   loadCrmCustomers('all');
 }

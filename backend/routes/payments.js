@@ -143,34 +143,73 @@ router.post('/pix', async (req, res) => {
     }
 
     // Salvar no banco de dados
-    let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone, customer_name';
-    let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9, $10';
-    let params = [
-      orderId || null,
-      mpPaymentResult.id,
-      mpPaymentResult.status,
-      amount,
-      'pix',
-      qrCode,
-      finalQrCodeBase64,
-      email,
-      payerPhone || null,
-      customer_name || null
-    ];
+    let result;
+    try {
+      // Tentar INSERT com customer_name (migration 004 executada)
+      let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone, customer_name';
+      let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9, $10';
+      let params = [
+        orderId || null,
+        mpPaymentResult.id,
+        mpPaymentResult.status,
+        amount,
+        'pix',
+        qrCode,
+        finalQrCodeBase64,
+        email,
+        payerPhone || null,
+        customer_name || null
+      ];
 
-    // Adicionar crm_purchase_id se fornecido
-    if (crm_purchase_id) {
-      sqlFields += ', crm_purchase_id';
-      sqlValues += ', $11';
-      params.push(crm_purchase_id);
+      // Adicionar crm_purchase_id se fornecido
+      if (crm_purchase_id) {
+        sqlFields += ', crm_purchase_id';
+        sqlValues += ', $11';
+        params.push(crm_purchase_id);
+      }
+
+      result = await db.query(
+        `INSERT INTO payments (${sqlFields})
+         VALUES (${sqlValues})
+         RETURNING id, mp_payment_id, status, amount, qr_code, qr_code_base64`,
+        params
+      );
+    } catch (innerError) {
+      // Se coluna customer_name não existir, tentar sem ela
+      if (innerError.message.includes('customer_name') || innerError.message.includes('column')) {
+        console.warn('⚠️  Coluna customer_name não encontrada, inserindo sem ela');
+        
+        let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone';
+        let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9';
+        let params = [
+          orderId || null,
+          mpPaymentResult.id,
+          mpPaymentResult.status,
+          amount,
+          'pix',
+          qrCode,
+          finalQrCodeBase64,
+          email,
+          payerPhone || null
+        ];
+
+        // Adicionar crm_purchase_id se fornecido
+        if (crm_purchase_id) {
+          sqlFields += ', crm_purchase_id';
+          sqlValues += ', $10';
+          params.push(crm_purchase_id);
+        }
+
+        result = await db.query(
+          `INSERT INTO payments (${sqlFields})
+           VALUES (${sqlValues})
+           RETURNING id, mp_payment_id, status, amount, qr_code, qr_code_base64`,
+          params
+        );
+      } else {
+        throw innerError;
+      }
     }
-
-    const result = await db.query(
-      `INSERT INTO payments (${sqlFields})
-       VALUES (${sqlValues})
-       RETURNING id, mp_payment_id, status, amount, qr_code, qr_code_base64`,
-      params
-    );
 
     console.log('✅ Pagamento PIX criado:', mpPaymentResult.id, crm_purchase_id ? `(Compra CRM: ${crm_purchase_id})` : '');
 
@@ -630,18 +669,39 @@ router.get('/pix/active', async (req, res) => {
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
 
-    // Buscar PIX pendente/processando criado na última hora
-    const result = await db.query(
-      `SELECT id, mp_payment_id, status, amount, qr_code, qr_code_base64, 
-              crm_purchase_id, customer_name, created_at, updated_at
-       FROM payments 
-       WHERE payment_method = 'pix' 
-       AND status IN ('pending', 'processing') 
-       AND created_at > $1
-       ORDER BY created_at DESC 
-       LIMIT 1`,
-      [oneHourAgo]
-    );
+    let result;
+    try {
+      // Tentar com customer_name (migration 004 executada)
+      result = await db.query(
+        `SELECT id, mp_payment_id, status, amount, qr_code, qr_code_base64, 
+                crm_purchase_id, customer_name, created_at, updated_at
+         FROM payments 
+         WHERE payment_method = 'pix' 
+         AND status IN ('pending', 'processing') 
+         AND created_at > $1
+         ORDER BY created_at DESC 
+         LIMIT 1`,
+        [oneHourAgo]
+      );
+    } catch (innerError) {
+      // Se coluna customer_name não existir, tentar sem ela
+      if (innerError.message.includes('customer_name') || innerError.message.includes('column')) {
+        console.warn('⚠️  Coluna customer_name não encontrada, usando query sem ela');
+        result = await db.query(
+          `SELECT id, mp_payment_id, status, amount, qr_code, qr_code_base64, 
+                  crm_purchase_id, NULL as customer_name, created_at, updated_at
+           FROM payments 
+           WHERE payment_method = 'pix' 
+           AND status IN ('pending', 'processing') 
+           AND created_at > $1
+           ORDER BY created_at DESC 
+           LIMIT 1`,
+          [oneHourAgo]
+        );
+      } else {
+        throw innerError;
+      }
+    }
 
     if (result.rows.length === 0) {
       return res.json({ active: false, pix: null });
@@ -671,7 +731,8 @@ router.get('/pix/active', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Erro ao buscar PIX ativo:', error.message);
-    res.status(500).json({ error: 'Erro ao buscar PIX ativo' });
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ error: 'Erro ao buscar PIX ativo', details: error.message });
   }
 });
 

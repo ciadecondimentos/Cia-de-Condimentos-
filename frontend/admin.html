@@ -48,6 +48,89 @@ body { display: flex; }
 .page.active { display: block; animation: fadeIn 0.3s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ==================== FLOATING ACTION BUTTON (FAB) PIX ==================== */
+.fab-pix {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--vermelho) 0%, var(--vermelho-escuro) 100%);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 28px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(192, 57, 43, 0.4);
+  z-index: 90;
+  transition: all 0.3s ease;
+  border: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.fab-pix.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  pointer-events: auto;
+  animation: fabPulse 2s infinite;
+}
+
+@keyframes fabPulse {
+  0%, 100% { box-shadow: 0 8px 24px rgba(192, 57, 43, 0.4); }
+  50% { box-shadow: 0 8px 32px rgba(192, 57, 43, 0.6); }
+}
+
+.fab-pix:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px rgba(192, 57, 43, 0.5);
+}
+
+.fab-pix-text {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.fab-pix-counter {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  min-width: 40px;
+}
+
+/* Mobile: Posição ajustada */
+@media (max-width: 767px) {
+  .fab-pix {
+    bottom: 20px;
+    right: 20px;
+    width: 70px;
+    height: 70px;
+    font-size: 24px;
+  }
+  
+  .fab-pix-text {
+    font-size: 11px;
+  }
+  
+  .fab-pix-counter {
+    font-size: 10px;
+  }
+}
+
+/* ==================== FIM FAB ==================== 
+
 /* DASHBOARD */
 .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
 .stat-card { background: white; border-radius: 10px; padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; box-shadow: 0 2px 12px rgba(0,0,0,0.06); transition: all 0.3s; cursor: pointer; border-top: 4px solid; }
@@ -858,6 +941,15 @@ tr:hover td { background: #faf7f2; }
 <body>
 
 <div id="toast" class="toast"></div>
+
+<!-- FLOATING ACTION BUTTON - PIX -->
+<button id="fabPixButton" class="fab-pix" onclick="openCrmPixQrModalFromFab()">
+  <span style="font-size: 32px;">💳</span>
+  <div class="fab-pix-text">
+    <div>PIX</div>
+    <div class="fab-pix-counter" id="fabPixCounter">59m 59s</div>
+  </div>
+</button>
 
 <!-- MODALS -->
 <div class="modal-overlay" id="productModal">

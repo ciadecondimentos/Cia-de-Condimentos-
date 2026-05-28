@@ -565,6 +565,7 @@ let crmCurrentPixData = null;
 let crmCurrentOrderId = null;
 let crmPixPollingInterval = null;
 let crmPixTimeoutHandle = null;
+let crmPixFabCounterInterval = null;
 
 // Gerar QR code PIX para pedido do CRM
 async function generateCrmPixQrCode(orderId) {
@@ -662,6 +663,9 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
     clearTimeout(crmPixTimeoutHandle);
   }
 
+  // ✅ Mostrar FAB PIX
+  showCrmPixFab();
+
   console.log('🔄 Iniciando polling do PIX por 1 hora:', pixPaymentId);
   let pollCount = 0;
   const maxPolls = 720; // 1 hora (720 × 5 segundos)
@@ -683,6 +687,9 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
         crmPixPollingInterval = null;
         if (crmPixTimeoutHandle) clearTimeout(crmPixTimeoutHandle);
 
+        // ✅ Esconder FAB PIX
+        hideCrmPixFab();
+        
         // Mostrar mensagem de sucesso
         showToast('✅ Pagamento confirmado! Atualizando histórico...', 'success');
 
@@ -701,6 +708,10 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
         console.log('⏰ Expiração: PIX expirou após 1 hora');
         clearInterval(crmPixPollingInterval);
         crmPixPollingInterval = null;
+        
+        // ✅ Esconder FAB PIX
+        hideCrmPixFab();
+        
         showToast('⏰ Código PIX expirou. Gere um novo se necessário.', 'warning');
       }
     } catch (error) {
@@ -715,6 +726,9 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
 // ✅ Função para atualizar contador de tempo até expiração
 function startCrmPixExpirationCounter(expiresAt) {
   let expirationInterval;
+  
+  // ✅ Também atualizar FAB counter
+  updateCrmPixFabCounter(expiresAt);
   
   const updateCounter = () => {
     const now = new Date();
@@ -880,6 +894,93 @@ function sendCrmPixViaWhatsApp() {
   } catch (error) {
     console.error('Erro ao enviar via WhatsApp:', error);
     showToast('Erro ao processar', 'error');
+  }
+}
+
+// ==================== FLOATING ACTION BUTTON (FAB) PIX ====================
+
+// ✅ Mostrar FAB quando há PIX ativo
+function showCrmPixFab() {
+  const fab = document.getElementById('fabPixButton');
+  if (fab) {
+    fab.classList.add('active');
+    console.log('💳 FAB PIX mostrado');
+  }
+}
+
+// ✅ Esconder FAB quando PIX expira ou é pago
+function hideCrmPixFab() {
+  const fab = document.getElementById('fabPixButton');
+  if (fab) {
+    fab.classList.remove('active');
+    console.log('❌ FAB PIX escondido');
+  }
+  
+  // Limpar intervals do FAB
+  if (crmPixFabCounterInterval) {
+    clearInterval(crmPixFabCounterInterval);
+    crmPixFabCounterInterval = null;
+  }
+}
+
+// ✅ Atualizar contador no FAB
+function updateCrmPixFabCounter(expiresAt) {
+  const counterEl = document.getElementById('fabPixCounter');
+  if (!counterEl) return;
+  
+  // Limpar interval anterior se existir
+  if (crmPixFabCounterInterval) {
+    clearInterval(crmPixFabCounterInterval);
+  }
+  
+  const updateCounter = () => {
+    const now = new Date();
+    const expireDate = new Date(expiresAt);
+    const secondsLeft = Math.floor((expireDate - now) / 1000);
+    
+    if (secondsLeft <= 0) {
+      counterEl.textContent = 'EXPIRADO';
+      counterEl.style.background = '#ffcdd2';
+      counterEl.style.color = '#d32f2f';
+      hideCrmPixFab();
+      clearInterval(crmPixFabCounterInterval);
+      crmPixFabCounterInterval = null;
+      showToast('⏰ PIX expirou', 'warning');
+      return;
+    }
+    
+    const minutes = Math.floor(secondsLeft / 60);
+    const seconds = secondsLeft % 60;
+    counterEl.textContent = `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+    
+    // Mudar cor se faltam menos de 5 minutos
+    if (secondsLeft <= 300) {
+      counterEl.style.background = '#ffe6e6';
+      counterEl.style.color = '#d32f2f';
+    } else {
+      counterEl.style.background = 'rgba(255, 255, 255, 0.2)';
+      counterEl.style.color = 'white';
+    }
+  };
+  
+  // Atualizar imediatamente
+  updateCounter();
+  
+  // Atualizar a cada segundo
+  crmPixFabCounterInterval = setInterval(updateCounter, 1000);
+}
+
+// ✅ Abrir modal do QR code PIX ao clicar no FAB
+function openCrmPixQrModalFromFab() {
+  if (!crmCurrentPixData || !crmCurrentOrderId) {
+    showToast('Erro: PIX não encontrado', 'error');
+    return;
+  }
+  
+  const modal = document.getElementById('crmPixQrModal');
+  if (modal) {
+    modal.classList.add('open');
+    console.log('📱 Modal PIX aberta pelo FAB');
   }
 }
 

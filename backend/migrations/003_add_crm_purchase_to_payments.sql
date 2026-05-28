@@ -10,10 +10,10 @@ ALTER TABLE payments ADD CONSTRAINT fk_payments_crm_purchases
   FOREIGN KEY (crm_purchase_id) REFERENCES crm_purchases(id) ON DELETE SET NULL;
 
 -- 3. Criar índice para melhorar performance
-CREATE INDEX idx_payments_crm_purchase_id ON payments(crm_purchase_id);
+CREATE INDEX IF NOT EXISTS idx_payments_crm_purchase_id ON payments(crm_purchase_id);
 
 -- 4. Criar índice para melhorar performance de queries por mp_payment_id
-CREATE INDEX idx_payments_mp_payment_id ON payments(mp_payment_id) IF NOT EXISTS;
+CREATE INDEX IF NOT EXISTS idx_payments_mp_payment_id ON payments(mp_payment_id);
 
 -- Verificação: Consultar estrutura da tabela payments
 -- SELECT * FROM information_schema.columns WHERE table_name='payments' ORDER BY ordinal_position;

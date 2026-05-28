@@ -18,9 +18,9 @@ async function runMigrations() {
       return;
     }
     
-    // Read all SQL files from migrations directory
+    // Read all migration files (both .sql and .js) from migrations directory
     const files = fs.readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.sql'))
+      .filter(file => file.endsWith('.sql') || file.endsWith('.js'))
       .sort(); // Sort alphabetically to ensure correct order
     
     if (files.length === 0) {
@@ -34,12 +34,22 @@ async function runMigrations() {
     // Execute each migration
     for (const file of files) {
       const filePath = path.join(migrationsDir, file);
-      const sql = fs.readFileSync(filePath, 'utf-8');
       
       try {
         console.log(`\n⏳ Executando: ${file}`);
-        await db.query(sql);
-        console.log(`✅ ${file} executada com sucesso`);
+        
+        // Detectar tipo de migração
+        if (file.endsWith('.js')) {
+          // Executar migração JavaScript
+          const migration = require(filePath);
+          await migration.migrate();
+          console.log(`✅ ${file} executada com sucesso`);
+        } else {
+          // Executar migração SQL
+          const sql = fs.readFileSync(filePath, 'utf-8');
+          await db.query(sql);
+          console.log(`✅ ${file} executada com sucesso`);
+        }
       } catch (error) {
         // Log the error but continue with other migrations
         // This allows idempotent migrations (e.g., CREATE TABLE IF NOT EXISTS)

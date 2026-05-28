@@ -675,6 +675,7 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
   showCrmPixFab();
 
   console.log('🔄 Iniciando polling do PIX por 1 hora:', pixPaymentId);
+  console.log('💰 Dados do pedido:', orderData);
   let pollCount = 0;
   const maxPolls = 720; // 1 hora (720 × 5 segundos)
 
@@ -685,10 +686,11 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
       const statusResponse = await fetch(`${API_BASE}/payments/status/${pixPaymentId}`);
       const statusData = await statusResponse.json();
       
-      console.log(`⏱️  [Poll ${pollCount}] Status PIX: ${statusData.status}`);
+      console.log(`⏱️  [Poll ${pollCount}/720] Status PIX: ${statusData.status} | Response:`, statusData);
 
       if (statusData.status === 'approved') {
-        console.log('✅ PIX CONFIRMADO! Atualizando histórico...');
+        console.log('✅✅✅ PIX CONFIRMADO! Processando confirmação...');
+        console.log('📊 Dados da confirmação:', statusData);
         
         // Parar polling
         clearInterval(crmPixPollingInterval);
@@ -718,8 +720,21 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
             openCrmCustomerDetail(customerId);
           }
         }, 2000);
-      } else if (pollCount >= maxPolls) {
-        console.log('⏰ Expiração: PIX expirou após 1 hora');
+      } else if (statusData.status === 'pending') {
+        console.log(`⏳ Status ainda pendente (Poll ${pollCount}/720)`);
+      } else if (statusData.status === 'processing') {
+        console.log(`⚙️  Status processando (Poll ${pollCount}/720)`);
+      } else {
+        console.log(`⚠️  Status inesperado: ${statusData.status} (Poll ${pollCount}/720)`);
+      }
+
+      // Log de debug: mostrar progresso a cada 50 polls
+      if (pollCount % 50 === 0) {
+        console.log(`📈 Progresso do polling: ${pollCount}/720 (${(pollCount/720*100).toFixed(1)}%) - Status: ${statusData.status}`);
+      }
+
+      if (pollCount >= maxPolls) {
+        console.log('⏰ Expiração: PIX expirou após 1 hora (720 polls × 5s)');
         clearInterval(crmPixPollingInterval);
         crmPixPollingInterval = null;
         
@@ -736,6 +751,7 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
       }
     } catch (error) {
       console.warn(`⚠️  Erro ao verificar status (Poll ${pollCount}):`, error.message);
+      console.warn('🔍 Stack:', error.stack);
     }
   }, 5000); // Verificar a cada 5 segundos
 

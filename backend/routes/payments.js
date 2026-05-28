@@ -255,16 +255,22 @@ router.get('/status/:paymentId', async (req, res) => {
     }
 
     const payment = dbResult.rows[0];
-    console.log(`📋 Status atual no banco: ${payment.status} | Order: ${payment.order_id || 'N/A'}`);
+    console.log(`📋 Status ATUAL NO BANCO: ${payment.status}`);
+    console.log(`   - Order ID: ${payment.order_id || 'N/A'}`);
+    console.log(`   - CRM Purchase ID: ${payment.crm_purchase_id || 'N/A'}`);
+    console.log(`   - Criado em: ${payment.created_at}`);
 
     // Consultar no Mercado Pago para atualizar status (com retry)
     let mpPaymentResult;
     let consulted = false;
     
     try {
+      console.log(`🔄 Consultando Mercado Pago...`);
       mpPaymentResult = await getPaymentMPWithRetry(paymentId, 3, 500);
       consulted = true;
-      console.log(`🔄 Status consultado no MP: ${mpPaymentResult.status}`);
+      console.log(`✅ Status CONSULTADO NO MP: ${mpPaymentResult.status}`);
+      console.log(`   - Transaction Amount: ${mpPaymentResult.transaction_amount}`);
+      console.log(`   - Status Code: ${mpPaymentResult.status}`);
     } catch (mpError) {
       console.warn(`⚠️  Falha ao consultar MP (usando dados do banco): ${mpError.message}`);
       // Usar dados do banco como fallback
@@ -277,7 +283,7 @@ router.get('/status/:paymentId', async (req, res) => {
 
     // Atualizar status no banco se mudou
     if (consulted && mpPaymentResult.status !== payment.status) {
-      console.log(`🔄 Status mudou: ${payment.status} → ${mpPaymentResult.status}`);
+      console.log(`\n🔄 STATUS MUDOU: ${payment.status} → ${mpPaymentResult.status}`);
       
       await db.query(
         'UPDATE payments SET status = $1, updated_at = NOW() WHERE mp_payment_id = $2',
@@ -285,6 +291,8 @@ router.get('/status/:paymentId', async (req, res) => {
       );
 
       if (mpPaymentResult.status === 'approved') {
+        console.log(`\n✅ PROCESSANDO CONFIRMAÇÃO DO PIX`);
+        
         await db.query(
           'UPDATE payments SET confirmed_at = NOW() WHERE mp_payment_id = $1',
           [paymentId]
@@ -316,7 +324,10 @@ router.get('/status/:paymentId', async (req, res) => {
           }
 
           const duration = Date.now() - startTime;
-          console.log(`✅ PIX CONFIRMADO (polling - ${duration}ms) - Pedido #${payment.order_id}`);
+          console.log(`✅ PIX CONFIRMADO via POLLING (${duration}ms)`);
+          console.log(`   - Pedido: #${payment.order_id}`);
+          console.log(`   - Status atualizado para: Pago`);
+          console.log(`   - Estoque diminuído`);
         }
 
         // Se tiver crm_purchase_id, atualizar compra do CRM
@@ -327,15 +338,20 @@ router.get('/status/:paymentId', async (req, res) => {
           );
 
           const duration = Date.now() - startTime;
-          console.log(`✅ PIX CONFIRMADO (polling - ${duration}ms) - Compra CRM #${payment.crm_purchase_id}`);
+          console.log(`✅ PIX CONFIRMADO via POLLING (${duration}ms)`);
+          console.log(`   - Compra CRM: #${payment.crm_purchase_id}`);
+          console.log(`   - Payment Status atualizado para: pago`);
         }
       }
     } else if (consulted) {
-      console.log(`ℹ️  Status permanece: ${mpPaymentResult.status}`);
+      console.log(`ℹ️  Status PERMANECE: ${mpPaymentResult.status} (sem mudanças)`);
     }
 
     const duration = Date.now() - startTime;
-    console.log(`📊 Resposta: Status = ${mpPaymentResult.status} | Tempo = ${duration}ms | Fonte = ${consulted ? 'MP' : 'Banco'}`);
+    console.log(`\n📊 RESPOSTA DO POLLING:`);
+    console.log(`   - Status Final: ${mpPaymentResult.status}`);
+    console.log(`   - Fonte: ${consulted ? 'Mercado Pago' : 'Banco de Dados'}`);
+    console.log(`   - Tempo: ${duration}ms`);
 
     return res.json({
       id: payment.id,
@@ -343,16 +359,20 @@ router.get('/status/:paymentId', async (req, res) => {
       status: mpPaymentResult.status,
       amount: mpPaymentResult.transaction_amount,
       order_id: payment.order_id,
+      crm_purchase_id: payment.crm_purchase_id,
       _debug: {
         consulted_mp: consulted,
         duration_ms: duration,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        banco_status_anterior: payment.status
       }
     });
 
   } catch (error) {
     const duration = Date.now() - startTime;
-    console.error(`❌ Erro ao consultar status (${duration}ms):`, error.message);
+    console.error(`\n❌ ERRO ao consultar status (${duration}ms):`);
+    console.error(`   - Erro: ${error.message}`);
+    console.error(`   - Stack: ${error.stack}`);
     res.status(500).json({ 
       error: 'Erro ao consultar status',
       details: error.message,

@@ -997,6 +997,7 @@ tr:hover td { background: #faf7f2; }
       <div style="margin-bottom: 20px;">
         <p style="color: #666; font-size: 14px; margin-bottom: 8px;">Cliente: <strong id="crmPixClientName"></strong></p>
         <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Valor: <strong style="color: var(--vermelho); font-size: 18px;" id="crmPixAmount"></strong></p>
+        <p style="color: #f39c12; font-size: 12px; font-weight: 700;">⏱️ Válido por: <span id="crmPixExpireCounter" style="background: #fff3cd; padding: 4px 8px; border-radius: 4px; font-family: monospace;">59m 59s</span></p>
       </div>
       <div id="crmPixQrCode" style="background: white; padding: 20px; border-radius: 8px; display: flex; justify-content: center; align-items: center; min-height: 300px; border: 2px dashed #e8e0d4; margin-bottom: 16px;">
         ⏳ Gerando QR Code...
@@ -1013,7 +1014,9 @@ tr:hover td { background: #faf7f2; }
         <strong>ℹ️ Instruções:</strong><br>
         1. Compartilhe o QR Code com o cliente<br>
         2. Ou envie o código PIX para ser escaneado<br>
-        3. O pagamento será confirmado automaticamente
+        3. O pagamento será confirmado automaticamente<br>
+        <br>
+        <strong>💡 Dica:</strong> Você pode fechar este modal. O PIX continuará válido por 1 hora e será monitorado automaticamente.
       </div>
     </div>
     <div class="modal-footer">

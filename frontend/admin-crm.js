@@ -564,6 +564,7 @@ function closeCrmDetailModal() {
 let crmCurrentPixData = null;
 let crmCurrentOrderId = null;
 let crmPixPollingInterval = null;
+let crmPixTimeoutHandle = null;
 
 // Gerar QR code PIX para pedido do CRM
 async function generateCrmPixQrCode(orderId) {
@@ -620,7 +621,9 @@ async function generateCrmPixQrCode(orderId) {
       qr_code: pixData.qr_code,
       qr_code_base64: pixData.qr_code_base64,
       status: pixData.status,
-      amount: pixData.amount
+      amount: pixData.amount,
+      expires_at: pixData.expires_at,
+      expires_in_seconds: pixData.expires_in_seconds
     };
 
     // Exibir QR code
@@ -655,10 +658,13 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
   if (crmPixPollingInterval) {
     clearInterval(crmPixPollingInterval);
   }
+  if (crmPixTimeoutHandle) {
+    clearTimeout(crmPixTimeoutHandle);
+  }
 
-  console.log('🔄 Iniciando polling do PIX:', pixPaymentId);
+  console.log('🔄 Iniciando polling do PIX por 1 hora:', pixPaymentId);
   let pollCount = 0;
-  const maxPolls = 120; // 10 minutos (120 × 5 segundos)
+  const maxPolls = 720; // 1 hora (720 × 5 segundos)
 
   crmPixPollingInterval = setInterval(async () => {
     pollCount++;
@@ -675,6 +681,7 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
         // Parar polling
         clearInterval(crmPixPollingInterval);
         crmPixPollingInterval = null;
+        if (crmPixTimeoutHandle) clearTimeout(crmPixTimeoutHandle);
 
         // Mostrar mensagem de sucesso
         showToast('✅ Pagamento confirmado! Atualizando histórico...', 'success');
@@ -691,30 +698,65 @@ async function startCrmPixPolling(pixPaymentId, orderData) {
           }
         }, 2000);
       } else if (pollCount >= maxPolls) {
-        console.log('⏰ Timeout: Parando polling após 10 minutos');
+        console.log('⏰ Expiração: PIX expirou após 1 hora');
         clearInterval(crmPixPollingInterval);
         crmPixPollingInterval = null;
-        showToast('⏰ Polling finalizado. Se o pagamento foi realizado, atualize a página.', 'info');
+        showToast('⏰ Código PIX expirou. Gere um novo se necessário.', 'warning');
       }
     } catch (error) {
       console.warn(`⚠️  Erro ao verificar status (Poll ${pollCount}):`, error.message);
     }
   }, 5000); // Verificar a cada 5 segundos
+
+  // ✅ Iniciar contador de expiração
+  startCrmPixExpirationCounter(crmCurrentPixData.expires_at);
 }
 
-// Fechar modal de PIX QR code
+// ✅ Função para atualizar contador de tempo até expiração
+function startCrmPixExpirationCounter(expiresAt) {
+  let expirationInterval;
+  
+  const updateCounter = () => {
+    const now = new Date();
+    const expireDate = new Date(expiresAt);
+    const secondsLeft = Math.floor((expireDate - now) / 1000);
+    
+    const minutes = Math.floor(secondsLeft / 60);
+    const seconds = secondsLeft % 60;
+    
+    const counterEl = document.getElementById('crmPixExpireCounter');
+    if (counterEl) {
+      if (secondsLeft > 0) {
+        counterEl.textContent = `${minutes}m ${seconds}s`;
+        counterEl.style.background = secondsLeft > 300 ? '#fff3cd' : '#ffe6e6';
+        counterEl.style.color = secondsLeft > 300 ? '#000' : '#d32f2f';
+      } else {
+        counterEl.textContent = 'EXPIRADO';
+        counterEl.style.background = '#ffcdd2';
+        counterEl.style.color = '#d32f2f';
+        clearInterval(expirationInterval);
+      }
+    }
+  };
+  
+  // Atualizar imediatamente
+  updateCounter();
+  
+  // Atualizar a cada segundo
+  expirationInterval = setInterval(updateCounter, 1000);
+}
+
+// Fechar modal de PIX QR code (apenas minimiza, não cancela o PIX)
 function closeCrmPixQrModal() {
   const modal = document.getElementById('crmPixQrModal');
   if (modal) modal.classList.remove('open');
   
-  // Parar polling ao fechar a modal
-  if (crmPixPollingInterval) {
-    clearInterval(crmPixPollingInterval);
-    crmPixPollingInterval = null;
-  }
+  // ⚠️ NÃO pausar polling! O PIX continua válido por 1 hora
+  // mesmo que o modal seja fechado
   
-  crmCurrentPixData = null;
+  // Apenas limpar referências da modal
   crmCurrentOrderId = null;
+  // NÃO limpar crmCurrentPixData para permitir verificação contínua
 }
 
 // Copiar código PIX para clipboard

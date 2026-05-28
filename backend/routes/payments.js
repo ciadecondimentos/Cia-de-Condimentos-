@@ -173,13 +173,18 @@ router.post('/pix', async (req, res) => {
 
     console.log('✅ Pagamento PIX criado:', mpPaymentResult.id, crm_purchase_id ? `(Compra CRM: ${crm_purchase_id})` : '');
 
+    // Calcular data de expiração (1 hora)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // +1 hora
+
     res.status(201).json({
       id: result.rows[0].id,
       mp_payment_id: result.rows[0].mp_payment_id,
       status: result.rows[0].status,
       amount: result.rows[0].amount,
       qr_code: result.rows[0].qr_code,
-      qr_code_base64: result.rows[0].qr_code_base64
+      qr_code_base64: result.rows[0].qr_code_base64,
+      expires_at: expiresAt,
+      expires_in_seconds: 3600 // 1 hora
     });
 
   } catch (error) {

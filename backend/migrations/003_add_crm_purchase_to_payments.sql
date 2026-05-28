@@ -1,13 +1,24 @@
 -- Migração: Adicionar suporte para PIX no CRM com atualização automática
 -- Data: 27 de maio de 2026
 -- Descrição: Adiciona coluna crm_purchase_id na tabela payments para vincular pagamentos PIX com compras do CRM
+-- Versão: Idempotente (segura para rodar múltiplas vezes)
 
--- 1. Adicionar coluna crm_purchase_id
-ALTER TABLE payments ADD COLUMN crm_purchase_id INTEGER;
+-- 1. Adicionar coluna crm_purchase_id se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payments' AND column_name='crm_purchase_id') THEN
+    ALTER TABLE payments ADD COLUMN crm_purchase_id INTEGER;
+  END IF;
+END $$;
 
--- 2. Adicionar restrição de chave estrangeira
-ALTER TABLE payments ADD CONSTRAINT fk_payments_crm_purchases 
-  FOREIGN KEY (crm_purchase_id) REFERENCES crm_purchases(id) ON DELETE SET NULL;
+-- 2. Adicionar restrição de chave estrangeira se não existir
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name='payments' AND constraint_name='fk_payments_crm_purchases') THEN
+    ALTER TABLE payments ADD CONSTRAINT fk_payments_crm_purchases 
+      FOREIGN KEY (crm_purchase_id) REFERENCES crm_purchases(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- 3. Criar índice para melhorar performance
 CREATE INDEX IF NOT EXISTS idx_payments_crm_purchase_id ON payments(crm_purchase_id);

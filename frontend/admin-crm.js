@@ -605,7 +605,8 @@ async function generateCrmPixQrCode(orderId) {
         description: 'Pagamento - Cia de Condimentos (Pedido Admin)',
         payerEmail: 'admin@condimentos.com',
         payerPhone: orderData.customerWhatsApp || '',
-        crm_purchase_id: crm_purchase_id  // ✅ NOVO: Enviar ID da compra CRM
+        crm_purchase_id: crm_purchase_id,  // ✅ ID da compra CRM
+        customer_name: orderData.customerName  // ✅ NOVO: Nome do cliente
       })
     });
 
@@ -625,7 +626,10 @@ async function generateCrmPixQrCode(orderId) {
       status: pixData.status,
       amount: pixData.amount,
       expires_at: pixData.expires_at,
-      expires_in_seconds: pixData.expires_in_seconds
+      expires_in_seconds: pixData.expires_in_seconds,
+      // ✅ NOVO: Salvar também dados do cliente para restauração
+      customerName: orderData.customerName,
+      customerWhatsApp: orderData.customerWhatsApp
     };
 
     // Exibir QR code
@@ -934,7 +938,9 @@ async function syncCrmPixFromBackend() {
         // Restaurar PIX do backend
         crmCurrentPixData = {
           ...pixData,
-          orderId: pixData.crm_purchase_id || crmCurrentOrderId
+          orderId: pixData.crm_purchase_id || crmCurrentOrderId,
+          customerName: pixData.customer_name,
+          customerWhatsApp: ''  // Não retorna do backend por segurança
         };
         
         // Salvar em localStorage
@@ -999,6 +1005,9 @@ function setupCrmPixStorageListener() {
           // Mostrar FAB
           showCrmPixFab();
           updateCrmPixFabCounter(pixData.expires_at);
+          
+          // Preencher modal se estiver aberta
+          fillCrmPixModalWithData();
           
           // Reiniciar polling
           startCrmPixPolling(pixData.mp_payment_id, { dayTotal: pixData.amount });
@@ -1065,7 +1074,9 @@ async function checkCrmPixOnPageLoad() {
       
       crmCurrentPixData = {
         ...data.pix,
-        orderId: data.pix.crm_purchase_id
+        orderId: data.pix.crm_purchase_id,
+        customerName: data.pix.customer_name,
+        customerWhatsApp: ''  // Não retorna do backend por segurança
       };
       crmCurrentOrderId = data.pix.crm_purchase_id;
       
@@ -1204,6 +1215,52 @@ function openCrmPixQrModalFromFab() {
   if (modal) {
     modal.classList.add('open');
     console.log('📱 Modal PIX aberta pelo FAB');
+  }
+  
+  // ✅ NOVO: Preencher modal com dados salvos
+  fillCrmPixModalWithData();
+}
+
+// ✅ Preencher modal com dados do PIX salvo
+function fillCrmPixModalWithData() {
+  if (!crmCurrentPixData) return;
+  
+  // Preencher cliente e valor
+  const clientNameEl = document.getElementById('crmPixClientName');
+  if (clientNameEl) {
+    clientNameEl.textContent = crmCurrentPixData.customerName || 'Cliente';
+  }
+  
+  const amountEl = document.getElementById('crmPixAmount');
+  if (amountEl) {
+    if (crmCurrentPixData.amount) {
+      amountEl.textContent = formatMoney(crmCurrentPixData.amount);
+    } else {
+      amountEl.textContent = 'R$ 0,00';
+    }
+  }
+  
+  // Preencher QR code
+  const qrCodeDiv = document.getElementById('crmPixQrCode');
+  if (qrCodeDiv) {
+    if (crmCurrentPixData.qr_code_base64) {
+      qrCodeDiv.innerHTML = `<img src="data:image/png;base64,${crmCurrentPixData.qr_code_base64}" style="width: 100%; height: auto; border-radius: 8px;">`;
+      console.log('✅ QR Code carregado na modal');
+    } else {
+      qrCodeDiv.innerHTML = '⚠️ QR Code não disponível';
+    }
+  }
+  
+  // Preencher código PIX
+  const pixCodeInput = document.getElementById('crmPixCode');
+  if (pixCodeInput) {
+    if (crmCurrentPixData.qr_code) {
+      pixCodeInput.value = crmCurrentPixData.qr_code;
+      console.log('✅ Código PIX carregado na modal');
+    } else {
+      pixCodeInput.value = '';
+      console.warn('⚠️ Código PIX não disponível');
+    }
   }
 }
 

@@ -90,7 +90,7 @@ async function getPaymentMP(paymentId) {
 // POST /payments/pix - Criar pagamento PIX
 router.post('/pix', async (req, res) => {
   try {
-    const { orderId, amount, description, payerEmail, payerPhone, crm_purchase_id } = req.body;
+    const { orderId, amount, description, payerEmail, payerPhone, crm_purchase_id, customer_name } = req.body;
 
     if (!amount || Number(amount) <= 0) {
       return res.status(400).json({ error: 'Valor inválido' });
@@ -99,7 +99,7 @@ router.post('/pix', async (req, res) => {
     // Email é obrigatório para Mercado Pago
     const email = payerEmail || 'cliente@condimentos.com';
 
-    console.log('📝 Criando pagamento PIX:', { amount, email, payerPhone });
+    console.log('📝 Criando pagamento PIX:', { amount, email, payerPhone, customer_name });
 
     // Criar pagamento PIX via SDK Mercado Pago
     let mpPaymentResult;
@@ -143,8 +143,8 @@ router.post('/pix', async (req, res) => {
     }
 
     // Salvar no banco de dados
-    let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone';
-    let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9';
+    let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone, customer_name';
+    let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9, $10';
     let params = [
       orderId || null,
       mpPaymentResult.id,
@@ -154,13 +154,14 @@ router.post('/pix', async (req, res) => {
       qrCode,
       finalQrCodeBase64,
       email,
-      payerPhone || null
+      payerPhone || null,
+      customer_name || null
     ];
 
     // Adicionar crm_purchase_id se fornecido
     if (crm_purchase_id) {
       sqlFields += ', crm_purchase_id';
-      sqlValues += ', $10';
+      sqlValues += ', $11';
       params.push(crm_purchase_id);
     }
 
@@ -632,7 +633,7 @@ router.get('/pix/active', async (req, res) => {
     // Buscar PIX pendente/processando criado na última hora
     const result = await db.query(
       `SELECT id, mp_payment_id, status, amount, qr_code, qr_code_base64, 
-              crm_purchase_id, created_at, updated_at
+              crm_purchase_id, customer_name, created_at, updated_at
        FROM payments 
        WHERE payment_method = 'pix' 
        AND status IN ('pending', 'processing') 
@@ -663,6 +664,7 @@ router.get('/pix/active', async (req, res) => {
         qr_code: payment.qr_code,
         qr_code_base64: payment.qr_code_base64,
         crm_purchase_id: payment.crm_purchase_id,
+        customer_name: payment.customer_name,
         expires_at: expiresAt.toISOString(),
         expires_in_seconds: Math.floor((expiresAt - new Date()) / 1000)
       }

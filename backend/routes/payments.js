@@ -624,4 +624,53 @@ router.post('/confirm-test/:paymentId', async (req, res) => {
   }
 });
 
+// ✅ GET /payments/pix/active - Retorna PIX ativo (ainda não expirou nem foi confirmado)
+router.get('/pix/active', async (req, res) => {
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    // Buscar PIX pendente/processando criado na última hora
+    const result = await db.query(
+      `SELECT id, mp_payment_id, status, amount, qr_code, qr_code_base64, 
+              crm_purchase_id, created_at, updated_at
+       FROM payments 
+       WHERE payment_method = 'pix' 
+       AND status IN ('pending', 'processing') 
+       AND created_at > $1
+       ORDER BY created_at DESC 
+       LIMIT 1`,
+      [oneHourAgo]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({ active: false, pix: null });
+    }
+
+    const payment = result.rows[0];
+    const expiresAt = new Date(payment.created_at.getTime() + 60 * 60 * 1000);
+
+    // Se já expirou, retornar como inativo
+    if (new Date() > expiresAt) {
+      return res.json({ active: false, pix: null });
+    }
+
+    res.json({
+      active: true,
+      pix: {
+        mp_payment_id: payment.mp_payment_id,
+        status: payment.status,
+        amount: payment.amount,
+        qr_code: payment.qr_code,
+        qr_code_base64: payment.qr_code_base64,
+        crm_purchase_id: payment.crm_purchase_id,
+        expires_at: expiresAt.toISOString(),
+        expires_in_seconds: Math.floor((expiresAt - new Date()) / 1000)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Erro ao buscar PIX ativo:', error.message);
+    res.status(500).json({ error: 'Erro ao buscar PIX ativo' });
+  }
+});
+
 module.exports = router;

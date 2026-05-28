@@ -18,6 +18,11 @@ function safeNumber(value) {
   return isNaN(num) ? 0 : num;
 }
 
+// Helper: Formatar valor monetário seguramente
+function formatMoney(value) {
+  return `R$ ${safeNumber(value).toFixed(2)}`;
+}
+
 // Helper: Função para obter data local em formato YYYY-MM-DD (sem timezone)
 function getLocalDateString(date) {
   const year = date.getFullYear();
@@ -84,8 +89,8 @@ function updateSuppliersDashboard() {
   const debtorsEl = document.getElementById('suppliers-debtors');
   
   if (totalEl) totalEl.textContent = totalSuppliers;
-  if (totalBoughtEl) totalBoughtEl.textContent = `R$ ${parseFloat(totalBought).toFixed(2)}`;
-  if (totalPendingEl) totalPendingEl.textContent = `R$ ${parseFloat(totalPending).toFixed(2)}`;
+  if (totalBoughtEl) totalBoughtEl.textContent = formatMoney(totalBought);
+  if (totalPendingEl) totalPendingEl.textContent = formatMoney(totalPending);
   if (debtorsEl) debtorsEl.textContent = debtors;
 }
 
@@ -119,8 +124,8 @@ function renderSuppliersTable() {
           <td data-label="Situação" style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
             ${isDebtor ? '💔 Devedor' : '✓ Em dia'}
           </td>
-          <td data-label="Total Comprado" style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+          <td data-label="Total Comprado" style="text-align: right;">${formatMoney(totalSpent)}</td>
+          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">${formatMoney(debtAmount)}</td>
           <td data-label="Ações">
             <button class="btn btn-sm btn-ghost" onclick="openSupplierDetail(${supplier.id})" title="Ver detalhes">👁️</button>
             <button class="btn btn-sm btn-ghost" onclick="openEditSupplier(${supplier.id})" title="Editar">✏️</button>
@@ -373,17 +378,17 @@ async function openSupplierDetail(supplierId) {
     title.textContent = `📊 ${supplier.company_name}`;
 
     // Dashboard do fornecedor
-    const monthRevenue = periodStats?.this_month || 0;
-    const yearRevenue = periodStats?.this_year || 0;
-    const avgTicket = stats?.average_ticket || 0;
-    const pendingAmount = stats?.pending || 0;
-    const paidAmount = stats?.paid || 0;
+    const monthRevenue = safeNumber(periodStats?.this_month || 0);
+    const yearRevenue = safeNumber(periodStats?.this_year || 0);
+    const avgTicket = safeNumber(stats?.average_ticket || 0);
+    const pendingAmount = safeNumber(stats?.pending || 0);
+    const paidAmount = safeNumber(stats?.paid || 0);
     
     let html = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--vermelho);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total Comprado</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${parseFloat(stats?.total_spent || 0).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${formatMoney(stats?.total_spent || 0)}</div>
         </div>
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--amarelo);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Número de Compras</div>
@@ -391,25 +396,25 @@ async function openSupplierDetail(supplierId) {
         </div>
         <div style="background: #d4edda; padding: 16px; border-radius: 8px; border-left: 4px solid #27ae60;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Pago</div>
-          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${parseFloat(paidAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">${formatMoney(paidAmount)}</div>
         </div>
         <div style="background: #fff3cd; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Em Aberto</div>
-          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${parseFloat(pendingAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">${formatMoney(pendingAmount)}</div>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(avgTicket).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(avgTicket)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Ticket Médio</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(monthRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(monthRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Mês</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(yearRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(yearRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Ano</div>
         </div>
       </div>
@@ -479,11 +484,14 @@ async function openSupplierDetail(supplierId) {
                   ${dateItems.length} produto${dateItems.length !== 1 ? 's' : ''} • ${dayQty} unidade${dayQty !== 1 ? 's' : ''}
                 </div>
               </div>
-              <div style="text-align: right;">
-                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${dayTotal.toFixed(2)}</div>
-                <span class="status-pill s-${dayStatus}" style="font-size: 10px; margin-top: 4px; display: inline-block;">
-                  ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
-                </span>
+              <div style="text-align: right; display: flex; align-items: center; gap: 12px;">
+                <div>
+                  <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${dayTotal.toFixed(2)}</div>
+                  <span class="status-pill s-${dayStatus}" style="font-size: 10px; margin-top: 4px; display: inline-block;">
+                    ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
+                  </span>
+                </div>
+                <button class="btn btn-sm btn-primary" onclick="openEditBulkSupplierPurchase(${supplierId}, '${dateKey}')" title="Editar compra completa" style="padding: 6px 10px; font-size: 12px; white-space: nowrap;">✏️ Editar</button>
               </div>
             </div>
 
@@ -494,12 +502,12 @@ async function openSupplierDetail(supplierId) {
                   <div style="flex: 1;">
                     <div style="font-weight: 700; color: var(--marrom); font-size: 12px;">${item.product_name}</div>
                     <div style="font-size: 10px; color: #999; margin-top: 2px;">
-                      ${item.quantity} unid. × R$ ${parseFloat(item.unit_price).toFixed(2)}
+                      ${item.quantity} unid. × ${formatMoney(item.unit_price)}
                       ${item.payment_method ? ` • ${item.payment_method}` : ''}
                     </div>
                   </div>
                   <div style="text-align: right; margin-left: 12px;">
-                    <div style="font-weight: 700; color: var(--vermelho); font-size: 12px;">R$ ${parseFloat(item.total_price).toFixed(2)}</div>
+                    <div style="font-weight: 700; color: var(--vermelho); font-size: 12px;">${formatMoney(item.total_price)}</div>
                   </div>
                   <div style="margin-left: 12px;">
                     <button class="btn btn-sm btn-ghost" onclick="openEditSupplierPurchase(${supplierId}, ${item.id})" title="Editar" style="padding: 4px 8px; font-size: 11px;">✏️</button>
@@ -604,7 +612,7 @@ async function openAddSupplierPurchase(supplierId) {
             <button onclick="decrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
             <input type="number" id="supplierProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateSupplierGrandTotal()" oninput="calculateSupplierGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
             <button onclick="incrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
-            <span id="supplierProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+            <span id="supplierProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">${formatMoney(p.price)}</span>
           </div>
         </div>
       </div>
@@ -714,6 +722,168 @@ function calculateSupplierTotal() {
   document.getElementById('supplierProdTotal').value = total.toFixed(2);
 }
 
+// ============ EDITAR COMPRA COMPLETA (MÚLTIPLOS PRODUTOS) ============
+
+// Abrir modal para editar todos os produtos de uma data
+async function openEditBulkSupplierPurchase(supplierId, purchaseDate) {
+  try {
+    const response = await fetch(`${API_BASE}/suppliers/${supplierId}`);
+    const data = await response.json();
+    const purchases = data.purchases || [];
+    
+    // Filtrar apenas os produtos desta data
+    const dateItems = purchases.filter(p => p.purchase_date === purchaseDate);
+    
+    if (dateItems.length === 0) {
+      showToast('Nenhum produto encontrado para esta data', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('supplierPurchaseModal');
+    const title = document.getElementById('supplierPurchaseModalTitle');
+    const body = document.getElementById('supplierPurchaseModalBody');
+
+    title.textContent = '✏️ Editar Compra Completa';
+
+    // Gerar HTML para cada produto
+    let productsHtml = '';
+    let totalGeral = 0;
+    
+    dateItems.forEach((item, index) => {
+      const itemTotal = safeNumber(item.total_price);
+      totalGeral += itemTotal;
+      
+      productsHtml += `
+        <div class="bulk-purchase-item" data-product-id="${item.id}" style="background: #f9f7f3; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e8e0d4;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="fg">
+              <label style="font-size: 11px;">Nome do Produto</label>
+              <input type="text" class="bulk-product-name" placeholder="Ex: Pimenta - 500g" value="${item.product_name}" style="font-size: 12px;">
+            </div>
+            <div class="fg">
+              <label style="font-size: 11px;">Quantidade</label>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <button onclick="decrementQty('bulk-qty-${item.id}')" class="btn btn-sm" style="min-width: 32px; padding: 4px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px;">−</button>
+                <input type="number" id="bulk-qty-${item.id}" class="bulk-quantity" placeholder="1" min="1" step="1" value="${item.quantity}" style="width: 50px; text-align: center; padding: 4px; border: 1px solid #ddd; border-radius: 4px; background: #fff; font-size: 12px;">
+                <button onclick="incrementQty('bulk-qty-${item.id}')" class="btn btn-sm" style="min-width: 32px; padding: 4px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px;">+</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="fg">
+              <label style="font-size: 11px;">Valor Unitário (R$)</label>
+              <input type="number" class="bulk-unit-price" placeholder="0.00" min="0" step="0.01" value="${safeNumber(item.unit_price).toFixed(2)}" style="font-size: 12px;">
+            </div>
+            <div class="fg">
+              <label style="font-size: 11px;">Total (R$)</label>
+              <input type="number" id="bulk-total-${item.id}" class="bulk-total" placeholder="0.00" disabled style="background: #f4f0ea; font-size: 12px;" value="${itemTotal.toFixed(2)}">
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // Formas de pagamento (compartilhada para toda a compra)
+    const firstItem = dateItems[0];
+    
+    body.innerHTML = `
+      <div style="max-height: 60vh; overflow-y: auto;">
+        <div style="margin-bottom: 20px; padding: 12px; background: #f0e8d0; border-radius: 8px; border-left: 4px solid var(--vermelho);">
+          <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Informações da Compra</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--marrom);">
+            📅 ${formatDateString(purchaseDate)} 
+            <span style="font-size: 12px; color: #999; margin-left: 12px;">${dateItems.length} produto${dateItems.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        <h4 style="font-size: 12px; font-weight: 700; color: var(--marrom); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">📦 Produtos</h4>
+        ${productsHtml}
+
+        <div style="background: #f0e8d0; padding: 12px; border-radius: 8px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Forma de Pagamento</div>
+            <select id="bulkPaymentMethod" style="margin-top: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 100%;">
+              <option value="">Não especificado</option>
+              <option value="dinheiro" ${firstItem.payment_method === 'dinheiro' ? 'selected' : ''}>Dinheiro</option>
+              <option value="cartão-débito" ${firstItem.payment_method === 'cartão-débito' ? 'selected' : ''}>Cartão - Débito</option>
+              <option value="cartão-crédito" ${firstItem.payment_method === 'cartão-crédito' ? 'selected' : ''}>Cartão - Crédito</option>
+              <option value="pix" ${firstItem.payment_method === 'pix' ? 'selected' : ''}>PIX</option>
+              <option value="cheque" ${firstItem.payment_method === 'cheque' ? 'selected' : ''}>Cheque</option>
+              <option value="crediário" ${firstItem.payment_method === 'crediário' ? 'selected' : ''}>Crediário</option>
+              <option value="outro" ${firstItem.payment_method === 'outro' ? 'selected' : ''}>Outro</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Status do Pagamento</div>
+            <select id="bulkPaymentStatus" style="margin-top: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 100%;">
+              <option value="pendente" ${firstItem.payment_status === 'pendente' ? 'selected' : ''}>Pendente</option>
+              <option value="pago" ${firstItem.payment_status === 'pago' ? 'selected' : ''}>Pago</option>
+              <option value="parcial" ${firstItem.payment_status === 'parcial' ? 'selected' : ''}>Parcial</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Observações</label>
+          <textarea id="bulkPurchaseNotes" placeholder="Anotações sobre esta compra..." style="font-size: 12px;">${firstItem.notes || ''}</textarea>
+        </div>
+
+        <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 16px; border: 1px solid #ffc107;">
+          <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total da Compra</div>
+          <div id="bulkTotalGeral" style="font-size: 24px; font-weight: 900; color: var(--vermelho); margin-top: 6px;">R$ ${totalGeral.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+
+    // Adicionar event listeners para cálculos
+    const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+    bulkItems.forEach(item => {
+      const qtyInput = item.querySelector('.bulk-quantity');
+      const priceInput = item.querySelector('.bulk-unit-price');
+      
+      qtyInput.addEventListener('input', calculateBulkSupplierTotal);
+      qtyInput.addEventListener('change', calculateBulkSupplierTotal);
+      priceInput.addEventListener('input', calculateBulkSupplierTotal);
+      priceInput.addEventListener('change', calculateBulkSupplierTotal);
+    });
+
+    document.getElementById('supplierPurchaseModal').dataset.supplierId = supplierId;
+    document.getElementById('supplierPurchaseModal').dataset.purchaseDate = purchaseDate;
+    document.getElementById('supplierPurchaseModal').dataset.isBulk = 'true';
+    modal.classList.add('open');
+  } catch (error) {
+    console.error('Erro ao abrir compra para edição em lote:', error);
+    showToast('Erro ao carregar compra', 'error');
+  }
+}
+
+// Calcular total geral da compra em lote
+function calculateBulkSupplierTotal() {
+  let totalGeral = 0;
+  
+  const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+  bulkItems.forEach(item => {
+    const qtyInput = item.querySelector('.bulk-quantity');
+    const priceInput = item.querySelector('.bulk-unit-price');
+    const totalInput = item.querySelector('.bulk-total');
+    
+    const qty = parseFloat(qtyInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    const itemTotal = qty * price;
+    
+    if (totalInput) {
+      totalInput.value = itemTotal.toFixed(2);
+    }
+    
+    totalGeral += itemTotal;
+  });
+  
+  const totalGeralEl = document.getElementById('bulkTotalGeral');
+  if (totalGeralEl) {
+    totalGeralEl.textContent = `R$ ${totalGeral.toFixed(2)}`;
+  }
+}
+
 // Abrir modal para editar compra
 async function openEditSupplierPurchase(supplierId, purchaseId) {
   try {
@@ -753,7 +923,7 @@ async function openEditSupplierPurchase(supplierId, purchaseId) {
         </div>
         <div class="fg">
           <label>Total (R$)</label>
-          <input type="number" id="supplierProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${parseFloat(purchase.total_price || 0).toFixed(2)}">
+          <input type="number" id="supplierProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${safeNumber(purchase.total_price || 0).toFixed(2)}">
         </div>
       </div>
       <div class="form-row-2">
@@ -807,12 +977,77 @@ function closeSupplierPurchaseModal() {
   document.getElementById('supplierPurchaseModal').classList.remove('open');
   delete document.getElementById('supplierPurchaseModal').dataset.supplierId;
   delete document.getElementById('supplierPurchaseModal').dataset.purchaseId;
+  delete document.getElementById('supplierPurchaseModal').dataset.purchaseDate;
+  delete document.getElementById('supplierPurchaseModal').dataset.isBulk;
   suppliersSelectedProducts = {}; // Limpar seleção
 }
 
 // Salvar compra(s)
 async function saveSupplierPurchase() {
   const purchaseId = document.getElementById('supplierPurchaseModal').dataset.purchaseId;
+  const isBulk = document.getElementById('supplierPurchaseModal').dataset.isBulk === 'true';
+
+  // Se está editando múltiplos produtos de uma compra (edição em lote)
+  if (isBulk) {
+    const supplierId = document.getElementById('supplierPurchaseModal').dataset.supplierId;
+    const purchaseDate = document.getElementById('supplierPurchaseModal').dataset.purchaseDate;
+    const paymentMethod = document.getElementById('bulkPaymentMethod').value || null;
+    const paymentStatus = document.getElementById('bulkPaymentStatus').value || 'pendente';
+    const notes = document.getElementById('bulkPurchaseNotes').value || null;
+
+    try {
+      const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+      const updatePromises = [];
+
+      bulkItems.forEach(item => {
+        const productId = item.dataset.productId;
+        const productName = item.querySelector('.bulk-product-name').value.trim();
+        const quantity = parseInt(item.querySelector('.bulk-quantity').value) || 0;
+        const unitPrice = parseFloat(item.querySelector('.bulk-unit-price').value) || 0;
+
+        if (!productName || !quantity || !unitPrice) {
+          throw new Error('Preencha todos os campos dos produtos');
+        }
+
+        const payload = {
+          product_name: productName,
+          quantity,
+          unit_price: unitPrice,
+          purchase_date: purchaseDate,
+          payment_method: paymentMethod,
+          payment_status: paymentStatus,
+          notes: notes
+        };
+
+        updatePromises.push(
+          fetch(
+            `${API_BASE}/suppliers/${supplierId}/purchases/${productId}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }
+          )
+        );
+      });
+
+      const responses = await Promise.all(updatePromises);
+      const allSuccess = responses.every(r => r.ok);
+
+      if (!allSuccess) {
+        throw new Error('Erro ao atualizar algumas compras');
+      }
+
+      showToast(`✓ ${bulkItems.length} produto(s) atualizado(s) com sucesso!`, 'success');
+      closeSupplierPurchaseModal();
+      openSupplierDetail(supplierId);
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (error) {
+      console.error('Erro ao atualizar compras em lote:', error);
+      showToast(error.message || 'Erro ao atualizar compras', 'error');
+    }
+    return;
+  }
 
   // Se está editando uma compra individual
   if (purchaseId) {
@@ -992,8 +1227,8 @@ function searchSuppliers(query) {
         <td style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
           ${isDebtor ? '💔 Devedor' : '✓ Em dia'}
         </td>
-        <td style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-        <td style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+        <td style="text-align: right;">${formatMoney(totalSpent)}</td>
+        <td style="text-align: right; color: #e74c3c; font-weight: 700;">${formatMoney(debtAmount)}</td>
         <td>
           <button class="btn btn-sm btn-ghost" onclick="openSupplierDetail(${supplier.id})" title="Ver detalhes">👁️</button>
           <button class="btn btn-sm btn-ghost" onclick="openEditSupplier(${supplier.id})" title="Editar">✏️</button>

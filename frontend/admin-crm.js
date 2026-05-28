@@ -6,6 +6,11 @@ function safeNumber(value) {
   return isNaN(num) ? 0 : num;
 }
 
+// Helper: Formatar valor monetário seguramente
+function formatMoney(value) {
+  return `R$ ${safeNumber(value).toFixed(2)}`;
+}
+
 // Estado global do CRM
 const crmState = {
   currentCustomerId: null,
@@ -41,12 +46,12 @@ function updateCrmDashboard() {
   // Calcular métricas
   let totalCustomers = customers.length;
   let vipCustomers = customers.filter(c => c.is_vip).length;
-  let totalSpent = 0;
+  let totalPaid = 0;
   let totalPending = 0;
   
   customers.forEach(c => {
     const stats = c.stats || {};
-    totalSpent += safeNumber(stats.total_spent || 0);
+    totalPaid += safeNumber(stats.paid || 0);
     totalPending += safeNumber(stats.pending || 0);
   });
   
@@ -58,8 +63,8 @@ function updateCrmDashboard() {
   
   if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
   if (vipCustomersEl) vipCustomersEl.textContent = vipCustomers;
-  if (totalSpentEl) totalSpentEl.textContent = `R$ ${parseFloat(totalSpent).toFixed(2)}`;
-  if (totalPendingEl) totalPendingEl.textContent = `R$ ${parseFloat(totalPending).toFixed(2)}`;
+  if (totalSpentEl) totalSpentEl.textContent = formatMoney(totalPaid);
+  if (totalPendingEl) totalPendingEl.textContent = formatMoney(totalPending);
 }
 
 // Renderizar tabela de clientes
@@ -92,8 +97,8 @@ function renderCrmCustomersTable() {
           <td data-label="Situação" style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
             ${isDebtor ? '💔 Devedor' : '✓ Adimplente'}
           </td>
-          <td data-label="Total Gasto" style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+          <td data-label="Total Gasto" style="text-align: right;">${formatMoney(totalSpent)}</td>
+          <td data-label="Em Aberto" style="text-align: right; color: #e74c3c; font-weight: 700;">${formatMoney(debtAmount)}</td>
           <td data-label="Compras">${customer.stats?.total_purchases || 0} compras</td>
           <td data-label="Ações">
             <button class="btn btn-sm btn-ghost" onclick="openCrmCustomerDetail(${customer.id})" title="Ver detalhes">👁️</button>
@@ -334,6 +339,9 @@ async function deleteCrmCustomer(customerId) {
 // Abrir detalhes do cliente
 async function openCrmCustomerDetail(customerId) {
   try {
+    // ✅ Armazenar customer ID atual para polling usar depois
+    crmState.currentCustomerId = customerId;
+    
     const response = await fetch(`${API_BASE}/crm/customers/${customerId}`);
     const data = await response.json();
     const customer = data.customer;
@@ -348,17 +356,17 @@ async function openCrmCustomerDetail(customerId) {
     title.textContent = `📊 ${customer.full_name}`;
 
     // Dashboard do cliente
-    const monthRevenue = periodStats?.this_month || 0;
-    const yearRevenue = periodStats?.this_year || 0;
-    const avgTicket = stats?.average_ticket || 0;
-    const pendingAmount = stats?.pending || 0;
-    const paidAmount = stats?.paid || 0;
+    const monthRevenue = safeNumber(periodStats?.this_month || 0);
+    const yearRevenue = safeNumber(periodStats?.this_year || 0);
+    const avgTicket = safeNumber(stats?.average_ticket || 0);
+    const pendingAmount = safeNumber(stats?.pending || 0);
+    const paidAmount = safeNumber(stats?.paid || 0);
     
     let html = `
       <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 24px;">
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--vermelho);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total Comprado</div>
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">R$ ${parseFloat(stats?.total_spent || 0).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom); margin-top: 8px;">${formatMoney(stats?.total_spent || 0)}</div>
         </div>
         <div style="background: #f0e8d0; padding: 16px; border-radius: 8px; border-left: 4px solid var(--amarelo);">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Número de Compras</div>
@@ -366,25 +374,25 @@ async function openCrmCustomerDetail(customerId) {
         </div>
         <div style="background: #d4edda; padding: 16px; border-radius: 8px; border-left: 4px solid #27ae60;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Pago</div>
-          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">R$ ${parseFloat(paidAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #27ae60; margin-top: 8px;">${formatMoney(paidAmount)}</div>
         </div>
         <div style="background: #fff3cd; padding: 16px; border-radius: 8px; border-left: 4px solid #f39c12;">
           <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Em Aberto</div>
-          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">R$ ${parseFloat(pendingAmount).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: #f39c12; margin-top: 8px;">${formatMoney(pendingAmount)}</div>
         </div>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(avgTicket).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(avgTicket)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Ticket Médio</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(monthRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(monthRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Mês</div>
         </div>
         <div style="background: #f4f0ea; padding: 12px; border-radius: 6px; text-align: center;">
-          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">R$ ${parseFloat(yearRevenue).toFixed(2)}</div>
+          <div style="font-size: 24px; font-weight: 900; color: var(--marrom);">${formatMoney(yearRevenue)}</div>
           <div style="font-size: 10px; color: #999; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Este Ano</div>
         </div>
       </div>
@@ -397,7 +405,7 @@ async function openCrmCustomerDetail(customerId) {
           ${customer.phone ? `<div style="margin-bottom: 8px;"><strong>Telefone:</strong> ${customer.phone}</div>` : ''}
           ${customer.birthday ? `<div style="margin-bottom: 8px;"><strong>Aniversário:</strong> ${formatDateString(customer.birthday)}</div>` : ''}
           ${customer.is_vip ? `<div style="margin-bottom: 8px;"><strong>Status:</strong> ⭐ Cliente VIP</div>` : ''}
-          ${customer.credit_limit > 0 ? `<div style="margin-bottom: 8px;"><strong>Limite de Crédito:</strong> R$ ${parseFloat(customer.credit_limit).toFixed(2)}</div>` : ''}
+          ${customer.credit_limit > 0 ? `<div style="margin-bottom: 8px;"><strong>Limite de Crédito:</strong> ${formatMoney(customer.credit_limit)}</div>` : ''}
           ${customer.observations ? `<div style="margin-bottom: 8px;"><strong>Observações:</strong> ${customer.observations}</div>` : ''}
         </div>
       </div>
@@ -451,68 +459,81 @@ async function openCrmCustomerDetail(customerId) {
         const hasPixPending = dateItems.some(p => p.payment_method === 'pix' && p.payment_status === 'pendente');
 
         // Armazenar dados do pedido globalmente
+        // Extrair IDs das compras para relacionar com PIX
+        const purchaseIds = dateItems.map(p => p.id);
+        
         crmOrdersData[orderId] = {
           customerName: customer.full_name,
           customerWhatsApp: customer.whatsapp,
           purchaseDate: dateFormatted,
           products: dateItems,
           dayTotal: dayTotal,
-          dayStatus: dayStatus
+          dayStatus: dayStatus,
+          purchaseIds: purchaseIds  // Array de IDs das compras do CRM
         };
 
         html += `
           <div style="background: #ffffff; border: 1px solid #e8e0d4; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <!-- Cabeçalho do Card -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 2px solid #f4f0ea;">
-              <div>
+            <!-- Cabeçalho do Card - Responsivo -->
+            <div class="crm-purchase-header">
+              <div style="flex: 1;">
                 <div style="font-size: 13px; font-weight: 700; color: var(--marrom);">📅 ${dateFormatted}</div>
                 <div style="font-size: 11px; color: #999; margin-top: 4px;">
                   ${dateItems.length} produto${dateItems.length !== 1 ? 's' : ''} • ${dayQty} unidade${dayQty !== 1 ? 's' : ''}
                 </div>
               </div>
-              <div style="text-align: right;">
-                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">R$ ${dayTotal.toFixed(2)}</div>
+              <div style="text-align: right; margin-right: 16px;">
+                <div style="font-size: 16px; font-weight: 900; color: var(--vermelho);">${formatMoney(dayTotal)}</div>
                 <span class="status-pill s-${dayStatus}" style="font-size: 10px; margin-top: 4px; display: inline-block;">
                   ${dayStatus === 'pago' ? '✓ PAGO' : dayStatus === 'parcial' ? '◐ PARCIAL' : '○ PENDENTE'}
                 </span>
               </div>
+            </div>
+
+            <!-- Botões - Responsivos -->
+            <div class="crm-purchase-buttons">
+              <button class="btn btn-sm btn-secondary" onclick="openEditCrmPurchaseBulk(${customerId}, '${dateKey}')" 
+                      title="Editar compra completa" 
+                      style="flex: 1; margin-right: 8px;">
+                ✏️ EDITAR
+              </button>
               <button class="btn btn-sm btn-success" onclick="sendOrderViaWhatsApp('${orderId}')" 
                       title="Enviar pedido via WhatsApp" 
-                      style="margin-left: 16px; white-space: nowrap; padding: 6px 12px;">
-                ENVIAR PARA O WHATSAPP
+                      style="flex: 1; margin-right: 8px;">
+                📱 WHATSAPP
               </button>
               ${hasPixPending ? 
                 `<button class="btn btn-sm btn-primary" onclick="generateCrmPixQrCode('${orderId}')" 
                         title="Gerar Código PIX" 
-                        style="margin-left: 8px; white-space: nowrap; padding: 6px 12px;">
-                  💳 GERAR CÓDIGO PIX
+                        style="flex: 1; margin-right: 8px;">
+                  💳 PIX
                 </button>` 
                 : ''}
             </div>
 
             <!-- Produtos do dia -->
-            <div style="space-y: 8px;">
+            <div style="margin-top: 16px;">
               ${dateItems.map((p, idx) => `
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0; ${idx < dateItems.length - 1 ? 'border-bottom: 1px solid #f4f0ea;' : ''}">
-                  <div style="flex: 1;">
-                    <div style="font-weight: 600; color: var(--marrom); margin-bottom: 4px;">
+                <div class="crm-purchase-item" style="${idx < dateItems.length - 1 ? 'border-bottom: 1px solid #f4f0ea;' : ''}">
+                  <div class="crm-product-info">
+                    <div style="font-weight: 600; color: var(--marrom);">
                       ${p.product_name}
                       <span style="font-weight: 400; color: #999;"> (${p.quantity}x)</span>
                     </div>
-                    <div style="font-size: 11px; color: #999;">
+                    <div style="font-size: 11px; color: #999; margin-top: 4px;">
                       ${p.payment_method ? `${p.payment_method}` : 'Não especificado'}
                       ${p.payment_status && p.payment_status !== dayStatus ? ` • ${p.payment_status}` : ''}
                     </div>
                   </div>
-                  <div style="text-align: right; min-width: 120px;">
+                  <div class="crm-product-price">
                     <div style="font-size: 12px; color: #666;">
-                      R$ ${parseFloat(p.unit_price).toFixed(2)} × ${p.quantity}
+                      ${formatMoney(p.unit_price)} × ${p.quantity}
                     </div>
                     <div style="font-weight: 700; color: var(--vermelho); margin-top: 2px;">
-                      R$ ${parseFloat(p.total_price).toFixed(2)}
+                      ${formatMoney(p.total_price)}
                     </div>
                   </div>
-                  <div style="display: flex; gap: 4px; margin-left: 12px;">
+                  <div class="crm-product-actions">
                     <button class="btn btn-sm btn-ghost" onclick="openEditCrmPurchase(${customerId}, ${p.id})" title="Editar" style="padding: 4px 8px; font-size: 12px;">✏️</button>
                     <button class="btn btn-sm btn-danger" onclick="deleteCrmPurchase(${customerId}, ${p.id})" title="Deletar" style="padding: 4px 8px; font-size: 12px;">🗑️</button>
                   </div>
@@ -542,6 +563,7 @@ function closeCrmDetailModal() {
 // Variável para armazenar dados do PIX gerado
 let crmCurrentPixData = null;
 let crmCurrentOrderId = null;
+let crmPixPollingInterval = null;
 
 // Gerar QR code PIX para pedido do CRM
 async function generateCrmPixQrCode(orderId) {
@@ -558,14 +580,17 @@ async function generateCrmPixQrCode(orderId) {
   
   // Atualizar informações do cliente e valor
   document.getElementById('crmPixClientName').textContent = orderData.customerName;
-  document.getElementById('crmPixAmount').textContent = `R$ ${orderData.dayTotal.toFixed(2)}`;
+  document.getElementById('crmPixAmount').textContent = formatMoney(orderData.dayTotal);
   document.getElementById('crmPixQrCode').innerHTML = '⏳ Gerando QR Code...';
   document.getElementById('crmPixCode').value = '';
   
   crmCurrentOrderId = orderId;
   
   try {
-    console.log('📝 Gerando PIX para CRM...', { amount: orderData.dayTotal });
+    console.log('📝 Gerando PIX para CRM...', { amount: orderData.dayTotal, purchaseIds: orderData.purchaseIds });
+    
+    // Usar o primeiro purchase_id como crm_purchase_id (ou poderia agrupar todos em uma compra agregada)
+    const crm_purchase_id = orderData.purchaseIds && orderData.purchaseIds.length > 0 ? orderData.purchaseIds[0] : null;
     
     // Chamar API de pagamento PIX (mesma do site)
     const response = await fetch(API_BASE + '/payments/pix', {
@@ -576,7 +601,8 @@ async function generateCrmPixQrCode(orderId) {
         amount: orderData.dayTotal,
         description: 'Pagamento - Cia de Condimentos (Pedido Admin)',
         payerEmail: 'admin@condimentos.com',
-        payerPhone: orderData.customerWhatsApp || ''
+        payerPhone: orderData.customerWhatsApp || '',
+        crm_purchase_id: crm_purchase_id  // ✅ NOVO: Enviar ID da compra CRM
       })
     });
 
@@ -612,6 +638,9 @@ async function generateCrmPixQrCode(orderId) {
     }
 
     showToast('✅ Código PIX gerado com sucesso!', 'success');
+
+    // ✅ NOVO: Iniciar polling automático para verificar se o PIX foi pago
+    startCrmPixPolling(pixData.mp_payment_id, orderData);
     
   } catch (error) {
     console.error('❌ Erro ao gerar PIX:', error);
@@ -620,10 +649,70 @@ async function generateCrmPixQrCode(orderId) {
   }
 }
 
+// ✅ NOVO: Função para fazer polling do status do PIX
+async function startCrmPixPolling(pixPaymentId, orderData) {
+  // Limpar polling anterior se existir
+  if (crmPixPollingInterval) {
+    clearInterval(crmPixPollingInterval);
+  }
+
+  console.log('🔄 Iniciando polling do PIX:', pixPaymentId);
+  let pollCount = 0;
+  const maxPolls = 120; // 10 minutos (120 × 5 segundos)
+
+  crmPixPollingInterval = setInterval(async () => {
+    pollCount++;
+    
+    try {
+      const statusResponse = await fetch(`${API_BASE}/payments/status/${pixPaymentId}`);
+      const statusData = await statusResponse.json();
+      
+      console.log(`⏱️  [Poll ${pollCount}] Status PIX: ${statusData.status}`);
+
+      if (statusData.status === 'approved') {
+        console.log('✅ PIX CONFIRMADO! Atualizando histórico...');
+        
+        // Parar polling
+        clearInterval(crmPixPollingInterval);
+        crmPixPollingInterval = null;
+
+        // Mostrar mensagem de sucesso
+        showToast('✅ Pagamento confirmado! Atualizando histórico...', 'success');
+
+        // Fechar modal após 2 segundos
+        setTimeout(() => {
+          closeCrmPixQrModal();
+          
+          // Recarregar histórico do cliente para atualizar status
+          const customerId = crmState.currentCustomerId;
+          if (customerId) {
+            console.log('🔄 Recarregando detalhes do cliente...');
+            openCrmCustomerDetail(customerId);
+          }
+        }, 2000);
+      } else if (pollCount >= maxPolls) {
+        console.log('⏰ Timeout: Parando polling após 10 minutos');
+        clearInterval(crmPixPollingInterval);
+        crmPixPollingInterval = null;
+        showToast('⏰ Polling finalizado. Se o pagamento foi realizado, atualize a página.', 'info');
+      }
+    } catch (error) {
+      console.warn(`⚠️  Erro ao verificar status (Poll ${pollCount}):`, error.message);
+    }
+  }, 5000); // Verificar a cada 5 segundos
+}
+
 // Fechar modal de PIX QR code
 function closeCrmPixQrModal() {
   const modal = document.getElementById('crmPixQrModal');
   if (modal) modal.classList.remove('open');
+  
+  // Parar polling ao fechar a modal
+  if (crmPixPollingInterval) {
+    clearInterval(crmPixPollingInterval);
+    crmPixPollingInterval = null;
+  }
+  
   crmCurrentPixData = null;
   crmCurrentOrderId = null;
 }
@@ -804,7 +893,7 @@ function sendOrderViaWhatsApp(orderId) {
   message += `*Produtos:*\n`;
   products.forEach(p => {
     message += `• ${p.product_name}\n`;
-    message += `  Qtd: ${p.quantity} | R$ ${parseFloat(p.unit_price).toFixed(2)} | Total: R$ ${parseFloat(p.total_price).toFixed(2)}\n`;
+    message += `  Qtd: ${p.quantity} | ${formatMoney(p.unit_price)} | Total: ${formatMoney(p.total_price)}\n`;
   });
   
   message += `\n*Total da Compra:* R$ ${dayTotal.toFixed(2)}\n`;
@@ -845,7 +934,7 @@ async function openAddCrmPurchase(customerId) {
             <button onclick="decrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
             <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
             <button onclick="incrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
-            <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+            <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">${formatMoney(p.price)}</span>
           </div>
         </div>
       </div>
@@ -992,6 +1081,167 @@ function filterCrmProducts(query, totalProducts) {
   }
 }
 
+// ============ EDITAR COMPRA COMPLETA (MÚLTIPLOS PRODUTOS) - CRM ============
+
+// Abrir modal para editar todos os produtos de uma data no CRM
+async function openEditCrmPurchaseBulk(customerId, purchaseDate) {
+  try {
+    const response = await fetch(`${API_BASE}/crm/customers/${customerId}`);
+    const data = await response.json();
+    const purchases = data.purchases || [];
+    
+    // Filtrar apenas os produtos desta data
+    const dateItems = purchases.filter(p => p.purchase_date === purchaseDate);
+    
+    if (dateItems.length === 0) {
+      showToast('Nenhum produto encontrado para esta data', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('crmPurchaseModal');
+    const title = document.getElementById('crmPurchaseModalTitle');
+    const body = document.getElementById('crmPurchaseModalBody');
+
+    title.textContent = '✏️ Editar Compra Completa';
+
+    // Gerar HTML para cada produto
+    let productsHtml = '';
+    let totalGeral = 0;
+    
+    dateItems.forEach((item, index) => {
+      const itemTotal = safeNumber(item.total_price);
+      totalGeral += itemTotal;
+      
+      productsHtml += `
+        <div class="bulk-purchase-item" data-product-id="${item.id}" style="background: #f9f7f3; padding: 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #e8e0d4;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="fg">
+              <label style="font-size: 11px;">Nome do Produto</label>
+              <input type="text" class="bulk-product-name" placeholder="Ex: Pimenta - 500g" value="${item.product_name}" style="font-size: 12px;">
+            </div>
+            <div class="fg">
+              <label style="font-size: 11px;">Quantidade</label>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <button onclick="decrementQty('crm-bulk-qty-${item.id}')" class="btn btn-sm" style="min-width: 32px; padding: 4px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px;">−</button>
+                <input type="number" id="crm-bulk-qty-${item.id}" class="bulk-quantity" placeholder="1" min="1" step="1" value="${item.quantity}" style="width: 50px; text-align: center; padding: 4px; border: 1px solid #ddd; border-radius: 4px; background: #fff; font-size: 12px;">
+                <button onclick="incrementQty('crm-bulk-qty-${item.id}')" class="btn btn-sm" style="min-width: 32px; padding: 4px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 11px;">+</button>
+              </div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="fg">
+              <label style="font-size: 11px;">Valor Unitário (R$)</label>
+              <input type="number" class="bulk-unit-price" placeholder="0.00" min="0" step="0.01" value="${safeNumber(item.unit_price).toFixed(2)}" style="font-size: 12px;">
+            </div>
+            <div class="fg">
+              <label style="font-size: 11px;">Total (R$)</label>
+              <input type="number" id="crm-bulk-total-${item.id}" class="bulk-total" placeholder="0.00" disabled style="background: #f4f0ea; font-size: 12px;" value="${itemTotal.toFixed(2)}">
+            </div>
+          </div>
+        </div>
+      `;
+    });
+
+    // Formas de pagamento (compartilhada para toda a compra)
+    const firstItem = dateItems[0];
+    
+    body.innerHTML = `
+      <div style="max-height: 60vh; overflow-y: auto;">
+        <div style="margin-bottom: 20px; padding: 12px; background: #f0e8d0; border-radius: 8px; border-left: 4px solid var(--vermelho);">
+          <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">Informações da Compra</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--marrom);">
+            📅 ${formatDateString(purchaseDate)} 
+            <span style="font-size: 12px; color: #999; margin-left: 12px;">${dateItems.length} produto${dateItems.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+
+        <h4 style="font-size: 12px; font-weight: 700; color: var(--marrom); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">📦 Produtos</h4>
+        ${productsHtml}
+
+        <div style="background: #f0e8d0; padding: 12px; border-radius: 8px; margin: 20px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Forma de Pagamento</div>
+            <select id="crmBulkPaymentMethod" style="margin-top: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 100%;">
+              <option value="">Não especificado</option>
+              <option value="dinheiro" ${firstItem.payment_method === 'dinheiro' ? 'selected' : ''}>Dinheiro</option>
+              <option value="cartão-débito" ${firstItem.payment_method === 'cartão-débito' ? 'selected' : ''}>Cartão - Débito</option>
+              <option value="cartão-crédito" ${firstItem.payment_method === 'cartão-crédito' ? 'selected' : ''}>Cartão - Crédito</option>
+              <option value="pix" ${firstItem.payment_method === 'pix' ? 'selected' : ''}>PIX</option>
+              <option value="cheque" ${firstItem.payment_method === 'cheque' ? 'selected' : ''}>Cheque</option>
+              <option value="crediário" ${firstItem.payment_method === 'crediário' ? 'selected' : ''}>Crediário</option>
+              <option value="outro" ${firstItem.payment_method === 'outro' ? 'selected' : ''}>Outro</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Status do Pagamento</div>
+            <select id="crmBulkPaymentStatus" style="margin-top: 6px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; width: 100%;">
+              <option value="pendente" ${firstItem.payment_status === 'pendente' ? 'selected' : ''}>Pendente</option>
+              <option value="pago" ${firstItem.payment_status === 'pago' ? 'selected' : ''}>Pago</option>
+              <option value="parcial" ${firstItem.payment_status === 'parcial' ? 'selected' : ''}>Parcial</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="fg">
+          <label>Observações</label>
+          <textarea id="crmBulkPurchaseNotes" placeholder="Anotações sobre esta compra..." style="font-size: 12px;">${firstItem.notes || ''}</textarea>
+        </div>
+
+        <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 16px; border: 1px solid #ffc107;">
+          <div style="font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; letter-spacing: 1px;">Total da Compra</div>
+          <div id="crmBulkTotalGeral" style="font-size: 24px; font-weight: 900; color: var(--vermelho); margin-top: 6px;">R$ ${totalGeral.toFixed(2)}</div>
+        </div>
+      </div>
+    `;
+
+    // Adicionar event listeners para cálculos
+    const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+    bulkItems.forEach(item => {
+      const qtyInput = item.querySelector('.bulk-quantity');
+      const priceInput = item.querySelector('.bulk-unit-price');
+      
+      qtyInput.addEventListener('input', calculateCrmBulkTotal);
+      qtyInput.addEventListener('change', calculateCrmBulkTotal);
+      priceInput.addEventListener('input', calculateCrmBulkTotal);
+      priceInput.addEventListener('change', calculateCrmBulkTotal);
+    });
+
+    document.getElementById('crmPurchaseModal').dataset.customerId = customerId;
+    document.getElementById('crmPurchaseModal').dataset.purchaseDate = purchaseDate;
+    document.getElementById('crmPurchaseModal').dataset.isBulk = 'true';
+    modal.classList.add('open');
+  } catch (error) {
+    console.error('Erro ao abrir compra para edição em lote:', error);
+    showToast('Erro ao carregar compra', 'error');
+  }
+}
+
+// Calcular total geral da compra em lote (CRM)
+function calculateCrmBulkTotal() {
+  let totalGeral = 0;
+  
+  const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+  bulkItems.forEach(item => {
+    const qtyInput = item.querySelector('.bulk-quantity');
+    const priceInput = item.querySelector('.bulk-unit-price');
+    const totalInput = item.querySelector('.bulk-total');
+    
+    const qty = parseFloat(qtyInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    const itemTotal = qty * price;
+    
+    if (totalInput) {
+      totalInput.value = itemTotal.toFixed(2);
+    }
+    
+    totalGeral += itemTotal;
+  });
+  
+  const totalGeralEl = document.getElementById('crmBulkTotalGeral');
+  if (totalGeralEl) {
+    totalGeralEl.textContent = `R$ ${totalGeral.toFixed(2)}`;
+  }
+}
 
 // Abrir modal para editar compra
 async function openEditCrmPurchase(customerId, purchaseId) {
@@ -1032,7 +1282,7 @@ async function openEditCrmPurchase(customerId, purchaseId) {
         </div>
         <div class="fg">
           <label>Total (R$)</label>
-          <input type="number" id="crmProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${parseFloat(purchase.total_price || 0).toFixed(2)}">
+          <input type="number" id="crmProdTotal" placeholder="0.00" disabled style="background: #f4f0ea;" value="${safeNumber(purchase.total_price || 0).toFixed(2)}">
         </div>
       </div>
       <div class="form-row-2">
@@ -1093,12 +1343,79 @@ function closeCrmPurchaseModal() {
   document.getElementById('crmPurchaseModal').classList.remove('open');
   delete document.getElementById('crmPurchaseModal').dataset.customerId;
   delete document.getElementById('crmPurchaseModal').dataset.purchaseId;
+  delete document.getElementById('crmPurchaseModal').dataset.purchaseDate;
+  delete document.getElementById('crmPurchaseModal').dataset.isBulk;
   crmSelectedProducts = {}; // Limpar seleção
 }
 
 // Salvar compra(s)
 async function saveCrmPurchase() {
   const purchaseId = document.getElementById('crmPurchaseModal').dataset.purchaseId;
+  const isBulk = document.getElementById('crmPurchaseModal').dataset.isBulk === 'true';
+
+  // Se está editando múltiplos produtos de uma compra (edição em lote)
+  if (isBulk) {
+    const customerId = document.getElementById('crmPurchaseModal').dataset.customerId;
+    const purchaseDate = document.getElementById('crmPurchaseModal').dataset.purchaseDate;
+    const paymentMethod = document.getElementById('crmBulkPaymentMethod').value || null;
+    const paymentStatus = document.getElementById('crmBulkPaymentStatus').value || 'pendente';
+    const notes = document.getElementById('crmBulkPurchaseNotes').value || null;
+
+    try {
+      const bulkItems = document.querySelectorAll('.bulk-purchase-item');
+      const updatePromises = [];
+
+      bulkItems.forEach(item => {
+        const productId = item.dataset.productId;
+        const productName = item.querySelector('.bulk-product-name').value.trim();
+        const quantity = parseInt(item.querySelector('.bulk-quantity').value) || 0;
+        const unitPrice = parseFloat(item.querySelector('.bulk-unit-price').value) || 0;
+
+        if (!productName || !quantity || !unitPrice) {
+          throw new Error('Preencha todos os campos dos produtos');
+        }
+
+        const payload = {
+          product_name: productName,
+          quantity,
+          unit_price: unitPrice,
+          purchase_date: purchaseDate,
+          payment_method: paymentMethod,
+          payment_status: paymentStatus,
+          notes: notes
+        };
+
+        updatePromises.push(
+          fetch(
+            `${API_BASE}/crm/customers/${customerId}/purchases/${productId}`,
+            {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }
+          )
+        );
+      });
+
+      const responses = await Promise.all(updatePromises);
+      const allSuccess = responses.every(r => r.ok);
+
+      if (!allSuccess) {
+        throw new Error('Erro ao atualizar algumas compras');
+      }
+
+      showToast(`✓ ${bulkItems.length} produto(s) atualizado(s) com sucesso!`, 'success');
+      closeCrmPurchaseModal();
+      openCrmCustomerDetail(customerId);
+      // Recarregar lista de clientes para atualizar dashboard com novos valores de pagamento
+      loadCrmCustomers(crmState.filters);
+      if (typeof loadDashboard === 'function') loadDashboard();
+    } catch (error) {
+      console.error('Erro ao atualizar compras em lote:', error);
+      showToast(error.message || 'Erro ao atualizar compras', 'error');
+    }
+    return;
+  }
 
   // Se está editando uma compra individual
   if (purchaseId) {
@@ -1142,6 +1459,8 @@ async function saveCrmPurchase() {
       showToast('Compra atualizada!', 'success');
       closeCrmPurchaseModal();
       openCrmCustomerDetail(customerId);
+      // Recarregar lista de clientes para atualizar dashboard com novos valores de pagamento
+      loadCrmCustomers(crmState.filters);
       // Atualizar dashboards automaticamente
       if (typeof loadDashboard === 'function') loadDashboard();
     } catch (error) {
@@ -1206,6 +1525,8 @@ async function saveCrmPurchase() {
     showToast(`✓ ${totalProducts} compra(s) registrada(s) com sucesso!`, 'success');
     closeCrmPurchaseModal();
     openCrmCustomerDetail(customerId);
+    // Recarregar lista de clientes para atualizar dashboard com novos valores de pagamento
+    loadCrmCustomers(crmState.filters);
     // Atualizar dashboards automaticamente
     if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
@@ -1232,6 +1553,8 @@ async function deleteCrmPurchase(customerId, purchaseId) {
     
     // Recarregar detalhes do cliente
     openCrmCustomerDetail(customerId);
+    // Recarregar lista de clientes para atualizar dashboard com novos valores de pagamento
+    loadCrmCustomers(crmState.filters);
     // Atualizar dashboards automaticamente
     if (typeof loadDashboard === 'function') loadDashboard();
   } catch (error) {
@@ -1284,8 +1607,8 @@ function searchCrmCustomers(query) {
         <td style="color: ${isDebtor ? '#e74c3c' : '#27ae60'}; font-weight: 700;">
           ${isDebtor ? '💔 Devedor' : '✓ Adimplente'}
         </td>
-        <td style="text-align: right;">R$ ${parseFloat(totalSpent || 0).toFixed(2)}</td>
-        <td style="text-align: right; color: #e74c3c; font-weight: 700;">R$ ${parseFloat(debtAmount || 0).toFixed(2)}</td>
+        <td style="text-align: right;">${formatMoney(totalSpent)}</td>
+        <td style="text-align: right; color: #e74c3c; font-weight: 700;">${formatMoney(debtAmount)}</td>
         <td>${customer.stats?.total_purchases || 0} compras</td>
         <td>
           <button class="btn btn-sm btn-ghost" onclick="openCrmCustomerDetail(${customer.id})" title="Ver detalhes">👁️</button>

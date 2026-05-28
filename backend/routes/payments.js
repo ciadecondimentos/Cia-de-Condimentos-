@@ -90,7 +90,7 @@ async function getPaymentMP(paymentId) {
 // POST /payments/pix - Criar pagamento PIX
 router.post('/pix', async (req, res) => {
   try {
-    const { orderId, amount, description, payerEmail, payerPhone } = req.body;
+    const { orderId, amount, description, payerEmail, payerPhone, crm_purchase_id } = req.body;
 
     if (!amount || Number(amount) <= 0) {
       return res.status(400).json({ error: 'Valor inválido' });
@@ -143,24 +143,35 @@ router.post('/pix', async (req, res) => {
     }
 
     // Salvar no banco de dados
+    let sqlFields = 'order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone';
+    let sqlValues = '$1, $2, $3, $4, $5, $6, $7, $8, $9';
+    let params = [
+      orderId || null,
+      mpPaymentResult.id,
+      mpPaymentResult.status,
+      amount,
+      'pix',
+      qrCode,
+      finalQrCodeBase64,
+      email,
+      payerPhone || null
+    ];
+
+    // Adicionar crm_purchase_id se fornecido
+    if (crm_purchase_id) {
+      sqlFields += ', crm_purchase_id';
+      sqlValues += ', $10';
+      params.push(crm_purchase_id);
+    }
+
     const result = await db.query(
-      `INSERT INTO payments (order_id, mp_payment_id, status, amount, payment_method, qr_code, qr_code_base64, payer_email, payer_phone)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO payments (${sqlFields})
+       VALUES (${sqlValues})
        RETURNING id, mp_payment_id, status, amount, qr_code, qr_code_base64`,
-      [
-        orderId || null,
-        mpPaymentResult.id,
-        mpPaymentResult.status,
-        amount,
-        'pix',
-        qrCode,
-        finalQrCodeBase64,
-        email,
-        payerPhone || null
-      ]
+      params
     );
 
-    console.log('✅ Pagamento PIX criado:', mpPaymentResult.id);
+    console.log('✅ Pagamento PIX criado:', mpPaymentResult.id, crm_purchase_id ? `(Compra CRM: ${crm_purchase_id})` : '');
 
     res.status(201).json({
       id: result.rows[0].id,
@@ -261,6 +272,17 @@ router.get('/status/:paymentId', async (req, res) => {
 
           const duration = Date.now() - startTime;
           console.log(`✅ PIX CONFIRMADO (polling - ${duration}ms) - Pedido #${payment.order_id}`);
+        }
+
+        // Se tiver crm_purchase_id, atualizar compra do CRM
+        if (payment.crm_purchase_id) {
+          await db.query(
+            'UPDATE crm_purchases SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+            ['pago', payment.crm_purchase_id]
+          );
+
+          const duration = Date.now() - startTime;
+          console.log(`✅ PIX CONFIRMADO (polling - ${duration}ms) - Compra CRM #${payment.crm_purchase_id}`);
         }
       }
     } else if (consulted) {
@@ -408,6 +430,16 @@ router.post('/webhook', async (req, res) => {
         }
 
         console.log(`✅ PIX CONFIRMADO - Pedido #${payment.order_id} - Status: Confirmado, Estoque atualizado`);
+      }
+
+      // ✅ NOVO: Se tiver crm_purchase_id, atualizar compra do CRM
+      if (payment.crm_purchase_id) {
+        await db.query(
+          'UPDATE crm_purchases SET payment_status = $1, updated_at = NOW() WHERE id = $2',
+          ['pago', payment.crm_purchase_id]
+        );
+
+        console.log(`✅ PIX CONFIRMADO - Compra CRM #${payment.crm_purchase_id} - Status: Pago`);
       }
     }
 

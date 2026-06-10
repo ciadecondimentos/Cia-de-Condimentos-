@@ -27,15 +27,21 @@ async function loadCrmCustomers(filter = 'all') {
       ? `${API_BASE}/crm/customers`
       : `${API_BASE}/crm/customers?filter=${filter}`;
     
+    console.log('📥 Carregando clientes de:', url);
     const response = await fetch(url);
     const customers = await response.json();
+    
+    console.log('✅ Clientes recebidos:', customers.length);
+    if (customers.length > 0) {
+      console.log('   Exemplo:', customers[0]);
+    }
     
     crmState.customers = customers;
     crmState.filters = filter;
     renderCrmCustomersTable();
     updateCrmDashboard(); // Atualizar métricas do dashboard
   } catch (error) {
-    console.error('Erro ao carregar clientes:', error);
+    console.error('❌ Erro ao carregar clientes:', error);
     showToast('Erro ao carregar clientes', 'error');
   }
 }
@@ -43,6 +49,8 @@ async function loadCrmCustomers(filter = 'all') {
 // Atualizar dashboard com métricas globais do CRM
 function updateCrmDashboard() {
   const customers = crmState.customers;
+  console.log('🔄 updateCrmDashboard() chamada');
+  console.log('   Clientes na memória:', customers.length);
   
   // Calcular métricas
   let totalCustomers = customers.length;
@@ -50,11 +58,20 @@ function updateCrmDashboard() {
   let totalPaid = 0;
   let totalPending = 0;
   
-  customers.forEach(c => {
+  customers.forEach((c, idx) => {
     const stats = c.stats || {};
-    totalPaid += safeNumber(stats.paid || 0);
-    totalPending += safeNumber(stats.pending || 0);
+    const paid = safeNumber(stats.paid || 0);
+    const pending = safeNumber(stats.pending || 0);
+    totalPaid += paid;
+    totalPending += pending;
+    if (idx === 0) console.log('   Exemplo cliente:', c.full_name, 'stats:', stats);
   });
+  
+  console.log('📊 Métricas calculadas:');
+  console.log('   Total clientes:', totalCustomers);
+  console.log('   VIP:', vipCustomers);
+  console.log('   Total pago:', totalPaid);
+  console.log('   Total pendente:', totalPending);
   
   // Atualizar elementos do DOM
   const totalCustomersEl = document.getElementById('crm-total-customers');
@@ -62,10 +79,28 @@ function updateCrmDashboard() {
   const totalSpentEl = document.getElementById('crm-total-spent');
   const totalPendingEl = document.getElementById('crm-total-pending');
   
-  if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
-  if (vipCustomersEl) vipCustomersEl.textContent = vipCustomers;
-  if (totalSpentEl) totalSpentEl.textContent = formatMoney(totalPaid);
-  if (totalPendingEl) totalPendingEl.textContent = formatMoney(totalPending);
+  console.log('🎯 Elementos DOM encontrados:');
+  console.log('   crm-total-customers:', totalCustomersEl ? '✅' : '❌');
+  console.log('   crm-vip-customers:', vipCustomersEl ? '✅' : '❌');
+  console.log('   crm-total-spent:', totalSpentEl ? '✅' : '❌');
+  console.log('   crm-total-pending:', totalPendingEl ? '✅' : '❌');
+  
+  if (totalCustomersEl) {
+    totalCustomersEl.textContent = totalCustomers;
+    console.log('✅ Atualizado: total-customers =', totalCustomers);
+  }
+  if (vipCustomersEl) {
+    vipCustomersEl.textContent = vipCustomers;
+    console.log('✅ Atualizado: vip-customers =', vipCustomers);
+  }
+  if (totalSpentEl) {
+    totalSpentEl.textContent = formatMoney(totalPaid);
+    console.log('✅ Atualizado: total-spent =', formatMoney(totalPaid));
+  }
+  if (totalPendingEl) {
+    totalPendingEl.textContent = formatMoney(totalPending);
+    console.log('✅ Atualizado: total-pending =', formatMoney(totalPending));
+  }
 }
 
 // Renderizar tabela de clientes

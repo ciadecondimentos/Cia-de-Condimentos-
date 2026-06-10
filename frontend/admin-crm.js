@@ -2101,3 +2101,11 @@ function initializeCrm() {
 window.addEventListener('beforeunload', () => {
   stopCrmPixBackendSync();
 });
+
+// ✅ NOVO: Inicializar CRM automaticamente quando a página carrega
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCrm);
+} else {
+  // Se o DOM já foi carregado, chamar diretamente
+  initializeCrm();
+}

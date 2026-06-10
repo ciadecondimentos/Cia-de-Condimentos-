@@ -43,6 +43,8 @@ router.get('/customers', async (req, res) => {
 
     const result = await db.query(query, params);
     
+    console.log('📊 GET /customers:', result.rows.length, 'clientes encontrados');
+    
     // Enriquecer dados com estatísticas
     const customers = await Promise.all(result.rows.map(async (customer) => {
       const statsResult = await db.query(`
@@ -56,11 +58,20 @@ router.get('/customers', async (req, res) => {
         WHERE customer_id = $1
       `, [customer.id]);
 
-      return {
+      const customerData = {
         ...customer,
         stats: statsResult.rows[0]
       };
+      
+      if (result.rows.indexOf(customer) === 0) {
+        console.log('   Exemplo retornado:', customerData);
+      }
+
+      return customerData;
     }));
+
+    console.log('✅ Total geral pago por todos clientes:', customers.reduce((sum, c) => sum + parseFloat(c.stats?.paid || 0), 0));
+    console.log('✅ Total geral pendente por todos clientes:', customers.reduce((sum, c) => sum + parseFloat(c.stats?.pending || 0), 0));
 
     res.json(customers);
   } catch (error) {

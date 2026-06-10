@@ -1,6 +1,5 @@
 {
-  "buildCommand": "node -e \"require('fs').cpSync('frontend', 'public', {recursive: true})\"",
-  "outputDirectory": "public",
+  "outputDirectory": "frontend",
   "trailingSlash": false,
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },

@@ -155,6 +155,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
+app.get('/login', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/login.html'));
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/admin.html'));
 });
@@ -211,9 +215,14 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+// SPA Fallback - Serve index.html para rotas não-API
+app.get('*', (req, res) => {
+  // Se não começar com /api, serve o frontend como SPA
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+  } else {
+    res.status(404).json({ error: 'Route not found' });
+  }
 });
 
 // Tratamento de erros geral (SEMPRE por último)

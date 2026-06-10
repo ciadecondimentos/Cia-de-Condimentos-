@@ -1,6 +1,5 @@
 {
   "outputDirectory": "frontend",
-  "public": "frontend",
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
     { "source": "/login", "destination": "/login.html" },

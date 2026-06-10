@@ -3,8 +3,8 @@ const path = require('path');
 
 console.log('🔨 Building for Vercel...');
 
-// Criar diretórios necessários
-const outputDir = '.vercel/output/static';
+// Criar diretório de saída
+const outputDir = 'out';
 if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
@@ -30,7 +30,7 @@ function copyDir(src, dest) {
   });
 }
 
-// Copiar frontend
+// Copiar frontend para out
 console.log('📁 Copying frontend files...');
 copyDir('frontend', outputDir);
 

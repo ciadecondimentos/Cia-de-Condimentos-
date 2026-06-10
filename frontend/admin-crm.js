@@ -58,19 +58,12 @@ function updateCrmDashboard() {
   let totalPaid = 0;
   let totalPending = 0;
   
-  console.log('📋 Detalhe de cada cliente:');
-  customers.forEach((c, idx) => {
+  customers.forEach(c => {
     const stats = c.stats || {};
     const paid = safeNumber(stats.paid || 0);
     const pending = safeNumber(stats.pending || 0);
     totalPaid += paid;
     totalPending += pending;
-    console.log(`   [${idx}] ${c.full_name}:`, {
-      paid_raw: stats.paid,
-      paid_converted: paid,
-      pending_raw: stats.pending,
-      pending_converted: pending
-    });
   });
   
   console.log('📊 Métricas calculadas:');
@@ -79,44 +72,43 @@ function updateCrmDashboard() {
   console.log('   Total pago:', totalPaid);
   console.log('   Total pendente:', totalPending);
   
-  // Atualizar elementos do DOM
-  const totalCustomersEl = document.getElementById('crm-total-customers');
-  const vipCustomersEl = document.getElementById('crm-vip-customers');
-  const totalSpentEl = document.getElementById('crm-total-spent');
-  const totalPendingEl = document.getElementById('crm-total-pending');
+  // Atualizar TODOS os elementos com essas classes (pode haver múltiplos)
+  const totalCustomersEls = document.querySelectorAll('.crm-stat-total-customers');
+  const vipCustomersEls = document.querySelectorAll('.crm-stat-vip-customers');
+  const totalSpentEls = document.querySelectorAll('.crm-stat-total-spent');
+  const totalPendingEls = document.querySelectorAll('.crm-stat-total-pending');
   
-  console.log('🎯 Elementos DOM encontrados:');
-  console.log('   crm-total-customers:', totalCustomersEl ? '✅' : '❌');
-  console.log('   crm-vip-customers:', vipCustomersEl ? '✅' : '❌');
-  console.log('   crm-total-spent:', totalSpentEl ? '✅' : '❌');
-  console.log('   crm-total-pending:', totalPendingEl ? '✅' : '❌');
+  console.log('🎯 Elementos encontrados:');
+  console.log('   Total de clientes (instâncias):', totalCustomersEls.length);
+  console.log('   VIP (instâncias):', vipCustomersEls.length);
+  console.log('   Total gasto (instâncias):', totalSpentEls.length);
+  console.log('   Total pendente (instâncias):', totalPendingEls.length);
   
-  if (totalCustomersEl) {
-    totalCustomersEl.textContent = totalCustomers;
-    console.log('✅ Atualizado: total-customers =', totalCustomers);
-  } else {
-    console.log('❌ ERRO: Elemento crm-total-customers não encontrado');
-  }
-  if (vipCustomersEl) {
-    vipCustomersEl.textContent = vipCustomers;
-    console.log('✅ Atualizado: vip-customers =', vipCustomers);
-  } else {
-    console.log('❌ ERRO: Elemento crm-vip-customers não encontrado');
-  }
-  if (totalSpentEl) {
-    const formatted = formatMoney(totalPaid);
-    totalSpentEl.textContent = formatted;
-    console.log('✅ Atualizado: total-spent =', formatted);
-  } else {
-    console.log('❌ ERRO: Elemento crm-total-spent não encontrado');
-  }
-  if (totalPendingEl) {
-    const formatted = formatMoney(totalPending);
-    totalPendingEl.textContent = formatted;
-    console.log('✅ Atualizado: total-pending =', formatted);
-  } else {
-    console.log('❌ ERRO: Elemento crm-total-pending não encontrado');
-  }
+  // Atualizar total de clientes
+  totalCustomersEls.forEach(el => {
+    el.textContent = totalCustomers;
+  });
+  if (totalCustomersEls.length > 0) console.log('✅ Atualizado: total-customers =', totalCustomers);
+  
+  // Atualizar clientes VIP
+  vipCustomersEls.forEach(el => {
+    el.textContent = vipCustomers;
+  });
+  if (vipCustomersEls.length > 0) console.log('✅ Atualizado: vip-customers =', vipCustomers);
+  
+  // Atualizar total gasto
+  const spentFormatted = formatMoney(totalPaid);
+  totalSpentEls.forEach(el => {
+    el.textContent = spentFormatted;
+  });
+  if (totalSpentEls.length > 0) console.log('✅ Atualizado: total-spent =', spentFormatted);
+  
+  // Atualizar total pendente
+  const pendingFormatted = formatMoney(totalPending);
+  totalPendingEls.forEach(el => {
+    el.textContent = pendingFormatted;
+  });
+  if (totalPendingEls.length > 0) console.log('✅ Atualizado: total-pending =', pendingFormatted);
 }
 
 // Renderizar tabela de clientes

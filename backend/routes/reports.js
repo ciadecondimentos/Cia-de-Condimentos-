@@ -168,7 +168,11 @@ router.get('/crm', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    console.log('📊 Gerando relatório CRM com período:', period, 'dias');
+    console.log('   Data inicial:', startDate.toISOString());
+
     // Resumo geral de clientes
+    console.log('📝 Executando query: resumo de clientes...');
     const summaryResult = await db.query(`
       SELECT 
         COUNT(*)::integer as total_customers,
@@ -178,7 +182,10 @@ router.get('/crm', async (req, res) => {
       FROM crm_customers
     `, [startDate]);
 
+    console.log('✅ Query de resumo executada com sucesso');
+
     // Total gasto por clientes
+    console.log('📝 Executando query: total gasto por clientes...');
     const spendingResult = await db.query(`
       SELECT 
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
@@ -188,7 +195,10 @@ router.get('/crm', async (req, res) => {
       WHERE purchase_date >= $1
     `, [startDate]);
 
+    console.log('✅ Query de gastos executada com sucesso');
+
     // Status de pagamento CRM
+    console.log('📝 Executando query: status de pagamento...');
     const paymentStatusResult = await db.query(`
       SELECT 
         payment_status,
@@ -200,7 +210,10 @@ router.get('/crm', async (req, res) => {
       ORDER BY count DESC
     `, [startDate]);
 
+    console.log('✅ Query de status de pagamento executada com sucesso');
+
     // Top clientes por gasto
+    console.log('📝 Executando query: top clientes...');
     const topCustomersResult = await db.query(`
       SELECT 
         cc.id,
@@ -219,7 +232,10 @@ router.get('/crm', async (req, res) => {
       LIMIT 10
     `, [startDate]);
 
+    console.log('✅ Query de top clientes executada com sucesso');
+
     // Clientes com atraso
+    console.log('📝 Executando query: clientes com atraso...');
     const debtorsResult = await db.query(`
       SELECT 
         cc.id,
@@ -235,6 +251,8 @@ router.get('/crm', async (req, res) => {
       ORDER BY total_debt DESC
       LIMIT 10
     `, [startDate]);
+
+    console.log('✅ Query de devedores executada com sucesso');
 
     const crmReport = {
       period,
@@ -260,7 +278,11 @@ router.get('/suppliers', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    console.log('📊 Gerando relatório de fornecedores com período:', period, 'dias');
+    console.log('   Data inicial:', startDate.toISOString());
+
     // Resumo geral de fornecedores
+    console.log('📝 Executando query: resumo de fornecedores...');
     const summaryResult = await db.query(`
       SELECT 
         COUNT(*)::integer as total_suppliers,
@@ -269,7 +291,10 @@ router.get('/suppliers', async (req, res) => {
       FROM suppliers
     `, [startDate]);
 
+    console.log('✅ Query de resumo de fornecedores executada com sucesso');
+
     // Total gasto com fornecedores
+    console.log('📝 Executando query: total gasto com fornecedores...');
     const spendingResult = await db.query(`
       SELECT 
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
@@ -279,7 +304,10 @@ router.get('/suppliers', async (req, res) => {
       WHERE purchase_date >= $1
     `, [startDate]);
 
+    console.log('✅ Query de gasto com fornecedores executada com sucesso');
+
     // Status de pagamento a fornecedores
+    console.log('📝 Executando query: status de pagamento de fornecedores...');
     const paymentStatusResult = await db.query(`
       SELECT 
         payment_status,
@@ -291,7 +319,10 @@ router.get('/suppliers', async (req, res) => {
       ORDER BY count DESC
     `, [startDate]);
 
+    console.log('✅ Query de status de pagamento de fornecedores executada com sucesso');
+
     // Top fornecedores por volume
+    console.log('📝 Executando query: top fornecedores...');
     const topSuppliersResult = await db.query(`
       SELECT 
         s.id,
@@ -311,7 +342,10 @@ router.get('/suppliers', async (req, res) => {
       LIMIT 10
     `, [startDate]);
 
+    console.log('✅ Query de top fornecedores executada com sucesso');
+
     // Fornecedores com atraso
+    console.log('📝 Executando query: fornecedores com atraso...');
     const debtorsResult = await db.query(`
       SELECT 
         s.id,

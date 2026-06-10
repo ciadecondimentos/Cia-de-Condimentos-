@@ -152,6 +152,16 @@ body { display: flex; }
 .period-tab.active { background: var(--amarelo); color: var(--marrom); }
 .period-tab:hover { background: var(--amarelo-escuro); color: white; }
 
+/* REPORT TABS */
+.report-tab { padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: #999; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+.report-tab.active { color: var(--marrom); border-bottom-color: var(--amarelo); }
+.report-tab:hover { color: var(--marrom); }
+.report-tab-content { display: none; animation: fadeIn 0.3s ease; }
+.report-tab-content.active { display: block; }
+
+/* STAT CARD BLUE */
+.stat-card.blue { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+
 /* GLOBAL TOUCH-FRIENDLY IMPROVEMENTS */
 input[type="text"],
 input[type="email"],
@@ -193,6 +203,7 @@ textarea {
   .stat-value { font-size: 32px; }
   .topbar h2 { font-size: 24px; }
   .period-tabs { flex-wrap: nowrap; }
+  .report-tab { padding: 10px 16px; font-size: 13px; }
   .form-row-2 { grid-template-columns: 1fr 1fr; }
   .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
   .bar-chart { height: 200px; }
@@ -1388,30 +1399,239 @@ tr:hover td { background: #faf7f2; }
     <div class="page" id="page-reports">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">📈 Relatórios</h2>
-        <button class="btn btn-secondary" onclick="exportReports()">📥 Exportar CSV</button>
+        <div style="display: flex; gap: 10px;">
+          <select id="reportPeriod" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">
+            <option value="7">Últimos 7 dias</option>
+            <option value="30" selected>Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+          </select>
+          <button class="btn btn-secondary" onclick="loadAllReports()">🔄 Atualizar</button>
+          <button class="btn btn-secondary" onclick="exportReports()">📥 Exportar CSV</button>
+        </div>
       </div>
-      <div class="dashboard-grid">
-        <div class="card" style="grid-column:1/-1">
-          <div class="card-header">
-            <span class="card-title">Relatório de Vendas</span>
-            <div class="period-tabs">
-              <button class="period-tab active" onclick="changeReportPeriod('7', this)">7 dias</button>
-              <button class="period-tab" onclick="changeReportPeriod('30', this)">30 dias</button>
-              <button class="period-tab" onclick="changeReportPeriod('90', this)">90 dias</button>
+
+      <!-- NAVIGATION TABS -->
+      <div style="display: flex; gap: 10px; border-bottom: 2px solid #e8e0d4; margin-bottom: 24px; overflow-x: auto;">
+        <button class="report-tab active" onclick="showReportTab('general', this)" data-tab="general" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: var(--marrom); border-bottom: 3px solid transparent; transition: all 0.2s;">📊 Relatório Geral</button>
+        <button class="report-tab" onclick="showReportTab('orders', this)" data-tab="orders" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: #999; border-bottom: 3px solid transparent; transition: all 0.2s;">🛍️ Pedidos</button>
+        <button class="report-tab" onclick="showReportTab('crm', this)" data-tab="crm" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: #999; border-bottom: 3px solid transparent; transition: all 0.2s;">👥 Clientes</button>
+        <button class="report-tab" onclick="showReportTab('suppliers', this)" data-tab="suppliers" style="padding: 12px 20px; border: none; background: none; cursor: pointer; font-weight: 700; color: #999; border-bottom: 3px solid transparent; transition: all 0.2s;">🚚 Fornecedores</button>
+      </div>
+
+      <!-- TAB CONTENT -->
+      <div id="report-general" class="report-tab-content" style="display: block;">
+        <div class="dashboard-grid">
+          <div class="stats-grid">
+            <div class="stat-card yellow">
+              <div class="stat-icon">🛍️</div>
+              <div class="stat-value" id="gen-total-orders">0</div>
+              <div class="stat-label">Pedidos</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">💰</div>
+              <div class="stat-value" id="gen-total-revenue">R$ 0,00</div>
+              <div class="stat-label">Receita</div>
+            </div>
+            <div class="stat-card blue" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+              <div class="stat-icon">👥</div>
+              <div class="stat-value" id="gen-total-customers">0</div>
+              <div class="stat-label">Clientes</div>
+            </div>
+            <div class="stat-card orange">
+              <div class="stat-icon">🚚</div>
+              <div class="stat-value" id="gen-total-suppliers">0</div>
+              <div class="stat-label">Fornecedores</div>
             </div>
           </div>
-          <div id="reportStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin:20px 0;"></div>
-          <div class="bar-chart" id="reportChart" style="height:200px;"></div>
-        </div>
 
-        <div class="card">
-          <div class="card-header"><span class="card-title">Vendas por Categoria</span></div>
-          <div id="categoryReport"></div>
-        </div>
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Formas de Pagamento</span></div>
+            <div id="gen-payment-methods" style="padding: 20px;"></div>
+          </div>
 
-        <div class="card">
-          <div class="card-header"><span class="card-title">Formas de Pagamento</span></div>
-          <div id="paymentReport"></div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Top 5 Clientes</span></div>
+            <div id="gen-top-customers" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Gastos em Fornecedores</span></div>
+            <div id="gen-suppliers-info" style="padding: 20px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="report-orders" class="report-tab-content" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="stats-grid">
+            <div class="stat-card yellow">
+              <div class="stat-icon">📦</div>
+              <div class="stat-value" id="ord-total-orders">0</div>
+              <div class="stat-label">Total de Pedidos</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">✅</div>
+              <div class="stat-value" id="ord-paid-orders">0</div>
+              <div class="stat-label">Pedidos Pagos</div>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-icon">⏳</div>
+              <div class="stat-value" id="ord-pending-orders">0</div>
+              <div class="stat-label">Pedidos Pendentes</div>
+            </div>
+            <div class="stat-card orange">
+              <div class="stat-icon">💵</div>
+              <div class="stat-value" id="ord-average-ticket">R$ 0,00</div>
+              <div class="stat-label">Ticket Médio</div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Resumo de Vendas</span></div>
+            <div id="ord-summary" style="padding: 20px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #ddd;">
+                    <th style="padding: 12px; text-align: left; font-weight: 700;">Métrica</th>
+                    <th style="padding: 12px; text-align: right; font-weight: 700;">Valor</th>
+                  </tr>
+                </thead>
+                <tbody id="ord-summary-table">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Pedidos por Status</span></div>
+            <div id="ord-by-status" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Formas de Pagamento</span></div>
+            <div id="ord-payment-methods" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Top 10 Clientes</span></div>
+            <div id="ord-top-customers" style="padding: 20px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="report-crm" class="report-tab-content" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="stats-grid">
+            <div class="stat-card blue" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+              <div class="stat-icon">👥</div>
+              <div class="stat-value" id="crm-total-customers">0</div>
+              <div class="stat-label">Total de Clientes</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-icon">⭐</div>
+              <div class="stat-value" id="crm-vip-customers">0</div>
+              <div class="stat-label">Clientes VIP</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">💰</div>
+              <div class="stat-value" id="crm-total-spent">R$ 0,00</div>
+              <div class="stat-label">Total Gasto</div>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-icon">💔</div>
+              <div class="stat-value" id="crm-total-pending">R$ 0,00</div>
+              <div class="stat-label">Em Aberto</div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Resumo Financeiro</span></div>
+            <div id="crm-summary" style="padding: 20px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #ddd;">
+                    <th style="padding: 12px; text-align: left; font-weight: 700;">Métrica</th>
+                    <th style="padding: 12px; text-align: right; font-weight: 700;">Valor</th>
+                  </tr>
+                </thead>
+                <tbody id="crm-summary-table">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Status de Pagamento</span></div>
+            <div id="crm-payment-status" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Top 10 Clientes</span></div>
+            <div id="crm-top-customers" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Clientes com Atraso (Top 10)</span></div>
+            <div id="crm-debtors" style="padding: 20px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="report-suppliers" class="report-tab-content" style="display: none;">
+        <div class="dashboard-grid">
+          <div class="stats-grid">
+            <div class="stat-card orange">
+              <div class="stat-icon">🚚</div>
+              <div class="stat-value" id="sup-total-suppliers">0</div>
+              <div class="stat-label">Total de Fornecedores</div>
+            </div>
+            <div class="stat-card green">
+              <div class="stat-icon">✅</div>
+              <div class="stat-value" id="sup-active-suppliers">0</div>
+              <div class="stat-label">Fornecedores Ativos</div>
+            </div>
+            <div class="stat-card red">
+              <div class="stat-icon">💵</div>
+              <div class="stat-value" id="sup-total-spent">R$ 0,00</div>
+              <div class="stat-label">Total Gasto</div>
+            </div>
+            <div class="stat-card yellow">
+              <div class="stat-icon">📋</div>
+              <div class="stat-value" id="sup-pending-debt">R$ 0,00</div>
+              <div class="stat-label">Débitos em Aberto</div>
+            </div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Resumo Financeiro</span></div>
+            <div id="sup-summary" style="padding: 20px;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                  <tr style="border-bottom: 2px solid #ddd;">
+                    <th style="padding: 12px; text-align: left; font-weight: 700;">Métrica</th>
+                    <th style="padding: 12px; text-align: right; font-weight: 700;">Valor</th>
+                  </tr>
+                </thead>
+                <tbody id="sup-summary-table">
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Status de Pagamento</span></div>
+            <div id="sup-payment-status" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Top 10 Fornecedores</span></div>
+            <div id="sup-top-suppliers" style="padding: 20px;"></div>
+          </div>
+
+          <div class="card" style="grid-column: 1/-1;">
+            <div class="card-header"><span class="card-title">Fornecedores com Atraso (Top 10)</span></div>
+            <div id="sup-debtors" style="padding: 20px;"></div>
+          </div>
         </div>
       </div>
     </div>

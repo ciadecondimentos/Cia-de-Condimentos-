@@ -16,6 +16,7 @@ const uploadRoutes = require('./routes/upload');
 const crmRoutes = require('./routes/crm');
 const suppliersRoutes = require('./routes/suppliers');
 const promotionsRoutes = require('./routes/promotions');
+const reportsRoutes = require('./routes/reports');
 
 // TODO: Implementar uploads com Cloudinary ou S3 depois
 // const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
@@ -184,6 +185,7 @@ app.use('/api/upload', uploadRoutes);
 app.use('/api/crm', crmRoutes);
 app.use('/api/suppliers', suppliersRoutes);
 app.use('/api/promotions', promotionsRoutes);
+app.use('/api/reports', reportsRoutes);
 
 // Health check endpoint (antes do error handler)
 app.get('/api/health', async (req, res) => {

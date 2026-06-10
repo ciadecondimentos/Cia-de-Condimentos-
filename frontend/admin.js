@@ -115,7 +115,7 @@ function showPage(pageId, buttonElement) {
     loadProductsForPromo();
     renderProductPromotionsAsync();
   } else if (pageId === 'reports') {
-    loadReportData('7');
+    initializeReports();
   } else if (pageId === 'crm') {
     initializeCrm();
   } else if (pageId === 'suppliers') {
@@ -1794,6 +1794,279 @@ function exportReports() {
       console.error('Error exporting reports:', error);
       showToast('Erro ao exportar relatórios', 'error');
     });
+}
+
+// ==================== NEW REPORTS SYSTEM ====================
+
+function initializeReports() {
+  // Initialize with general report
+  const firstTab = document.querySelector('.report-tab[data-tab="general"]');
+  if (firstTab) {
+    firstTab.classList.add('active');
+  }
+  const firstContent = document.getElementById('report-general');
+  if (firstContent) {
+    firstContent.style.display = 'block';
+  }
+  
+  // Load all reports
+  loadAllReports();
+}
+
+function showReportTab(tabName, element) {
+  // Hide all tabs
+  document.querySelectorAll('.report-tab-content').forEach(tab => {
+    tab.style.display = 'none';
+  });
+  
+  // Show selected tab
+  const selectedTab = document.getElementById(`report-${tabName}`);
+  if (selectedTab) {
+    selectedTab.style.display = 'block';
+  }
+  
+  // Update tab buttons
+  document.querySelectorAll('.report-tab').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  if (element) {
+    element.classList.add('active');
+  }
+  
+  // Load data for the selected tab
+  const period = document.getElementById('reportPeriod').value || '30';
+  
+  switch(tabName) {
+    case 'general':
+      loadGeneralReport(period);
+      break;
+    case 'orders':
+      loadOrdersReport(period);
+      break;
+    case 'crm':
+      loadCrmReport(period);
+      break;
+    case 'suppliers':
+      loadSuppliersReport(period);
+      break;
+  }
+}
+
+function loadAllReports() {
+  const period = document.getElementById('reportPeriod').value || '30';
+  const activeTab = document.querySelector('.report-tab.active')?.getAttribute('data-tab') || 'general';
+  
+  loadGeneralReport(period);
+  loadOrdersReport(period);
+  loadCrmReport(period);
+  loadSuppliersReport(period);
+  
+  showToast('Relatórios atualizados com sucesso!', 'success');
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+function formatNumber(value) {
+  return new Intl.NumberFormat('pt-BR').format(value);
+}
+
+// ==================== GENERAL REPORT ====================
+async function loadGeneralReport(period) {
+  try {
+    const res = await fetch(`${API_BASE}/reports/general?period=${period}`);
+    if (!res.ok) throw new Error('Failed to fetch general report');
+    
+    const data = await res.json();
+    
+    // Update stats
+    document.getElementById('gen-total-orders').textContent = formatNumber(data.sales.total_orders || 0);
+    document.getElementById('gen-total-revenue').textContent = formatCurrency(data.sales.total_revenue || 0);
+    document.getElementById('gen-total-customers').textContent = formatNumber(data.crm.total_customers || 0);
+    document.getElementById('gen-total-suppliers').textContent = formatNumber(data.suppliers.total_suppliers || 0);
+    
+    // Payment methods
+    let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+    data.paymentMethods.forEach(pm => {
+      paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total)}</td></tr>`;
+    });
+    paymentHtml += '</table>';
+    document.getElementById('gen-payment-methods').innerHTML = paymentHtml;
+    
+    // Suppliers info
+    let suppliersHtml = `<strong>Total Gasto com Fornecedores:</strong> ${formatCurrency(data.suppliers.total_spent_suppliers || 0)}<br>`;
+    suppliersHtml += `<strong>Número de Fornecedores:</strong> ${data.suppliers.total_suppliers}`;
+    document.getElementById('gen-suppliers-info').innerHTML = suppliersHtml;
+    
+  } catch (error) {
+    console.error('Error loading general report:', error);
+    showToast('Erro ao carregar relatório geral', 'error');
+  }
+}
+
+// ==================== ORDERS REPORT ====================
+async function loadOrdersReport(period) {
+  try {
+    const res = await fetch(`${API_BASE}/reports/orders?period=${period}`);
+    if (!res.ok) throw new Error('Failed to fetch orders report');
+    
+    const data = await res.json();
+    
+    // Update stats
+    document.getElementById('ord-total-orders').textContent = formatNumber(data.summary.total_orders || 0);
+    document.getElementById('ord-paid-orders').textContent = formatNumber(data.summary.paid_orders || 0);
+    document.getElementById('ord-pending-orders').textContent = formatNumber(data.summary.pending_orders || 0);
+    document.getElementById('ord-average-ticket').textContent = formatCurrency(data.summary.average_ticket || 0);
+    
+    // Summary table
+    let summaryHtml = '';
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Pedidos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_orders)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pagos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.paid_orders)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pendentes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.pending_orders)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Cancelados</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.cancelled_orders)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Receita Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_revenue)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Ticket Médio</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.average_ticket)}</td></tr>`;
+    summaryHtml += `<tr><td style="padding: 8px;">Frete Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_shipping)}</td></tr>`;
+    document.getElementById('ord-summary-table').innerHTML = summaryHtml;
+    
+    // Status
+    let statusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Quantidade</th></tr>';
+    data.byStatus.forEach(s => {
+      statusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${s.status}</td><td style="padding: 8px; text-align: right;">${formatNumber(s.count)}</td></tr>`;
+    });
+    statusHtml += '</table>';
+    document.getElementById('ord-by-status').innerHTML = statusHtml;
+    
+    // Payment methods
+    let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Quantidade</th><th style="padding: 8px; text-align: right;">Receita</th></tr>';
+    data.byPaymentMethod.forEach(pm => {
+      paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatNumber(pm.count)}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total_revenue)}</td></tr>`;
+    });
+    paymentHtml += '</table>';
+    document.getElementById('ord-payment-methods').innerHTML = paymentHtml;
+    
+    // Top customers
+    let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+    data.topCustomers.forEach(c => {
+      customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.customer_name}">${c.customer_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
+    });
+    customersHtml += '</table>';
+    document.getElementById('ord-top-customers').innerHTML = customersHtml;
+    
+  } catch (error) {
+    console.error('Error loading orders report:', error);
+    showToast('Erro ao carregar relatório de pedidos', 'error');
+  }
+}
+
+// ==================== CRM REPORT ====================
+async function loadCrmReport(period) {
+  try {
+    const res = await fetch(`${API_BASE}/reports/crm?period=${period}`);
+    if (!res.ok) throw new Error('Failed to fetch CRM report');
+    
+    const data = await res.json();
+    
+    // Update stats
+    document.getElementById('crm-total-customers').textContent = formatNumber(data.summary.total_customers || 0);
+    document.getElementById('crm-vip-customers').textContent = formatNumber(data.summary.vip_customers || 0);
+    document.getElementById('crm-total-spent').textContent = formatCurrency(data.spending.total_spent || 0);
+    document.getElementById('crm-total-pending').textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
+    
+    // Summary table
+    let summaryHtml = '';
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Clientes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_customers)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes VIP</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.vip_customers)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_customers)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_customers_period)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Transações</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_transactions)}</td></tr>`;
+    summaryHtml += `<tr><td style="padding: 8px;">Transação Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_transaction)}</td></tr>`;
+    document.getElementById('crm-summary-table').innerHTML = summaryHtml;
+    
+    // Payment status
+    let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+    data.paymentStatus.forEach(ps => {
+      paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
+    });
+    paymentStatusHtml += '</table>';
+    document.getElementById('crm-payment-status').innerHTML = paymentStatusHtml;
+    
+    // Top customers
+    let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+    data.topCustomers.forEach(c => {
+      customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.full_name}">${c.full_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
+    });
+    customersHtml += '</table>';
+    document.getElementById('crm-top-customers').innerHTML = customersHtml;
+    
+    // Debtors
+    let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
+    data.debtors.forEach(d => {
+      debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.full_name}">${d.full_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
+    });
+    debtorsHtml += '</table>';
+    document.getElementById('crm-debtors').innerHTML = debtorsHtml;
+    
+  } catch (error) {
+    console.error('Error loading CRM report:', error);
+    showToast('Erro ao carregar relatório de clientes', 'error');
+  }
+}
+
+// ==================== SUPPLIERS REPORT ====================
+async function loadSuppliersReport(period) {
+  try {
+    const res = await fetch(`${API_BASE}/reports/suppliers?period=${period}`);
+    if (!res.ok) throw new Error('Failed to fetch suppliers report');
+    
+    const data = await res.json();
+    
+    // Update stats
+    document.getElementById('sup-total-suppliers').textContent = formatNumber(data.summary.total_suppliers || 0);
+    document.getElementById('sup-active-suppliers').textContent = formatNumber(data.summary.active_suppliers || 0);
+    document.getElementById('sup-total-spent').textContent = formatCurrency(data.spending.total_spent || 0);
+    document.getElementById('sup-pending-debt').textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
+    
+    // Summary table
+    let summaryHtml = '';
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Fornecedores</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_suppliers)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Fornecedores Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_suppliers)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_suppliers_period)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
+    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Compras</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_purchases)}</td></tr>`;
+    summaryHtml += `<tr><td style="padding: 8px;">Compra Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_purchase)}</td></tr>`;
+    document.getElementById('sup-summary-table').innerHTML = summaryHtml;
+    
+    // Payment status
+    let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+    data.paymentStatus.forEach(ps => {
+      paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
+    });
+    paymentStatusHtml += '</table>';
+    document.getElementById('sup-payment-status').innerHTML = paymentStatusHtml;
+    
+    // Top suppliers
+    let suppliersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+    data.topSuppliers.forEach(s => {
+      suppliersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${s.company_name}">${s.company_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(s.total_spent)}</td></tr>`;
+    });
+    suppliersHtml += '</table>';
+    document.getElementById('sup-top-suppliers').innerHTML = suppliersHtml;
+    
+    // Debtors
+    let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
+    data.debtors.forEach(d => {
+      debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.company_name}">${d.company_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
+    });
+    debtorsHtml += '</table>';
+    document.getElementById('sup-debtors').innerHTML = debtorsHtml;
+    
+  } catch (error) {
+    console.error('Error loading suppliers report:', error);
+    showToast('Erro ao carregar relatório de fornecedores', 'error');
+  }
 }
 
 // ==================== PROMOTIONS MANAGEMENT ====================

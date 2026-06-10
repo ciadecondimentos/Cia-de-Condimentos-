@@ -1,6 +1,6 @@
 {
-  "buildCommand": "echo 'Static deployment'",
-  "outputDirectory": "frontend",
+  "buildCommand": "node -e \"require('fs').cpSync('frontend', 'public', {recursive: true})\"",
+  "outputDirectory": "public",
   "trailingSlash": false,
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },

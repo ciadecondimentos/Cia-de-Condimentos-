@@ -1428,12 +1428,16 @@ function exportCustomers() {
       }
 
       // Prepare CSV headers
-      const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total Pedidos', 'Total Gasto', 'Notas'];
+      const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total de Pedidos', 'Faturamento', 'Notas'];
       
       // Prepare CSV rows
       const rows = customers.map(customer => {
+        const stats = customer.stats || {};
+        const totalSpent = safeNumber(stats.total_spent || 0);
+        const totalPurchases = stats.total_purchases || 0;
+        
         return [
-          customer.name || 'N/A',
+          customer.full_name || customer.name || 'N/A',
           customer.email || 'N/A',
           customer.phone || 'N/A',
           customer.cpf || 'N/A',
@@ -1441,8 +1445,8 @@ function exportCustomers() {
           customer.city || 'N/A',
           customer.state || 'N/A',
           customer.zip || 'N/A',
-          customer.total_orders || 0,
-          customer.total_spent ? parseFloat(customer.total_spent).toFixed(2) : '0.00',
+          totalPurchases,
+          totalSpent.toFixed(2),
           customer.notes || ''
         ];
       });

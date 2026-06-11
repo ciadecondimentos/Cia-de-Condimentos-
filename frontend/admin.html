@@ -160,13 +160,6 @@ body { display: flex; }
 .report-tab-content { display: none; animation: fadeIn 0.3s ease; }
 .report-tab-content.active { display: block; }
 
-/* ==================== STANDBY SECTIONS (Em desenvolvimento) ==================== */
-#nav-reports {
-  display: none;
-}
-
-/* ==================== FIM STANDBY SECTIONS ==================== */
-
 /* GLOBAL TOUCH-FRIENDLY IMPROVEMENTS */
 input[type="text"],
 input[type="email"],
@@ -1174,9 +1167,6 @@ tr:hover td { background: #faf7f2; }
   <div class="nav-item" onclick="showPage('promotions', this)">
     <span class="nav-icon">🎁</span> Promoções
   </div>
-  <div class="nav-item" id="nav-reports" onclick="showPage('reports', this)">
-    <span class="nav-icon">📈</span> Relatórios
-  </div>
   <div class="nav-item" onclick="showPage('crm', this)">
     <span class="nav-icon">👥</span> Central de Clientes
   </div>
@@ -1400,8 +1390,8 @@ tr:hover td { background: #faf7f2; }
       </div>
     </div>
 
-    <!-- REPORTS -->
-    <div class="page" id="page-reports">
+    <!-- SUPPLIERS -->
+    <div class="page" id="page-suppliers">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">📈 Relatórios</h2>
         <div style="display: flex; gap: 10px;">

@@ -47,7 +47,7 @@ router.get('/', async (req, res) => {
     const suppliers = await Promise.all(result.rows.map(async (supplier) => {
       const statsResult = await db.query(`
         SELECT 
-          COUNT(*)::integer as total_purchases,
+          COUNT(DISTINCT purchase_date)::integer as total_purchases,
           COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
           COALESCE(CAST(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as paid,
           COALESCE(CAST(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as pending,
@@ -91,7 +91,7 @@ router.get('/:id', async (req, res) => {
     // Estatísticas
     const statsResult = await db.query(`
       SELECT 
-        COUNT(*)::integer as total_purchases,
+        COUNT(DISTINCT purchase_date)::integer as total_purchases,
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent,
         COALESCE(CAST(SUM(CASE WHEN payment_status = 'pago' THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as paid,
         COALESCE(CAST(SUM(CASE WHEN payment_status IN ('pendente', 'parcial') THEN total_price ELSE 0 END) AS NUMERIC(15,2)), 0) as pending,

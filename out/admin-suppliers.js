@@ -5,7 +5,9 @@ const suppliersState = {
   currentSupplierId: null,
   suppliers: [],
   currentPurchases: [],
-  filters: 'all'
+  filters: 'all',
+  dateStart: null,  // ✅ Data início do filtro
+  dateEnd: null     // ✅ Data fim do filtro
 };
 
 // Estado para rastrear produtos selecionados e quantidades
@@ -1241,6 +1243,32 @@ function searchSuppliers(query) {
   tbody.innerHTML = html;
 }
 
+function filterSuppliersByDate() {
+  const dateStart = document.getElementById('suppliersDateStart')?.value;
+  const dateEnd = document.getElementById('suppliersDateEnd')?.value;
+  
+  suppliersState.dateStart = dateStart;
+  suppliersState.dateEnd = dateEnd;
+  
+  if (!dateStart && !dateEnd) {
+    renderSuppliersTable();
+    return;
+  }
+  
+  const startDate = dateStart ? new Date(dateStart) : new Date('1900-01-01');
+  const endDate = dateEnd ? new Date(dateEnd) : new Date('2100-12-31');
+  
+  // Filtrar fornecedores que têm compras dentro do período
+  const filtered = suppliersState.suppliers.filter(supplier => {
+    // Verificar se o fornecedor tem compras no período selecionado
+    // Isso seria feito verificando os dados de compras do fornecedor
+    // Por enquanto, vamos mostrar todos mas o CSV vai filtrar
+    return true;
+  });
+  
+  renderSuppliersTable();
+}
+
 // Inicializar fornecedores quando a página for carregada
 function initializeSuppliers() {
   loadSuppliers('all');
@@ -1256,37 +1284,64 @@ function exportSuppliers() {
         return;
       }
 
+      const dateStart = document.getElementById('suppliersDateStart')?.value;
+      const dateEnd = document.getElementById('suppliersDateEnd')?.value;
+      
+      let startDate = null;
+      let endDate = null;
+      let dateLabel = '';
+      
+      if (dateStart) startDate = new Date(dateStart);
+      if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59'); // incluir até o fim do dia
+      
+      if (dateStart || dateEnd) {
+        dateLabel = ` (${dateStart || 'início'} a ${dateEnd || 'fim'})`;
+      }
+
       // Preparar cabeçalhos CSV
       const headers = ['Empresa', 'Contato', 'Email', 'Telefone', 'Cidade', 'Estado', 'Status', 'Total Investido', 'Em Aberto', 'Notas'];
       
-      // Preparar linhas CSV
-      const rows = suppliers.map(supplier => {
-        const stats = supplier.stats || {};
-        const totalSpent = safeNumber(stats.total_spent || 0);
-        const pending = safeNumber(stats.pending || 0);
-        
-        // Determinar status
-        let status = '✓ Ativo';
-        if (pending > 0) {
-          status = '💔 Devedor';
-        }
-        if (supplier.status === 'inactive') {
-          status = '❌ Inativo';
-        }
-        
-        return [
-          supplier.company_name || 'N/A',
-          supplier.contact_name || 'N/A',
-          supplier.email || 'N/A',
-          supplier.phone || 'N/A',
-          supplier.city || 'N/A',
-          supplier.state || 'N/A',
-          status,
-          'R$ ' + totalSpent.toFixed(2),
-          'R$ ' + pending.toFixed(2),
-          supplier.notes || ''
-        ];
-      });
+      // Preparar linhas CSV - filtrar por data se aplicável
+      const rows = suppliers
+        .filter(supplier => {
+          if (!startDate && !endDate) return true;
+          const lastPurchase = supplier.stats?.last_purchase ? new Date(supplier.stats.last_purchase) : null;
+          if (startDate && lastPurchase && lastPurchase < startDate) return false;
+          if (endDate && lastPurchase && lastPurchase > endDate) return false;
+          return true;
+        })
+        .map(supplier => {
+          const stats = supplier.stats || {};
+          const totalSpent = safeNumber(stats.total_spent || 0);
+          const pending = safeNumber(stats.pending || 0);
+          
+          // Determinar status
+          let status = '✓ Ativo';
+          if (pending > 0) {
+            status = '💔 Devedor';
+          }
+          if (supplier.status === 'inactive') {
+            status = '❌ Inativo';
+          }
+          
+          return [
+            supplier.company_name || 'N/A',
+            supplier.contact_name || 'N/A',
+            supplier.email || 'N/A',
+            supplier.phone || 'N/A',
+            supplier.city || 'N/A',
+            supplier.state || 'N/A',
+            status,
+            'R$ ' + totalSpent.toFixed(2),
+            'R$ ' + pending.toFixed(2),
+            supplier.notes || ''
+          ];
+        });
+
+      if (rows.length === 0) {
+        showToast('Nenhum fornecedor encontrado para esse período', 'warning');
+        return;
+      }
 
       // Criar conteúdo CSV
       let csvContent = headers.join(',') + '\n';
@@ -1300,14 +1355,14 @@ function exportSuppliers() {
       const url = URL.createObjectURL(blob);
       
       link.setAttribute('href', url);
-      link.setAttribute('download', `Fornecedores_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Fornecedores_${new Date().toISOString().split('T')[0]}${dateLabel.replace(/\s/g, '').replace(/\(/g, '_').replace(/\)/g, '')}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      showToast(`${suppliers.length} fornecedores exportados como CSV!`);
+      showToast(`${rows.length} fornecedores exportados como CSV!`);
     })
     .catch(error => {
       console.error('Erro ao exportar fornecedores:', error);

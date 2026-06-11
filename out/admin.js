@@ -1426,30 +1426,57 @@ function exportCustomers() {
         showToast('Nenhum cliente para exportar', 'warning');
         return;
       }
+
+      const dateStart = document.getElementById('crmDateStart')?.value;
+      const dateEnd = document.getElementById('crmDateEnd')?.value;
+      
+      let startDate = null;
+      let endDate = null;
+      let dateLabel = '';
+      
+      if (dateStart) startDate = new Date(dateStart);
+      if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59'); // incluir até o fim do dia
+      
+      if (dateStart || dateEnd) {
+        dateLabel = ` (${dateStart || 'início'} a ${dateEnd || 'fim'})`;
+      }
       
       // Prepare CSV headers
       const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total de Pedidos', 'Faturamento', 'Notas'];
       
-      // Prepare CSV rows
-      const rows = customers.map(customer => {
-        const stats = customer.stats || {};
-        const totalSpent = safeNumber(stats.total_spent || 0);
-        const totalPurchases = parseInt(stats.total_purchases) || 0;
-        
-        return [
-          customer.full_name || customer.name || 'N/A',
-          customer.email || 'N/A',
-          customer.phone || 'N/A',
-          customer.cpf || 'N/A',
-          customer.address || 'N/A',
-          customer.city || 'N/A',
-          customer.state || 'N/A',
-          customer.zip || 'N/A',
-          totalPurchases,
-          totalSpent.toFixed(2),
-          customer.notes || ''
-        ];
-      });
+      // Prepare CSV rows - filtrar por data se aplicável
+      const rows = customers
+        .filter(customer => {
+          if (!startDate && !endDate) return true;
+          const lastPurchase = customer.stats?.last_purchase ? new Date(customer.stats.last_purchase) : null;
+          if (startDate && lastPurchase && lastPurchase < startDate) return false;
+          if (endDate && lastPurchase && lastPurchase > endDate) return false;
+          return true;
+        })
+        .map(customer => {
+          const stats = customer.stats || {};
+          const totalSpent = safeNumber(stats.total_spent || 0);
+          const totalPurchases = parseInt(stats.total_purchases) || 0;
+          
+          return [
+            customer.full_name || customer.name || 'N/A',
+            customer.email || 'N/A',
+            customer.phone || 'N/A',
+            customer.cpf || 'N/A',
+            customer.address || 'N/A',
+            customer.city || 'N/A',
+            customer.state || 'N/A',
+            customer.zip || 'N/A',
+            totalPurchases,
+            totalSpent.toFixed(2),
+            customer.notes || ''
+          ];
+        });
+
+      if (rows.length === 0) {
+        showToast('Nenhum cliente encontrado para esse período', 'warning');
+        return;
+      }
 
       // Create CSV content
       let csvContent = headers.join(',') + '\n';
@@ -1463,14 +1490,14 @@ function exportCustomers() {
       const url = URL.createObjectURL(blob);
       
       link.setAttribute('href', url);
-      link.setAttribute('download', `Clientes_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `Clientes_${new Date().toISOString().split('T')[0]}${dateLabel.replace(/\s/g, '').replace(/\(/g, '_').replace(/\)/g, '')}.csv`);
       link.style.visibility = 'hidden';
       
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       
-      showToast(`${customers.length} clientes exportados como CSV!`);
+      showToast(`${rows.length} clientes exportados como CSV!`);
     })
     .catch(error => {
       console.error('Error exporting customers:', error);

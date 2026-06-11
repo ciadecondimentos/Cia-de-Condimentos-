@@ -17,7 +17,9 @@ const crmState = {
   customers: [],
   currentPurchases: [],
   filters: 'all',
-  activePix: null  // ✅ NOVO: Rastrear PIX ativo
+  activePix: null,  // ✅ NOVO: Rastrear PIX ativo
+  dateStart: null,  // ✅ Data início do filtro
+  dateEnd: null     // ✅ Data fim do filtro
 };
 
 // GET: Listar clientes
@@ -2124,6 +2126,32 @@ function searchCrmCustomers(query) {
   }).join('');
 
   tbody.innerHTML = html;
+}
+
+function filterCrmByDate() {
+  const dateStart = document.getElementById('crmDateStart')?.value;
+  const dateEnd = document.getElementById('crmDateEnd')?.value;
+  
+  crmState.dateStart = dateStart;
+  crmState.dateEnd = dateEnd;
+  
+  if (!dateStart && !dateEnd) {
+    renderCrmCustomersTable();
+    return;
+  }
+  
+  const startDate = dateStart ? new Date(dateStart) : new Date('1900-01-01');
+  const endDate = dateEnd ? new Date(dateEnd) : new Date('2100-12-31');
+  
+  // Filtrar clientes que têm compras dentro do período
+  const filtered = crmState.customers.filter(customer => {
+    // Verificar se o cliente tem compras no período selecionado
+    // Isso seria feito verificando os dados de compras do cliente
+    // Por enquanto, vamos mostrar todos os clientes mas o CSV vai filtrar
+    return true;
+  });
+  
+  renderCrmCustomersTable();
 }
 
 // Inicializar CRM quando a página for carregada

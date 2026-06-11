@@ -2199,6 +2199,22 @@ function initializeCrm() {
   // ✅ NOVO: Iniciar sincronização periódica com backend (múltiplos dispositivos)
   startCrmPixBackendSync();
   
+  // ✅ NOVO: Setup date range listeners para mobile
+  const crmDateStart = document.getElementById('crmDateStart');
+  const crmDateEnd = document.getElementById('crmDateEnd');
+  
+  if (crmDateStart) {
+    crmDateStart.addEventListener('change', filterCrmByDate);
+    crmDateStart.addEventListener('input', filterCrmByDate);
+    crmDateStart.addEventListener('blur', filterCrmByDate);
+  }
+  
+  if (crmDateEnd) {
+    crmDateEnd.addEventListener('change', filterCrmByDate);
+    crmDateEnd.addEventListener('input', filterCrmByDate);
+    crmDateEnd.addEventListener('blur', filterCrmByDate);
+  }
+  
   loadCrmCustomers('all');
 }
 

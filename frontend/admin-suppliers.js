@@ -1305,6 +1305,22 @@ function updateSuppliersDashboardByDateRange() {
 
 // Inicializar fornecedores quando a página for carregada
 function initializeSuppliers() {
+  // ✅ NOVO: Setup date range listeners para mobile
+  const suppliersDateStart = document.getElementById('suppliersDateStart');
+  const suppliersDateEnd = document.getElementById('suppliersDateEnd');
+  
+  if (suppliersDateStart) {
+    suppliersDateStart.addEventListener('change', filterSuppliersByDate);
+    suppliersDateStart.addEventListener('input', filterSuppliersByDate);
+    suppliersDateStart.addEventListener('blur', filterSuppliersByDate);
+  }
+  
+  if (suppliersDateEnd) {
+    suppliersDateEnd.addEventListener('change', filterSuppliersByDate);
+    suppliersDateEnd.addEventListener('input', filterSuppliersByDate);
+    suppliersDateEnd.addEventListener('blur', filterSuppliersByDate);
+  }
+  
   loadSuppliers('all');
 }
 

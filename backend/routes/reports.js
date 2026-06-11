@@ -38,6 +38,38 @@ router.get('/test-crm', async (req, res) => {
   }
 });
 
+// Debug general report queries
+router.get('/debug/general', async (req, res) => {
+  try {
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+
+    const crmData = await db.query(`
+      SELECT 
+        COUNT(DISTINCT c.id)::integer as total_customers,
+        COALESCE(CAST(SUM(p.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_crm
+      FROM crm_customers c
+      LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
+    `, [startDate]);
+
+    const suppliersData = await db.query(`
+      SELECT 
+        COUNT(DISTINCT s.id)::integer as total_suppliers,
+        COALESCE(CAST(SUM(sp.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_suppliers
+      FROM suppliers s
+      LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
+    `, [startDate]);
+
+    res.json({
+      startDate,
+      crmData: crmData.rows[0],
+      suppliersData: suppliersData.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // List all tables
 router.get('/debug/tables', async (req, res) => {
   try {

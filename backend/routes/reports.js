@@ -117,6 +117,15 @@ router.get('/general', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    // Debug: list all tables
+    let allTables = [];
+    try {
+      const tables = await db.query(`
+        SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+      `);
+      allTables = tables.rows.map(r => r.table_name);
+    } catch (e) {}
+
     // Debug: check columns
     let allColumns = [];
     try {
@@ -191,8 +200,9 @@ router.get('/general', async (req, res) => {
 
     res.json({
       period,
-      typeInfo,
+      allTables,
       allColumns,
+      typeInfo,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),

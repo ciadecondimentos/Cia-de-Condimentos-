@@ -10,12 +10,16 @@ function cleanData(obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       let val = obj[key];
       if (typeof val === 'string') {
-        const num = parseFloat(val);
-        result[key] = isNaN(num) ? null : num;
+        if (val === 'NaN' || val === 'null' || val === '') {
+          result[key] = 0;
+        } else {
+          const num = parseFloat(val);
+          result[key] = isNaN(num) ? 0 : num;
+        }
       } else if (typeof val === 'number') {
-        result[key] = isNaN(val) ? null : val;
+        result[key] = isNaN(val) ? 0 : val;
       } else if (val === null || val === undefined) {
-        result[key] = null;
+        result[key] = 0;
       } else {
         result[key] = val;
       }

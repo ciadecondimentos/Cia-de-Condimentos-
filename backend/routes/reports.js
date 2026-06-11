@@ -54,10 +54,20 @@ router.get('/general', async (req, res) => {
 
     const generalReport = {
       period,
-      sales: salesResult.rows[0],
-      crm: crmResult.rows[0],
-      suppliers: suppliersResult.rows[0],
-      paymentMethods: paymentMethodsResult.rows,
+      sales: salesResult.rows[0] || {
+        total_orders: 0,
+        total_revenue: 0,
+        paid_orders: 0
+      },
+      crm: crmResult.rows[0] || {
+        total_customers: 0,
+        total_spent_crm: 0
+      },
+      suppliers: suppliersResult.rows[0] || {
+        total_suppliers: 0,
+        total_spent_suppliers: 0
+      },
+      paymentMethods: paymentMethodsResult.rows || [],
       generatedAt: new Date().toISOString()
     };
 
@@ -146,11 +156,19 @@ router.get('/orders', async (req, res) => {
 
     const ordersReport = {
       period,
-      summary: summaryResult.rows[0],
-      byStatus: statusResult.rows,
-      byPaymentMethod: paymentMethodResult.rows,
-      topCustomers: topCustomersResult.rows,
-      dailySales: dailySalesResult.rows,
+      summary: summaryResult.rows[0] || {
+        total_orders: 0,
+        paid_orders: 0,
+        pending_orders: 0,
+        cancelled_orders: 0,
+        total_revenue: 0,
+        average_ticket: 0,
+        total_shipping: 0
+      },
+      byStatus: statusResult.rows || [],
+      byPaymentMethod: paymentMethodResult.rows || [],
+      topCustomers: topCustomersResult.rows || [],
+      dailySales: dailySalesResult.rows || [],
       generatedAt: new Date().toISOString()
     };
 
@@ -207,10 +225,20 @@ router.get('/crm', async (req, res) => {
       FROM crm_purchases
       WHERE purchase_date >= $1
       GROUP BY payment_status
-      ORDER BY count DESC
+      ORDER BY total DESC
     `, [startDate]);
 
     console.log('✅ Query de status de pagamento executada com sucesso');
+
+    // Garantir que sempre há os 3 status
+    const allStatuses = ['pago', 'pendente', 'parcial'];
+    const statusMap = {};
+    paymentStatusResult.rows.forEach(row => {
+      statusMap[row.payment_status] = row;
+    });
+    const completedPaymentStatus = allStatuses.map(status => 
+      statusMap[status] || { payment_status: status, count: 0, total: 0 }
+    );
 
     // Top clientes por gasto
     console.log('📝 Executando query: top clientes...');
@@ -256,11 +284,20 @@ router.get('/crm', async (req, res) => {
 
     const crmReport = {
       period,
-      summary: summaryResult.rows[0],
-      spending: spendingResult.rows[0],
-      paymentStatus: paymentStatusResult.rows,
-      topCustomers: topCustomersResult.rows,
-      debtors: debtorsResult.rows,
+      summary: summaryResult.rows[0] || {
+        total_customers: 0,
+        vip_customers: 0,
+        active_customers: 0,
+        new_customers_period: 0
+      },
+      spending: spendingResult.rows[0] || {
+        total_spent: 0,
+        total_transactions: 0,
+        average_transaction: 0
+      },
+      paymentStatus: completedPaymentStatus || [],
+      topCustomers: topCustomersResult.rows || [],
+      debtors: debtorsResult.rows || [],
       generatedAt: new Date().toISOString()
     };
 
@@ -316,10 +353,20 @@ router.get('/suppliers', async (req, res) => {
       FROM supplier_purchases
       WHERE purchase_date >= $1
       GROUP BY payment_status
-      ORDER BY count DESC
+      ORDER BY total DESC
     `, [startDate]);
 
     console.log('✅ Query de status de pagamento de fornecedores executada com sucesso');
+
+    // Garantir que sempre há os 3 status
+    const allStatuses = ['pago', 'pendente', 'parcial'];
+    const suppStatusMap = {};
+    paymentStatusResult.rows.forEach(row => {
+      suppStatusMap[row.payment_status] = row;
+    });
+    const completedSupplierPaymentStatus = allStatuses.map(status => 
+      suppStatusMap[status] || { payment_status: status, count: 0, total: 0 }
+    );
 
     // Top fornecedores por volume
     console.log('📝 Executando query: top fornecedores...');
@@ -365,11 +412,19 @@ router.get('/suppliers', async (req, res) => {
 
     const suppliersReport = {
       period,
-      summary: summaryResult.rows[0],
-      spending: spendingResult.rows[0],
-      paymentStatus: paymentStatusResult.rows,
-      topSuppliers: topSuppliersResult.rows,
-      debtors: debtorsResult.rows,
+      summary: summaryResult.rows[0] || {
+        total_suppliers: 0,
+        active_suppliers: 0,
+        new_suppliers_period: 0
+      },
+      spending: spendingResult.rows[0] || {
+        total_spent: 0,
+        total_purchases: 0,
+        average_purchase: 0
+      },
+      paymentStatus: completedSupplierPaymentStatus || [],
+      topSuppliers: topSuppliersResult.rows || [],
+      debtors: debtorsResult.rows || [],
       generatedAt: new Date().toISOString()
     };
 

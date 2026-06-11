@@ -2151,16 +2151,11 @@ function updateCrmDashboardByDateRange() {
   const startDate = crmState.dateStart ? new Date(crmState.dateStart) : null;
   const endDate = crmState.dateEnd ? new Date(crmState.dateEnd + 'T23:59:59') : null;
   
-  let totalCustomers = 0;
-  let vipCount = 0;
   let totalSpent = 0;
   let totalPending = 0;
   
   // Filtrar dados baseado no período selecionado
   crmState.customers.forEach(customer => {
-    totalCustomers++;
-    if (customer.is_vip) vipCount++;
-    
     // Se nenhuma data foi selecionada, usar totais completos
     if (!startDate && !endDate) {
       totalSpent += safeNumber(customer.stats?.total_spent || 0);
@@ -2168,28 +2163,27 @@ function updateCrmDashboardByDateRange() {
     } else {
       // Filtrar compras por período
       const purchases = customer.purchases || [];
-      const filteredPurchases = purchases.filter(p => {
+      
+      // Calcular totais baseado nas compras filtradas
+      purchases.forEach(p => {
         const pDate = new Date(p.purchase_date);
         const afterStart = !startDate || pDate >= startDate;
         const beforeEnd = !endDate || pDate <= endDate;
-        return afterStart && beforeEnd;
-      });
-      
-      // Calcular totais baseado nas compras filtradas
-      filteredPurchases.forEach(p => {
-        totalSpent += safeNumber(p.total_price || 0);
-        if (p.payment_status === 'pago') {
-          // Pago já está incluído em totalSpent, não contar novamente
-        } else if (p.payment_status === 'pendente' || p.payment_status === 'parcial') {
-          totalPending += safeNumber(p.total_price || 0);
+        
+        if (afterStart && beforeEnd) {
+          // Adiciona o valor TOTAL ao faturamento
+          totalSpent += safeNumber(p.total_price || 0);
+          
+          // Se está pendente/parcial, também conta como em aberto
+          if (p.payment_status === 'pendente' || p.payment_status === 'parcial') {
+            totalPending += safeNumber(p.total_price || 0);
+          }
         }
       });
     }
   });
   
   // Atualizar cartões do dashboard
-  document.getElementById('crm-total-customers').textContent = totalCustomers;
-  document.getElementById('crm-vip-customers').textContent = vipCount;
   document.getElementById('crm-total-spent').textContent = formatMoney(totalSpent);
   document.getElementById('crm-total-pending').textContent = formatMoney(totalPending);
 }

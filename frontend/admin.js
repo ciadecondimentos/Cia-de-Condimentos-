@@ -1435,7 +1435,7 @@ function exportCustomers() {
       let dateLabel = '';
       
       if (dateStart) startDate = new Date(dateStart);
-      if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59'); // incluir até o fim do dia
+      if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59');
       
       if (dateStart || dateEnd) {
         dateLabel = ` (${dateStart || 'início'} a ${dateEnd || 'fim'})`;
@@ -1447,16 +1447,42 @@ function exportCustomers() {
       // Prepare CSV rows - filtrar por data se aplicável
       const rows = customers
         .filter(customer => {
-          if (!startDate && !endDate) return true;
-          const lastPurchase = customer.stats?.last_purchase ? new Date(customer.stats.last_purchase) : null;
-          if (startDate && lastPurchase && lastPurchase < startDate) return false;
-          if (endDate && lastPurchase && lastPurchase > endDate) return false;
-          return true;
+          // Só incluir clientes que têm compras no período
+          const purchases = customer.purchases || [];
+          if (!startDate && !endDate) return true; // Se sem filtro, incluir todos
+          
+          return purchases.some(p => {
+            const pDate = new Date(p.purchase_date);
+            const afterStart = !startDate || pDate >= startDate;
+            const beforeEnd = !endDate || pDate <= endDate;
+            return afterStart && beforeEnd;
+          });
         })
         .map(customer => {
-          const stats = customer.stats || {};
-          const totalSpent = safeNumber(stats.total_spent || 0);
-          const totalPurchases = parseInt(stats.total_purchases) || 0;
+          const purchases = customer.purchases || [];
+          let totalPurchaseCount = 0;
+          let totalSpent = 0;
+          
+          // Calcular totais apenas do período selecionado
+          if (!startDate && !endDate) {
+            // Sem filtro: usar dados completos
+            totalPurchaseCount = parseInt(customer.stats?.total_purchases) || 0;
+            totalSpent = safeNumber(customer.stats?.total_spent || 0);
+          } else {
+            // Com filtro: contar compras do período
+            const purchaseDates = new Set();
+            purchases.forEach(p => {
+              const pDate = new Date(p.purchase_date);
+              const afterStart = !startDate || pDate >= startDate;
+              const beforeEnd = !endDate || pDate <= endDate;
+              
+              if (afterStart && beforeEnd) {
+                purchaseDates.add(p.purchase_date); // Contar datas únicas
+                totalSpent += safeNumber(p.total_price || 0);
+              }
+            });
+            totalPurchaseCount = purchaseDates.size;
+          }
           
           return [
             customer.full_name || customer.name || 'N/A',
@@ -1467,7 +1493,7 @@ function exportCustomers() {
             customer.city || 'N/A',
             customer.state || 'N/A',
             customer.zip || 'N/A',
-            totalPurchases,
+            totalPurchaseCount,
             totalSpent.toFixed(2),
             customer.notes || ''
           ];

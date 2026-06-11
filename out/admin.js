@@ -91,7 +91,6 @@ function showPage(pageId, buttonElement) {
     'orders': 'Pedidos',
     'promotions': 'Promoções',
     'customers': 'Clientes',
-    'reports': 'Relatórios',
     'crm': 'Central de Clientes'
   };
   

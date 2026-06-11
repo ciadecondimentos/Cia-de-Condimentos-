@@ -110,6 +110,52 @@ router.get('/debug/tables', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Debug: Check CRM purchases raw data and casting
+router.get('/debug/crm-total', async (req, res) => {
+  try {
+    const { period = 30 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - parseInt(period));
+
+    // Show first few raw records
+    const rawRecords = await db.query(`
+      SELECT id, total_price, payment_status, purchase_date 
+      FROM crm_purchases 
+      LIMIT 5
+    `);
+
+    // Try different casting approaches
+    const test1 = await db.query(`
+      SELECT SUM(total_price::numeric) as result FROM crm_purchases WHERE purchase_date >= $1
+    `, [startDate]);
+
+    const test2 = await db.query(`
+      SELECT SUM(CAST(total_price AS NUMERIC)) as result FROM crm_purchases WHERE purchase_date >= $1
+    `, [startDate]);
+
+    const test3 = await db.query(`
+      SELECT SUM(CAST(total_price AS NUMERIC)) as result FROM crm_purchases
+    `);
+
+    const test4 = await db.query(`
+      SELECT COUNT(*) as cnt, SUM(CAST(total_price AS NUMERIC))::numeric as total 
+      FROM crm_purchases
+    `);
+
+    res.json({
+      period,
+      startDate: startDate.toISOString(),
+      rawRecords: rawRecords.rows,
+      test1: test1.rows[0],
+      test2: test2.rows[0],
+      test3: test3.rows[0],
+      test4: test4.rows[0]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {

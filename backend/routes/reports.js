@@ -107,6 +107,17 @@ router.get('/general', async (req, res) => {
       LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
     `, [startDate]);
 
+    // CRM payment status
+    const crmPaymentStatus = await db.query(`
+      SELECT 
+        payment_status,
+        COUNT(*)::integer as count,
+        COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total
+      FROM crm_purchases
+      WHERE purchase_date >= $1
+      GROUP BY payment_status
+    `, [startDate]);
+
     // Suppliers data
     const suppliersData = await db.query(`
       SELECT 
@@ -131,6 +142,7 @@ router.get('/general', async (req, res) => {
       period,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
+      crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),
       suppliers: cleanData(suppliersData.rows[0]),
       paymentMethods: (paymentMethods.rows || []).map(cleanData),
       generatedAt: new Date().toISOString()

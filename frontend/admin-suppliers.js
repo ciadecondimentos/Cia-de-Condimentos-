@@ -1250,23 +1250,73 @@ function filterSuppliersByDate() {
   suppliersState.dateStart = dateStart;
   suppliersState.dateEnd = dateEnd;
   
+  // Recalcular dashboard com as datas selecionadas
+  updateSuppliersDashboardByDateRange();
+  
   if (!dateStart && !dateEnd) {
     renderSuppliersTable();
     return;
   }
   
-  const startDate = dateStart ? new Date(dateStart) : new Date('1900-01-01');
-  const endDate = dateEnd ? new Date(dateEnd) : new Date('2100-12-31');
+  renderSuppliersTable();
+}
+
+// ✅ NOVO: Atualizar dashboard baseado no filtro de data
+function updateSuppliersDashboardByDateRange() {
+  const startDate = suppliersState.dateStart ? new Date(suppliersState.dateStart) : null;
+  const endDate = suppliersState.dateEnd ? new Date(suppliersState.dateEnd + 'T23:59:59') : null;
   
-  // Filtrar fornecedores que têm compras dentro do período
-  const filtered = suppliersState.suppliers.filter(supplier => {
-    // Verificar se o fornecedor tem compras no período selecionado
-    // Isso seria feito verificando os dados de compras do fornecedor
-    // Por enquanto, vamos mostrar todos mas o CSV vai filtrar
-    return true;
+  let totalSuppliers = 0;
+  let totalBought = 0;
+  let totalPending = 0;
+  let debtorCount = 0;
+  
+  // Filtrar dados baseado no período selecionado
+  suppliersState.suppliers.forEach(supplier => {
+    totalSuppliers++;
+    
+    // Se nenhuma data foi selecionada, usar totais completos
+    if (!startDate && !endDate) {
+      totalBought += safeNumber(supplier.stats?.total_spent || 0);
+      totalPending += safeNumber(supplier.stats?.pending || 0);
+      if (safeNumber(supplier.stats?.pending || 0) > 0) {
+        debtorCount++;
+      }
+    } else {
+      // Filtrar compras por período
+      const purchases = supplier.purchases || [];
+      const filteredPurchases = purchases.filter(p => {
+        const pDate = new Date(p.purchase_date);
+        const afterStart = !startDate || pDate >= startDate;
+        const beforeEnd = !endDate || pDate <= endDate;
+        return afterStart && beforeEnd;
+      });
+      
+      // Calcular totais baseado nas compras filtradas
+      let supplierSpent = 0;
+      let supplierPending = 0;
+      
+      filteredPurchases.forEach(p => {
+        supplierSpent += safeNumber(p.total_price || 0);
+        if (p.payment_status === 'pendente' || p.payment_status === 'parcial') {
+          supplierPending += safeNumber(p.total_price || 0);
+        }
+      });
+      
+      totalBought += supplierSpent;
+      totalPending += supplierPending;
+      
+      if (supplierPending > 0) {
+        debtorCount++;
+      }
+    }
   });
   
-  renderSuppliersTable();
+  // Atualizar cartões do dashboard
+  document.getElementById('suppliers-total').textContent = totalSuppliers;
+  document.getElementById('suppliers-total-bought').textContent = formatMoney(totalBought);
+  document.getElementById('suppliers-total-pending').textContent = formatMoney(totalPending);
+  document.getElementById('suppliers-debtors').textContent = debtorCount;
 }
 
 // Inicializar fornecedores quando a página for carregada

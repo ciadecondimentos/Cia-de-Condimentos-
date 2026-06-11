@@ -2135,23 +2135,63 @@ function filterCrmByDate() {
   crmState.dateStart = dateStart;
   crmState.dateEnd = dateEnd;
   
+  // Recalcular dashboard com as datas selecionadas
+  updateCrmDashboardByDateRange();
+  
   if (!dateStart && !dateEnd) {
     renderCrmCustomersTable();
     return;
   }
   
-  const startDate = dateStart ? new Date(dateStart) : new Date('1900-01-01');
-  const endDate = dateEnd ? new Date(dateEnd) : new Date('2100-12-31');
+  renderCrmCustomersTable();
+}
+
+// ✅ NOVO: Atualizar dashboard baseado no filtro de data
+function updateCrmDashboardByDateRange() {
+  const startDate = crmState.dateStart ? new Date(crmState.dateStart) : null;
+  const endDate = crmState.dateEnd ? new Date(crmState.dateEnd + 'T23:59:59') : null;
   
-  // Filtrar clientes que têm compras dentro do período
-  const filtered = crmState.customers.filter(customer => {
-    // Verificar se o cliente tem compras no período selecionado
-    // Isso seria feito verificando os dados de compras do cliente
-    // Por enquanto, vamos mostrar todos os clientes mas o CSV vai filtrar
-    return true;
+  let totalCustomers = 0;
+  let vipCount = 0;
+  let totalSpent = 0;
+  let totalPending = 0;
+  
+  // Filtrar dados baseado no período selecionado
+  crmState.customers.forEach(customer => {
+    totalCustomers++;
+    if (customer.is_vip) vipCount++;
+    
+    // Se nenhuma data foi selecionada, usar totais completos
+    if (!startDate && !endDate) {
+      totalSpent += safeNumber(customer.stats?.total_spent || 0);
+      totalPending += safeNumber(customer.stats?.pending || 0);
+    } else {
+      // Filtrar compras por período
+      const purchases = customer.purchases || [];
+      const filteredPurchases = purchases.filter(p => {
+        const pDate = new Date(p.purchase_date);
+        const afterStart = !startDate || pDate >= startDate;
+        const beforeEnd = !endDate || pDate <= endDate;
+        return afterStart && beforeEnd;
+      });
+      
+      // Calcular totais baseado nas compras filtradas
+      filteredPurchases.forEach(p => {
+        totalSpent += safeNumber(p.total_price || 0);
+        if (p.payment_status === 'pago') {
+          // Pago já está incluído em totalSpent, não contar novamente
+        } else if (p.payment_status === 'pendente' || p.payment_status === 'parcial') {
+          totalPending += safeNumber(p.total_price || 0);
+        }
+      });
+    }
   });
   
-  renderCrmCustomersTable();
+  // Atualizar cartões do dashboard
+  document.getElementById('crm-total-customers').textContent = totalCustomers;
+  document.getElementById('crm-vip-customers').textContent = vipCount;
+  document.getElementById('crm-total-spent').textContent = formatMoney(totalSpent);
+  document.getElementById('crm-total-pending').textContent = formatMoney(totalPending);
 }
 
 // Inicializar CRM quando a página for carregada

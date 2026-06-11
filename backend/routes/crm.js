@@ -58,9 +58,21 @@ router.get('/customers', async (req, res) => {
         WHERE customer_id = $1
       `, [customer.id]);
 
+      // Buscar compras individuais para filtros no frontend
+      const purchasesResult = await db.query(`
+        SELECT 
+          purchase_date,
+          COALESCE(CAST(total_price AS NUMERIC(15,2)), 0) as total_price,
+          payment_status
+        FROM crm_purchases 
+        WHERE customer_id = $1
+        ORDER BY purchase_date DESC
+      `, [customer.id]);
+
       const customerData = {
         ...customer,
-        stats: statsResult.rows[0]
+        stats: statsResult.rows[0],
+        purchases: purchasesResult.rows
       };
       
       if (result.rows.indexOf(customer) === 0) {

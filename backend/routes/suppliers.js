@@ -56,9 +56,21 @@ router.get('/', async (req, res) => {
         WHERE supplier_id = $1
       `, [supplier.id]);
 
+      // Buscar compras individuais para filtros no frontend
+      const purchasesResult = await db.query(`
+        SELECT 
+          purchase_date,
+          COALESCE(CAST(total_price AS NUMERIC(15,2)), 0) as total_price,
+          payment_status
+        FROM supplier_purchases 
+        WHERE supplier_id = $1
+        ORDER BY purchase_date DESC
+      `, [supplier.id]);
+
       return {
         ...supplier,
-        stats: statsResult.rows[0]
+        stats: statsResult.rows[0],
+        purchases: purchasesResult.rows
       };
     }));
 

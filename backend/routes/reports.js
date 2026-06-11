@@ -24,7 +24,15 @@ function cleanData(obj) {
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-
+// Test CRM table query
+router.get('/test-crm', async (req, res) => {
+  try {
+    const result = await db.query('SELECT COUNT(*) as cnt FROM crm_customers');
+    res.json({ success: true, crm_customers: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {

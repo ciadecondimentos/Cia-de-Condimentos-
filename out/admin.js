@@ -1419,7 +1419,7 @@ function deleteCustomer(id) {
 }
 
 function exportCustomers() {
-  fetch(`${API_BASE}/auth/admin/customers`)
+  fetch(`${API_BASE}/crm/customers`)
     .then(res => res.json())
     .then(customers => {
       if (!customers || customers.length === 0) {

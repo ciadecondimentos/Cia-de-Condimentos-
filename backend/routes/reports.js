@@ -117,6 +117,18 @@ router.get('/general', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    // Debug: check columns
+    let allColumns = [];
+    try {
+      const cols = await db.query(`
+        SELECT column_name, data_type
+        FROM information_schema.columns
+        WHERE table_name = 'crm_purchases'
+        ORDER BY ordinal_position
+      `);
+      allColumns = cols.rows;
+    } catch (e) {}
+
     // Test: get column type and sample values
     let typeInfo = null;
     try {
@@ -180,6 +192,7 @@ router.get('/general', async (req, res) => {
     res.json({
       period,
       typeInfo,
+      allColumns,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),

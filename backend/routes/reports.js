@@ -34,54 +34,73 @@ function cleanArray(arr) {
 
 
 // ==================== DIAGNÓSTICO ====================
-router.get('/diagnose/crm', async (req, res) => {
-  const { period = 30 } = req.query;
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - parseInt(period));
-
-  const results = {};
-
+router.get('/diagnose/simple', async (req, res) => {
   try {
-    console.log('🔍 Iniciando diagnóstico de CRM...');
+    const q1 = await db.query('SELECT 1 as test');
+    res.json({ step: 1, result: q1.rows[0] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test CRM tables
+router.get('/diagnose/tables', async (req, res) => {
+  try {
+    const result = {};
     
-    console.log('📝 Query 1: Resumo de clientes...');
-    const q1 = await db.query(`
-      SELECT COUNT(*) FROM crm_customers
-    `);
-    results.customers_count = q1.rows[0];
-    console.log('✅ Q1:', results.customers_count);
+    const q1 = await db.query('SELECT COUNT(*) as cnt FROM crm_customers');
+    result.crm_customers_count = parseInt(q1.rows[0].cnt);
+    
+    const q2 = await db.query('SELECT COUNT(*) as cnt FROM crm_purchases');
+    result.crm_purchases_count = parseInt(q2.rows[0].cnt);
+    
+    const q3 = await db.query('SELECT COUNT(*) as cnt FROM suppliers');
+    result.suppliers_count = parseInt(q3.rows[0].cnt);
+    
+    const q4 = await db.query('SELECT COUNT(*) as cnt FROM supplier_purchases');
+    result.supplier_purchases_count = parseInt(q4.rows[0].cnt);
+    
+    res.json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
-    console.log('📝 Query 2: Crm Purchases...');
-    const q2 = await db.query(`
-      SELECT COUNT(*) FROM crm_purchases
-    `);
-    results.crm_purchases_count = q2.rows[0];
-    console.log('✅ Q2:', results.crm_purchases_count);
-
-    console.log('📝 Query 3: Resumo completo...');
-    const q3 = await db.query(`
+// Test CRM query step by step
+router.get('/diagnose/crm-step', async (req, res) => {
+  try {
+    const period = 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - period);
+    
+    console.log('Step 1: Query summary');
+    const summaryResult = await db.query(`
       SELECT 
         COUNT(*)::integer as total_customers,
         COUNT(CASE WHEN is_vip = true THEN 1 END)::integer as vip_customers
       FROM crm_customers
     `);
-    results.summary = q3.rows[0];
-    console.log('✅ Q3:', results.summary);
-
-    console.log('📝 Query 4: Gasto total...');
-    const q4 = await db.query(`
+    
+    console.log('Step 2: Query spending');
+    const spendingResult = await db.query(`
       SELECT 
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent
       FROM crm_purchases
       WHERE purchase_date >= $1
     `, [startDate]);
-    results.spending = q4.rows[0];
-    console.log('✅ Q4:', results.spending);
-
-    res.json({ success: true, results });
+    
+    console.log('Step 3: Clean data');
+    const summary = cleanNumeric(summaryResult.rows[0]);
+    const spending = cleanNumeric(spendingResult.rows[0]);
+    
+    res.json({ 
+      success: true, 
+      summary, 
+      spending
+    });
   } catch (error) {
-    console.error('❌ Erro no diagnóstico:', error);
-    res.json({ success: false, error: error.message });
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 

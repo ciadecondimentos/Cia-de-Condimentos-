@@ -1442,6 +1442,16 @@ tr:hover td { background: #faf7f2; }
               <div class="stat-value" id="gen-total-suppliers">0</div>
               <div class="stat-label">Fornecedores</div>
             </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);">
+              <div class="stat-icon">💵</div>
+              <div class="stat-value" id="gen-total-spent-crm">R$ 0,00</div>
+              <div class="stat-label">Total Gasto CRM</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+              <div class="stat-icon">💔</div>
+              <div class="stat-value" id="gen-total-pending-crm">R$ 0,00</div>
+              <div class="stat-label">Em Aberto CRM</div>
+            </div>
           </div>
 
           <div class="card" style="grid-column: 1/-1;">
@@ -1522,24 +1532,24 @@ tr:hover td { background: #faf7f2; }
       <div id="report-crm" class="report-tab-content" style="display: none;">
         <div class="dashboard-grid">
           <div class="stats-grid">
-            <div class="stat-card blue" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+            <div class="stat-card blue">
               <div class="stat-icon">👥</div>
-              <div class="stat-value" id="crm-total-customers">0</div>
+              <div class="stat-value crm-stat-total-customers" id="crm-total-customers">0</div>
               <div class="stat-label">Total de Clientes</div>
             </div>
             <div class="stat-card yellow">
               <div class="stat-icon">⭐</div>
-              <div class="stat-value" id="crm-vip-customers">0</div>
+              <div class="stat-value crm-stat-vip-customers" id="crm-vip-customers">0</div>
               <div class="stat-label">Clientes VIP</div>
             </div>
             <div class="stat-card green">
               <div class="stat-icon">💰</div>
-              <div class="stat-value" id="crm-total-spent">R$ 0,00</div>
+              <div class="stat-value crm-stat-total-spent" id="crm-total-spent">R$ 0,00</div>
               <div class="stat-label">Total Gasto</div>
             </div>
             <div class="stat-card red">
               <div class="stat-icon">💔</div>
-              <div class="stat-value" id="crm-total-pending">R$ 0,00</div>
+              <div class="stat-value crm-stat-total-pending" id="crm-total-pending">R$ 0,00</div>
               <div class="stat-label">Em Aberto</div>
             </div>
           </div>
@@ -1647,22 +1657,22 @@ tr:hover td { background: #faf7f2; }
       <div class="stats-grid" id="crmDashboard" style="margin-bottom: 32px;">
         <div class="stat-card yellow">
           <div class="stat-icon">👥</div>
-          <div class="stat-value" id="crm-total-customers">0</div>
+          <div class="stat-value crm-stat-total-customers" id="crm-total-customers">0</div>
           <div class="stat-label">Total de Clientes</div>
         </div>
         <div class="stat-card red">
           <div class="stat-icon">⭐</div>
-          <div class="stat-value" id="crm-vip-customers">0</div>
+          <div class="stat-value crm-stat-vip-customers" id="crm-vip-customers">0</div>
           <div class="stat-label">Clientes VIP</div>
         </div>
         <div class="stat-card green">
           <div class="stat-icon">💰</div>
-          <div class="stat-value" id="crm-total-spent">R$ 0</div>
+          <div class="stat-value crm-stat-total-spent" id="crm-total-spent">R$ 0</div>
           <div class="stat-label">Total Gasto</div>
         </div>
         <div class="stat-card orange">
           <div class="stat-icon">💔</div>
-          <div class="stat-value" id="crm-total-pending">R$ 0</div>
+          <div class="stat-value crm-stat-total-pending" id="crm-total-pending">R$ 0</div>
           <div class="stat-label">Em Aberto</div>
         </div>
       </div>

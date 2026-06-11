@@ -1426,25 +1426,15 @@ function exportCustomers() {
         showToast('Nenhum cliente para exportar', 'warning');
         return;
       }
-
-      console.log('📊 Dados dos clientes para exportação:', customers[0]); // Debug
       
       // Prepare CSV headers
       const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total de Pedidos', 'Faturamento', 'Notas'];
       
       // Prepare CSV rows
-      const rows = customers.map((customer, idx) => {
+      const rows = customers.map(customer => {
         const stats = customer.stats || {};
         const totalSpent = safeNumber(stats.total_spent || 0);
-        const totalPurchases = parseInt(stats.total_purchases) || 0; // Garantir inteiro
-        
-        if (idx === 0) {
-          console.log('🔍 Exemplo de cliente exportado:');
-          console.log('   Nome:', customer.full_name);
-          console.log('   stats:', stats);
-          console.log('   Total Pedidos:', totalPurchases);
-          console.log('   Faturamento:', totalSpent);
-        }
+        const totalPurchases = parseInt(stats.total_purchases) || 0;
         
         return [
           customer.full_name || customer.name || 'N/A',

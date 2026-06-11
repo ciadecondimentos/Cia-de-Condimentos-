@@ -37,7 +37,7 @@ function cleanArray(arr) {
 router.get('/diagnose/crm', async (req, res) => {
   const { period = 30 } = req.query;
   const startDate = new Date();
-  startDate.setDate(startDate.setDate(startDate.getDate() - parseInt(period)));
+  startDate.setDate(startDate.getDate() - parseInt(period));
 
   const results = {};
 

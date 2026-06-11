@@ -58,19 +58,49 @@ router.get('/general', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    // Sales from orders
     const sales = await db.query(`
       SELECT 
         COUNT(*)::integer as total_orders,
         COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as total_revenue
-      FROM orders WHERE created_at >= $1 AND payment_status = 'Pago'
+      FROM orders WHERE created_at >= $1
+    `, [startDate]);
+
+    // CRM data
+    const crmData = await db.query(`
+      SELECT 
+        COUNT(DISTINCT c.id)::integer as total_customers,
+        COALESCE(CAST(SUM(p.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_crm
+      FROM crm_customers c
+      LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
+    `, [startDate]);
+
+    // Suppliers data
+    const suppliersData = await db.query(`
+      SELECT 
+        COUNT(DISTINCT s.id)::integer as total_suppliers,
+        COALESCE(CAST(SUM(sp.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_suppliers
+      FROM suppliers s
+      LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
+    `, [startDate]);
+
+    // Payment methods
+    const paymentMethods = await db.query(`
+      SELECT 
+        payment_method,
+        COUNT(*)::integer as count,
+        COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as total
+      FROM orders
+      WHERE created_at >= $1
+      GROUP BY payment_method
     `, [startDate]);
 
     res.json({
       period,
       sales: cleanData(sales.rows[0]),
-      crm: { total_customers: 0, total_spent_crm: 0 },
-      suppliers: { total_suppliers: 0, total_spent_suppliers: 0 },
-      paymentMethods: [],
+      crm: cleanData(crmData.rows[0]),
+      suppliers: cleanData(suppliersData.rows[0]),
+      paymentMethods: (paymentMethods.rows || []).map(cleanData),
       generatedAt: new Date().toISOString()
     });
   } catch (error) {

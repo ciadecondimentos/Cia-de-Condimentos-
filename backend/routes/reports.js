@@ -110,62 +110,6 @@ router.get('/debug/tables', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-// Temp debug endpoint
-router.get('/debug/simple', async (req, res) => {
-  try {
-    const test1 = await db.query(`SELECT COUNT(*) as cnt FROM crm_purchases WHERE total_price IS NOT NULL`);
-    const test2 = await db.query(`SELECT COUNT(*) as cnt FROM crm_purchases WHERE total_price IS NULL`);
-    const test3 = await db.query(`SELECT COUNT(*) as cnt, SUM(total_price::numeric) as total FROM crm_purchases`);
-    res.json({ test1: test1.rows[0], test2: test2.rows[0], test3: test3.rows[0] });
-  } catch (e) { res.status(500).json({ error: e.message }); }
-});
-
-// Debug: Check CRM purchases raw data and casting
-router.get('/debug/crm-total', async (req, res) => {
-  try {
-    const { period = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
-
-    // Show first few raw records
-    const rawRecords = await db.query(`
-      SELECT id, total_price, payment_status, purchase_date 
-      FROM crm_purchases 
-      LIMIT 5
-    `);
-
-    // Try different casting approaches
-    const test1 = await db.query(`
-      SELECT SUM(total_price::numeric) as result FROM crm_purchases WHERE purchase_date >= $1
-    `, [startDate]);
-
-    const test2 = await db.query(`
-      SELECT SUM(CAST(total_price AS NUMERIC)) as result FROM crm_purchases WHERE purchase_date >= $1
-    `, [startDate]);
-
-    const test3 = await db.query(`
-      SELECT SUM(CAST(total_price AS NUMERIC)) as result FROM crm_purchases
-    `);
-
-    const test4 = await db.query(`
-      SELECT COUNT(*) as cnt, SUM(CAST(total_price AS NUMERIC))::numeric as total 
-      FROM crm_purchases
-    `);
-
-    res.json({
-      period,
-      startDate: startDate.toISOString(),
-      rawRecords: rawRecords.rows,
-      test1: test1.rows[0],
-      test2: test2.rows[0],
-      test3: test3.rows[0],
-      test4: test4.rows[0]
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {
@@ -181,16 +125,13 @@ router.get('/general', async (req, res) => {
       FROM orders WHERE created_at >= $1
     `, [startDate]);
 
-    // CRM data
-    // CRM data
+    // CRM data - just sum all total_price values
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm,
-        COALESCE((SELECT SUM(CAST(total_price AS NUMERIC))::numeric FROM crm_purchases), 0)::numeric as total_all
+        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
       FROM crm_purchases
-      WHERE purchase_date >= $1
-    `, [startDate]);
+    `);
 
     // CRM payment status
     const crmPaymentStatus = await db.query(`

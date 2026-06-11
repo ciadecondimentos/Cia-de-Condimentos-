@@ -1257,7 +1257,7 @@ function exportSuppliers() {
       }
 
       // Preparar cabeçalhos CSV
-      const headers = ['ID', 'Empresa', 'Contato', 'Email', 'Telefone', 'Cidade', 'Estado', 'Status', 'Total Comprado', 'Em Aberto', 'Notas'];
+      const headers = ['Empresa', 'Contato', 'Email', 'Telefone', 'Cidade', 'Estado', 'Status', 'Total Comprado', 'Em Aberto', 'Notas'];
       
       // Preparar linhas CSV
       const rows = suppliers.map(supplier => {
@@ -1275,7 +1275,6 @@ function exportSuppliers() {
         }
         
         return [
-          supplier.id || '',
           supplier.company_name || 'N/A',
           supplier.contact_name || 'N/A',
           supplier.email || 'N/A',

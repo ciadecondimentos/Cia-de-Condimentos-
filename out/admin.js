@@ -1428,12 +1428,11 @@ function exportCustomers() {
       }
 
       // Prepare CSV headers
-      const headers = ['ID', 'Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total Pedidos', 'Total Gasto', 'Notas'];
+      const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total Pedidos', 'Total Gasto', 'Notas'];
       
       // Prepare CSV rows
       const rows = customers.map(customer => {
         return [
-          customer.id || '',
           customer.name || 'N/A',
           customer.email || 'N/A',
           customer.phone || 'N/A',

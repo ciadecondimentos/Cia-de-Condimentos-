@@ -33,6 +33,20 @@ router.get('/test-crm', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// List all tables
+router.get('/debug/tables', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT table_name FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name
+    `);
+    res.json({ tables: result.rows.map(r => r.table_name) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {

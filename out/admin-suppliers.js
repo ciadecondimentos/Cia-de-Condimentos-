@@ -1245,3 +1245,73 @@ function searchSuppliers(query) {
 function initializeSuppliers() {
   loadSuppliers('all');
 }
+
+// ==================== EXPORT SUPPLIERS TO CSV ====================
+function exportSuppliers() {
+  fetch(`${API_BASE}/suppliers`)
+    .then(res => res.json())
+    .then(suppliers => {
+      if (!suppliers || suppliers.length === 0) {
+        showToast('Nenhum fornecedor para exportar', 'warning');
+        return;
+      }
+
+      // Preparar cabeçalhos CSV
+      const headers = ['ID', 'Empresa', 'Contato', 'Email', 'Telefone', 'Cidade', 'Estado', 'Status', 'Total Comprado', 'Em Aberto', 'Notas'];
+      
+      // Preparar linhas CSV
+      const rows = suppliers.map(supplier => {
+        const stats = supplier.stats || {};
+        const totalSpent = safeNumber(stats.total_spent || 0);
+        const pending = safeNumber(stats.pending || 0);
+        
+        // Determinar status
+        let status = '✓ Ativo';
+        if (pending > 0) {
+          status = '💔 Devedor';
+        }
+        if (supplier.status === 'inactive') {
+          status = '❌ Inativo';
+        }
+        
+        return [
+          supplier.id || '',
+          supplier.company_name || 'N/A',
+          supplier.contact_name || 'N/A',
+          supplier.email || 'N/A',
+          supplier.phone || 'N/A',
+          supplier.city || 'N/A',
+          supplier.state || 'N/A',
+          status,
+          totalSpent.toFixed(2),
+          pending.toFixed(2),
+          supplier.notes || ''
+        ];
+      });
+
+      // Criar conteúdo CSV
+      let csvContent = headers.join(',') + '\n';
+      rows.forEach(row => {
+        csvContent += row.map(cell => `"${String(cell).replace(/"/g, '""')}"`.trim()).join(',') + '\n';
+      });
+
+      // Download CSV
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Fornecedores_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast(`${suppliers.length} fornecedores exportados como CSV!`);
+    })
+    .catch(error => {
+      console.error('Erro ao exportar fornecedores:', error);
+      showToast('Erro ao exportar fornecedores', 'error');
+    });
+}

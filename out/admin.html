@@ -1394,7 +1394,10 @@ tr:hover td { background: #faf7f2; }
     <div class="page" id="page-crm">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">👥 Central de Clientes</h2>
-        <button class="btn btn-primary" onclick="openAddCrmCustomer()">+ Novo Cliente</button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="exportCustomers()">📥 Exportar CSV</button>
+          <button class="btn btn-primary" onclick="openAddCrmCustomer()">+ Novo Cliente</button>
+        </div>
       </div>
 
       <!-- DASHBOARD CRM -->
@@ -1454,7 +1457,10 @@ tr:hover td { background: #faf7f2; }
     <div class="page" id="page-suppliers">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
         <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">🏭 Central de Fornecedores</h2>
-        <button class="btn btn-primary" onclick="openAddSupplier()">+ Novo Fornecedor</button>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="exportSuppliers()">📥 Exportar CSV</button>
+          <button class="btn btn-primary" onclick="openAddSupplier()">+ Novo Fornecedor</button>
+        </div>
       </div>
 
       <!-- DASHBOARD SUPPLIERS -->

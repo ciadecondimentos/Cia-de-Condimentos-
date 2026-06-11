@@ -51,7 +51,10 @@ router.get('/debug/general', async (req, res) => {
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
+        COALESCE(
+          SUM(CAST(COALESCE(total, total_price) AS NUMERIC)), 
+          0
+        )::numeric as total_spent_crm
       FROM crm_purchases
     `);
 
@@ -101,11 +104,14 @@ router.get('/general', async (req, res) => {
       FROM orders WHERE created_at >= $1
     `, [startDate]);
 
-    // CRM data
+    // CRM data - try total column first, then total_price
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
+        COALESCE(
+          SUM(CAST(COALESCE(total, total_price) AS NUMERIC)), 
+          0
+        )::numeric as total_spent_crm
       FROM crm_purchases
     `);
 

@@ -7,14 +7,18 @@ function cleanData(obj) {
   if (!obj) return obj;
   const result = {};
   for (const key in obj) {
-    let val = obj[key];
-    if (typeof val === 'string') {
-      const num = parseFloat(val);
-      result[key] = isNaN(num) ? 0 : num;
-    } else if (typeof val === 'number') {
-      result[key] = isNaN(val) ? 0 : val;
-    } else {
-      result[key] = val || 0;
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      let val = obj[key];
+      if (typeof val === 'string') {
+        const num = parseFloat(val);
+        result[key] = isNaN(num) ? null : num;
+      } else if (typeof val === 'number') {
+        result[key] = isNaN(val) ? null : val;
+      } else if (val === null || val === undefined) {
+        result[key] = null;
+      } else {
+        result[key] = val;
+      }
     }
   }
   return result;

@@ -182,11 +182,12 @@ router.get('/general', async (req, res) => {
     `, [startDate]);
 
     // CRM data
-    // CRM data - using exact same pattern as crmPaymentStatus
+    // CRM data
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
+        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm,
+        COALESCE((SELECT SUM(CAST(total_price AS NUMERIC))::numeric FROM crm_purchases), 0)::numeric as total_all
       FROM crm_purchases
       WHERE purchase_date >= $1
     `, [startDate]);

@@ -118,14 +118,17 @@ router.get('/general', async (req, res) => {
     startDate.setDate(startDate.getDate() - parseInt(period));
 
     // Test: get column type and sample values
-    const typeTest = await db.query(`
-      SELECT 
-        data_type,
-        (SELECT total_price::text FROM crm_purchases LIMIT 1) as sample_as_text,
-        (SELECT total_price FROM crm_purchases LIMIT 1) as sample_raw
-      FROM information_schema.columns
-      WHERE table_name = 'crm_purchases' AND column_name = 'total_price'
-    `);
+    let typeInfo = null;
+    try {
+      const typeTest = await db.query(`
+        SELECT data_type
+        FROM information_schema.columns
+        WHERE table_name = 'crm_purchases' AND column_name = 'total_price'
+      `);
+      typeInfo = typeTest.rows[0] || {};
+    } catch (e) {
+      typeInfo = { error: e.message };
+    }
 
     // Sales from orders
     const sales = await db.query(`
@@ -176,7 +179,7 @@ router.get('/general', async (req, res) => {
 
     res.json({
       period,
-      typeTest: typeTest.rows[0],
+      typeInfo,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),

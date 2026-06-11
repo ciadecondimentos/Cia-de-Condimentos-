@@ -47,7 +47,7 @@ router.get('/debug/general', async (req, res) => {
     const crmData = await db.query(`
       SELECT 
         COUNT(DISTINCT c.id)::integer as total_customers,
-        COALESCE(CAST(SUM(p.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_crm
+        COALESCE(SUM(CAST(p.total_price AS NUMERIC)), 0)::numeric as total_spent_crm
       FROM crm_customers c
       LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
     `, [startDate]);
@@ -55,7 +55,7 @@ router.get('/debug/general', async (req, res) => {
     const suppliersData = await db.query(`
       SELECT 
         COUNT(DISTINCT s.id)::integer as total_suppliers,
-        COALESCE(CAST(SUM(sp.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_suppliers
+        COALESCE(SUM(CAST(sp.total_price AS NUMERIC)), 0)::numeric as total_spent_suppliers
       FROM suppliers s
       LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
     `, [startDate]);
@@ -102,7 +102,7 @@ router.get('/general', async (req, res) => {
     const crmData = await db.query(`
       SELECT 
         COUNT(DISTINCT c.id)::integer as total_customers,
-        COALESCE(CAST(SUM(p.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_crm
+        COALESCE(SUM(CAST(p.total_price AS NUMERIC)), 0)::numeric as total_spent_crm
       FROM crm_customers c
       LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
     `, [startDate]);
@@ -112,7 +112,7 @@ router.get('/general', async (req, res) => {
       SELECT 
         payment_status,
         COUNT(*)::integer as count,
-        COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total
+        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total
       FROM crm_purchases
       WHERE purchase_date >= $1
       GROUP BY payment_status
@@ -122,7 +122,7 @@ router.get('/general', async (req, res) => {
     const suppliersData = await db.query(`
       SELECT 
         COUNT(DISTINCT s.id)::integer as total_suppliers,
-        COALESCE(CAST(SUM(sp.total_price) AS NUMERIC(15,2)), 0)::text as total_spent_suppliers
+        COALESCE(SUM(CAST(sp.total_price AS NUMERIC)), 0)::numeric as total_spent_suppliers
       FROM suppliers s
       LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
     `, [startDate]);

@@ -27,15 +27,21 @@ async function loadCrmCustomers(filter = 'all') {
       ? `${API_BASE}/crm/customers`
       : `${API_BASE}/crm/customers?filter=${filter}`;
     
+    console.log('📥 Carregando clientes de:', url);
     const response = await fetch(url);
     const customers = await response.json();
+    
+    console.log('✅ Clientes recebidos:', customers.length);
+    if (customers.length > 0) {
+      console.log('   Exemplo:', customers[0]);
+    }
     
     crmState.customers = customers;
     crmState.filters = filter;
     renderCrmCustomersTable();
     updateCrmDashboard(); // Atualizar métricas do dashboard
   } catch (error) {
-    console.error('Erro ao carregar clientes:', error);
+    console.error('❌ Erro ao carregar clientes:', error);
     showToast('Erro ao carregar clientes', 'error');
   }
 }
@@ -43,6 +49,8 @@ async function loadCrmCustomers(filter = 'all') {
 // Atualizar dashboard com métricas globais do CRM
 function updateCrmDashboard() {
   const customers = crmState.customers;
+  console.log('🔄 updateCrmDashboard() chamada');
+  console.log('   Clientes na memória:', customers.length);
   
   // Calcular métricas
   let totalCustomers = customers.length;
@@ -52,20 +60,55 @@ function updateCrmDashboard() {
   
   customers.forEach(c => {
     const stats = c.stats || {};
-    totalPaid += safeNumber(stats.paid || 0);
-    totalPending += safeNumber(stats.pending || 0);
+    const paid = safeNumber(stats.paid || 0);
+    const pending = safeNumber(stats.pending || 0);
+    totalPaid += paid;
+    totalPending += pending;
   });
   
-  // Atualizar elementos do DOM
-  const totalCustomersEl = document.getElementById('crm-total-customers');
-  const vipCustomersEl = document.getElementById('crm-vip-customers');
-  const totalSpentEl = document.getElementById('crm-total-spent');
-  const totalPendingEl = document.getElementById('crm-total-pending');
+  console.log('📊 Métricas calculadas:');
+  console.log('   Total clientes:', totalCustomers);
+  console.log('   VIP:', vipCustomers);
+  console.log('   Total pago:', totalPaid);
+  console.log('   Total pendente:', totalPending);
   
-  if (totalCustomersEl) totalCustomersEl.textContent = totalCustomers;
-  if (vipCustomersEl) vipCustomersEl.textContent = vipCustomers;
-  if (totalSpentEl) totalSpentEl.textContent = formatMoney(totalPaid);
-  if (totalPendingEl) totalPendingEl.textContent = formatMoney(totalPending);
+  // Atualizar TODOS os elementos com essas classes (pode haver múltiplos)
+  const totalCustomersEls = document.querySelectorAll('.crm-stat-total-customers');
+  const vipCustomersEls = document.querySelectorAll('.crm-stat-vip-customers');
+  const totalSpentEls = document.querySelectorAll('.crm-stat-total-spent');
+  const totalPendingEls = document.querySelectorAll('.crm-stat-total-pending');
+  
+  console.log('🎯 Elementos encontrados:');
+  console.log('   Total de clientes (instâncias):', totalCustomersEls.length);
+  console.log('   VIP (instâncias):', vipCustomersEls.length);
+  console.log('   Total gasto (instâncias):', totalSpentEls.length);
+  console.log('   Total pendente (instâncias):', totalPendingEls.length);
+  
+  // Atualizar total de clientes
+  totalCustomersEls.forEach(el => {
+    el.textContent = totalCustomers;
+  });
+  if (totalCustomersEls.length > 0) console.log('✅ Atualizado: total-customers =', totalCustomers);
+  
+  // Atualizar clientes VIP
+  vipCustomersEls.forEach(el => {
+    el.textContent = vipCustomers;
+  });
+  if (vipCustomersEls.length > 0) console.log('✅ Atualizado: vip-customers =', vipCustomers);
+  
+  // Atualizar total gasto
+  const spentFormatted = formatMoney(totalPaid);
+  totalSpentEls.forEach(el => {
+    el.textContent = spentFormatted;
+  });
+  if (totalSpentEls.length > 0) console.log('✅ Atualizado: total-spent =', spentFormatted);
+  
+  // Atualizar total pendente
+  const pendingFormatted = formatMoney(totalPending);
+  totalPendingEls.forEach(el => {
+    el.textContent = pendingFormatted;
+  });
+  if (totalPendingEls.length > 0) console.log('✅ Atualizado: total-pending =', pendingFormatted);
 }
 
 // Renderizar tabela de clientes
@@ -2101,3 +2144,11 @@ function initializeCrm() {
 window.addEventListener('beforeunload', () => {
   stopCrmPixBackendSync();
 });
+
+// ✅ NOVO: Inicializar CRM automaticamente quando a página carrega
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeCrm);
+} else {
+  // Se o DOM já foi carregado, chamar diretamente
+  initializeCrm();
+}

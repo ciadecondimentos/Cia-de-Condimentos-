@@ -1,4 +1,5 @@
 {
+  "name": "cia-de-condimentos",
   "outputDirectory": "frontend",
   "cleanUrls": true,
   "trailingSlash": false,

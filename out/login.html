@@ -409,7 +409,7 @@
                 showSuccess('Login realizado com sucesso!');
                 
                 setTimeout(() => {
-                    window.location.href = '/admin.html';
+                    window.location.href = '/admin';
                 }, 1000);
 
             } catch (error) {
@@ -431,7 +431,7 @@
             // Se já tem token válido, redirecionar para admin
             const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
             if (token) {
-                window.location.href = '/admin.html';
+                window.location.href = '/admin';
             }
         });
 

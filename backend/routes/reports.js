@@ -117,40 +117,6 @@ router.get('/general', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
-    // Debug: list all tables
-    let allTables = [];
-    try {
-      const tables = await db.query(`
-        SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
-      `);
-      allTables = tables.rows.map(r => r.table_name);
-    } catch (e) {}
-
-    // Debug: check columns
-    let allColumns = [];
-    try {
-      const cols = await db.query(`
-        SELECT column_name, data_type
-        FROM information_schema.columns
-        WHERE table_name = 'crm_purchases'
-        ORDER BY ordinal_position
-      `);
-      allColumns = cols.rows;
-    } catch (e) {}
-
-    // Test: get column type and sample values
-    let typeInfo = null;
-    try {
-      const typeTest = await db.query(`
-        SELECT data_type
-        FROM information_schema.columns
-        WHERE table_name = 'crm_purchases' AND column_name = 'total_price'
-      `);
-      typeInfo = typeTest.rows[0] || {};
-    } catch (e) {
-      typeInfo = { error: e.message };
-    }
-
     // Sales from orders
     const sales = await db.query(`
       SELECT 
@@ -159,13 +125,16 @@ router.get('/general', async (req, res) => {
       FROM orders WHERE created_at >= $1
     `, [startDate]);
 
-    // CRM data - just sum all total_price values
+    // CRM data - SUM ALL payment statuses from crmPaymentStatus
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
-      FROM crm_purchases
-    `);
+        COALESCE((
+          SELECT SUM(CAST(total_price AS NUMERIC))::numeric FROM crm_purchases WHERE purchase_date >= $1
+        ), 0)::numeric as total_spent_crm
+      FROM crm_purchases 
+      LIMIT 1
+    `, [startDate]);
 
     // CRM payment status
     const crmPaymentStatus = await db.query(`
@@ -200,9 +169,6 @@ router.get('/general', async (req, res) => {
 
     res.json({
       period,
-      allTables,
-      allColumns,
-      typeInfo,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),

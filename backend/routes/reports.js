@@ -117,6 +117,16 @@ router.get('/general', async (req, res) => {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - parseInt(period));
 
+    // Test: get column type and sample values
+    const typeTest = await db.query(`
+      SELECT 
+        data_type,
+        (SELECT total_price::text FROM crm_purchases LIMIT 1) as sample_as_text,
+        (SELECT total_price FROM crm_purchases LIMIT 1) as sample_raw
+      FROM information_schema.columns
+      WHERE table_name = 'crm_purchases' AND column_name = 'total_price'
+    `);
+
     // Sales from orders
     const sales = await db.query(`
       SELECT 
@@ -166,6 +176,7 @@ router.get('/general', async (req, res) => {
 
     res.json({
       period,
+      typeTest: typeTest.rows[0],
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),

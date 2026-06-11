@@ -33,6 +33,58 @@ function cleanArray(arr) {
 }
 
 
+// ==================== DIAGNÓSTICO ====================
+router.get('/diagnose/crm', async (req, res) => {
+  const { period = 30 } = req.query;
+  const startDate = new Date();
+  startDate.setDate(startDate.setDate(startDate.getDate() - parseInt(period)));
+
+  const results = {};
+
+  try {
+    console.log('🔍 Iniciando diagnóstico de CRM...');
+    
+    console.log('📝 Query 1: Resumo de clientes...');
+    const q1 = await db.query(`
+      SELECT COUNT(*) FROM crm_customers
+    `);
+    results.customers_count = q1.rows[0];
+    console.log('✅ Q1:', results.customers_count);
+
+    console.log('📝 Query 2: Crm Purchases...');
+    const q2 = await db.query(`
+      SELECT COUNT(*) FROM crm_purchases
+    `);
+    results.crm_purchases_count = q2.rows[0];
+    console.log('✅ Q2:', results.crm_purchases_count);
+
+    console.log('📝 Query 3: Resumo completo...');
+    const q3 = await db.query(`
+      SELECT 
+        COUNT(*)::integer as total_customers,
+        COUNT(CASE WHEN is_vip = true THEN 1 END)::integer as vip_customers
+      FROM crm_customers
+    `);
+    results.summary = q3.rows[0];
+    console.log('✅ Q3:', results.summary);
+
+    console.log('📝 Query 4: Gasto total...');
+    const q4 = await db.query(`
+      SELECT 
+        COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0) as total_spent
+      FROM crm_purchases
+      WHERE purchase_date >= $1
+    `, [startDate]);
+    results.spending = q4.rows[0];
+    console.log('✅ Q4:', results.spending);
+
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('❌ Erro no diagnóstico:', error);
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // ==================== RELATÓRIO GERAL ====================
 // Consolidação de Pedidos + Clientes + Fornecedores
 router.get('/general', async (req, res) => {

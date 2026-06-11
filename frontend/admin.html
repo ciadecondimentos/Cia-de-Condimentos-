@@ -1400,6 +1400,14 @@ tr:hover td { background: #faf7f2; }
         </div>
       </div>
 
+      <!-- FILTROS DE DATA -->
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--marrom);">Filtrar por período:</label>
+        <input type="date" id="crmDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterCrmByDate()">
+        <span style="color: #999;">até</span>
+        <input type="date" id="crmDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterCrmByDate()">
+      </div>
+
       <!-- DASHBOARD CRM -->
       <div class="stats-grid" id="crmDashboard" style="margin-bottom: 32px;">
         <div class="stat-card yellow">
@@ -1428,17 +1436,13 @@ tr:hover td { background: #faf7f2; }
         <div class="search-box">
           <input type="text" placeholder="Buscar cliente, cidade, telefone..." id="crmSearch" oninput="searchCrmCustomers(this.value)">
         </div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <input type="date" id="crmDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterCrmByDate()">
-          <input type="date" id="crmDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterCrmByDate()">
-          <select id="crmFilterSelect" onchange="filterCrmCustomers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
-            <option value="all">Todos Clientes</option>
-            <option value="vip">⭐ Clientes VIP</option>
-            <option value="debtors">💔 Devedores</option>
-            <option value="inactive">❌ Inativos</option>
-            <option value="new">🆕 Novos (30 dias)</option>
-          </select>
-        </div>
+        <select id="crmFilterSelect" onchange="filterCrmCustomers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="all">Todos Clientes</option>
+          <option value="vip">⭐ Clientes VIP</option>
+          <option value="debtors">💔 Devedores</option>
+          <option value="inactive">❌ Inativos</option>
+          <option value="new">🆕 Novos (30 dias)</option>
+        </select>
       </div>
 
       <table>
@@ -1491,21 +1495,25 @@ tr:hover td { background: #faf7f2; }
         </div>
       </div>
 
+      <!-- FILTROS DE DATA -->
+      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
+        <label style="font-size: 13px; font-weight: 600; color: var(--marrom);">Filtrar por período:</label>
+        <input type="date" id="suppliersDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterSuppliersByDate()">
+        <span style="color: #999;">até</span>
+        <input type="date" id="suppliersDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterSuppliersByDate()">
+      </div>
+
       <div class="table-toolbar" style="margin-bottom: 20px;">
         <div class="search-box">
           <input type="text" placeholder="Buscar empresa, contato, cidade..." id="suppliersSearch" oninput="searchSuppliers(this.value)">
         </div>
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <input type="date" id="suppliersDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterSuppliersByDate()">
-          <input type="date" id="suppliersDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="filterSuppliersByDate()">
-          <select id="suppliersFilterSelect" onchange="filterSuppliers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
-            <option value="all">Todos Fornecedores</option>
-            <option value="active">✓ Ativos</option>
-            <option value="debt">💔 Devedores</option>
-            <option value="inactive">❌ Inativos</option>
-            <option value="new">🆕 Novos (30 dias)</option>
-          </select>
-        </div>
+        <select id="suppliersFilterSelect" onchange="filterSuppliers(this.value)" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none; font-family:Lato,sans-serif;">
+          <option value="all">Todos Fornecedores</option>
+          <option value="active">✓ Ativos</option>
+          <option value="debt">💔 Devedores</option>
+          <option value="inactive">❌ Inativos</option>
+          <option value="new">🆕 Novos (30 dias)</option>
+        </select>
       </div>
 
       <table>

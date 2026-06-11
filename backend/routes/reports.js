@@ -42,6 +42,29 @@ router.get('/test-crm', async (req, res) => {
   }
 });
 
+// Debug CRM purchases data
+router.get('/debug/crm-purchases', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        COUNT(*) as total_records,
+        SUM(CAST(total AS NUMERIC)) as sum_total,
+        SUM(CAST(total_price AS NUMERIC)) as sum_total_price,
+        COUNT(DISTINCT payment_status) as status_count
+      FROM crm_purchases LIMIT 1
+    `);
+    const sample = await db.query('SELECT id, customer_id, total, total_price, payment_status, purchase_date FROM crm_purchases LIMIT 5');
+    res.json({ 
+      success: true, 
+      summary: result.rows[0],
+      samples: sample.rows
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
 // Debug general report queries
 router.get('/debug/general', async (req, res) => {
   try {

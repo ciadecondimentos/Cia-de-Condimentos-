@@ -233,7 +233,7 @@ router.get('/crm', async (req, res) => {
     // Garantir que sempre há os 3 status
     const allStatuses = ['pago', 'pendente', 'parcial'];
     const statusMap = {};
-    paymentStatusResult.rows.forEach(row => {
+    (paymentStatusResult.rows || []).forEach(row => {
       statusMap[row.payment_status] = row;
     });
     const completedPaymentStatus = allStatuses.map(status => 
@@ -361,7 +361,7 @@ router.get('/suppliers', async (req, res) => {
     // Garantir que sempre há os 3 status
     const allStatuses = ['pago', 'pendente', 'parcial'];
     const suppStatusMap = {};
-    paymentStatusResult.rows.forEach(row => {
+    (paymentStatusResult.rows || []).forEach(row => {
       suppStatusMap[row.payment_status] = row;
     });
     const completedSupplierPaymentStatus = allStatuses.map(status => 

@@ -1882,7 +1882,9 @@ async function loadGeneralReport(period) {
     
     // Update stats
     document.getElementById('gen-total-orders').textContent = formatNumber(data.sales.total_orders || 0);
-    document.getElementById('gen-total-revenue').textContent = formatCurrency(data.sales.total_revenue || 0);
+    // Faturamento = Faturamento dos pedidos + Faturamento da central de clientes (CRM)
+    const totalRevenue = (data.sales.total_revenue || 0) + (data.crm.total_spent_crm || 0);
+    document.getElementById('gen-total-revenue').textContent = formatCurrency(totalRevenue);
     document.getElementById('gen-total-customers').textContent = formatNumber(data.crm.total_customers || 0);
     document.getElementById('gen-total-suppliers').textContent = formatNumber(data.suppliers.total_suppliers || 0);
     document.getElementById('gen-total-spent-crm').textContent = formatCurrency(data.crm.total_spent_crm || 0);

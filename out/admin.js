@@ -1882,9 +1882,23 @@ async function loadGeneralReport(period) {
     
     // Update stats
     document.getElementById('gen-total-orders').textContent = formatNumber(data.sales.total_orders || 0);
-    document.getElementById('gen-total-revenue').textContent = formatCurrency(data.sales.total_revenue || 0);
+    // Faturamento = Faturamento dos pedidos + Faturamento da central de clientes (CRM)
+    const totalRevenue = (data.sales.total_revenue || 0) + (data.crm.total_spent_crm || 0);
+    document.getElementById('gen-total-revenue').textContent = formatCurrency(totalRevenue);
     document.getElementById('gen-total-customers').textContent = formatNumber(data.crm.total_customers || 0);
     document.getElementById('gen-total-suppliers').textContent = formatNumber(data.suppliers.total_suppliers || 0);
+    document.getElementById('gen-total-spent-crm').textContent = formatCurrency(data.crm.total_spent_crm || 0);
+    
+    // Get pending payments from CRM payment status
+    let totalPending = 0;
+    if (data.crmPaymentStatus && Array.isArray(data.crmPaymentStatus)) {
+      data.crmPaymentStatus.forEach(ps => {
+        if (ps.payment_status === 'pendente' || ps.payment_status === 'pending' || ps.payment_status === 0) {
+          totalPending += ps.total || 0;
+        }
+      });
+    }
+    document.getElementById('gen-total-pending-crm').textContent = formatCurrency(totalPending);
     
     // Payment methods
     let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Total</th></tr>';

@@ -113,8 +113,6 @@ function showPage(pageId, buttonElement) {
   } else if (pageId === 'promotions') {
     loadProductsForPromo();
     renderProductPromotionsAsync();
-  } else if (pageId === 'reports') {
-    initializeReports();
   } else if (pageId === 'crm') {
     initializeCrm();
   } else if (pageId === 'suppliers') {

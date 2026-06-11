@@ -5,13 +5,20 @@ const db = require('../db');
 // Helper function to convert numeric strings to numbers and handle NaN
 function cleanNumeric(obj) {
   if (!obj) return obj;
-  const cleaned = { ...obj };
-  for (const key in cleaned) {
-    const val = cleaned[key];
-    if (typeof val === 'string' && !isNaN(val) && val !== '') {
-      cleaned[key] = parseFloat(val);
-    } else if (val === 'NaN' || isNaN(val)) {
+  const cleaned = {};
+  for (const key in obj) {
+    const val = obj[key];
+    if (val === null || val === undefined) {
       cleaned[key] = 0;
+    } else if (typeof val === 'number') {
+      cleaned[key] = isNaN(val) ? 0 : val;
+    } else if (typeof val === 'string') {
+      const num = parseFloat(val);
+      cleaned[key] = isNaN(num) ? 0 : num;
+    } else if (val === 'NaN') {
+      cleaned[key] = 0;
+    } else {
+      cleaned[key] = val;
     }
   }
   return cleaned;
@@ -19,7 +26,10 @@ function cleanNumeric(obj) {
 
 function cleanArray(arr) {
   if (!Array.isArray(arr)) return [];
-  return arr.map(cleanNumeric);
+  return arr.map(item => {
+    if (!item) return item;
+    return cleanNumeric(item);
+  });
 }
 
 

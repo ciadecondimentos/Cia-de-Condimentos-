@@ -76,7 +76,8 @@ router.get('/debug/general', async (req, res) => {
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
         COALESCE(SUM(total_price::numeric), 0)::numeric as total_spent_crm
       FROM crm_purchases
-    `);
+      WHERE purchase_date >= $1
+    `, [startDate]);
 
     const suppliersData = await db.query(`
       SELECT 
@@ -130,7 +131,8 @@ router.get('/general', async (req, res) => {
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
         COALESCE(SUM(total_price::numeric), 0)::numeric as total_spent_crm
       FROM crm_purchases
-    `);
+      WHERE purchase_date >= $1
+    `, [startDate]);
 
     // CRM payment status
     const crmPaymentStatus = await db.query(`

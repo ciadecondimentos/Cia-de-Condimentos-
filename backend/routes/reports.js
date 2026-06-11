@@ -50,10 +50,10 @@ router.get('/debug/general', async (req, res) => {
 
     const crmData = await db.query(`
       SELECT 
-        COUNT(DISTINCT c.id)::integer as total_customers,
-        COALESCE(SUM(CAST(p.total_price AS NUMERIC)), 0)::numeric as total_spent_crm
-      FROM crm_customers c
-      LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
+        (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
+        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
+      FROM crm_purchases
+      WHERE purchase_date >= $1
     `, [startDate]);
 
     const suppliersData = await db.query(`
@@ -105,10 +105,10 @@ router.get('/general', async (req, res) => {
     // CRM data
     const crmData = await db.query(`
       SELECT 
-        COUNT(DISTINCT c.id)::integer as total_customers,
-        COALESCE(SUM(CAST(p.total_price AS NUMERIC)), 0)::numeric as total_spent_crm
-      FROM crm_customers c
-      LEFT JOIN crm_purchases p ON c.id = p.customer_id AND p.purchase_date >= $1
+        (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
+        COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total_spent_crm
+      FROM crm_purchases
+      WHERE purchase_date >= $1
     `, [startDate]);
 
     // CRM payment status

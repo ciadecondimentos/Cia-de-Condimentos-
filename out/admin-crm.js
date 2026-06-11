@@ -22,6 +22,9 @@ const crmState = {
   dateEnd: null     // ✅ Data fim do filtro
 };
 
+// ✅ Expor globalmente para acesso nos event listeners
+window.crmState = crmState;
+
 // GET: Listar clientes
 async function loadCrmCustomers(filter = 'all') {
   try {

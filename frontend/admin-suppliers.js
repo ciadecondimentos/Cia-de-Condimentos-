@@ -10,6 +10,9 @@ const suppliersState = {
   dateEnd: null     // ✅ Data fim do filtro
 };
 
+// ✅ Expor globalmente para acesso nos event listeners
+window.suppliersState = suppliersState;
+
 // Estado para rastrear produtos selecionados e quantidades
 let suppliersSelectedProducts = {};
 

@@ -110,6 +110,16 @@ router.get('/debug/tables', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// Temp debug endpoint
+router.get('/debug/simple', async (req, res) => {
+  try {
+    const test1 = await db.query(`SELECT COUNT(*) as cnt FROM crm_purchases WHERE total_price IS NOT NULL`);
+    const test2 = await db.query(`SELECT COUNT(*) as cnt FROM crm_purchases WHERE total_price IS NULL`);
+    const test3 = await db.query(`SELECT COUNT(*) as cnt, SUM(total_price::numeric) as total FROM crm_purchases`);
+    res.json({ test1: test1.rows[0], test2: test2.rows[0], test3: test3.rows[0] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Debug: Check CRM purchases raw data and casting
 router.get('/debug/crm-total', async (req, res) => {
   try {

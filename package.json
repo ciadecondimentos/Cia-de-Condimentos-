@@ -1,6 +1,6 @@
 {
   "name": "cia-de-condimentos",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cia de Condimentos - Full Stack E-commerce",
   "main": "backend/index.js",
   "scripts": {

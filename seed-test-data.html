@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 Seed Dados de Teste - Relatórios</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #555;
+        }
+        .info-box strong {
+            display: block;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-seed {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-seed:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .btn-seed:active {
+            transform: translateY(0);
+        }
+        .btn-check {
+            background: #f5f5f5;
+            color: #333;
+            border: 2px solid #ddd;
+        }
+        .btn-check:hover {
+            background: #ececec;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+            font-size: 14px;
+        }
+        .status.success {
+            display: block;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.error {
+            display: block;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status.loading {
+            display: block;
+            background: #cfe2ff;
+            border: 1px solid #b6d4fe;
+            color: #084298;
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(8, 66, 152, 0.3);
+            border-top-color: #084298;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .details {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #666;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .details strong {
+            display: block;
+            color: #333;
+            margin: 10px 0 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌱 Seed de Dados</h1>
+        <p class="subtitle">Adicionar dados de teste ao banco</p>
+
+        <div class="info-box">
+            <strong>📊 O que será adicionado?</strong>
+            10 pedidos com:<br>
+            • Datas variadas (últimos 20 dias)<br>
+            • Clientes e valores diferentes<br>
+            • Status e métodos de pagamento variados
+        </div>
+
+        <div class="button-group">
+            <button class="btn-seed" onclick="seedTestOrders()">🚀 Adicionar Dados</button>
+            <button class="btn-check" onclick="checkOrders()">🔍 Verificar Status</button>
+        </div>
+
+        <div class="status" id="status"></div>
+        <div class="details" id="details"></div>
+    </div>
+
+    <script>
+        const API = 'https://cia-de-condimentos.onrender.com/api/reports';
+
+        async function seedTestOrders() {
+            showStatus('loading', 'Adicionando dados de teste...');
+            
+            try {
+                const response = await fetch(`${API}/debug/seed-test-orders`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                showStatus('success', `✅ ${data.inserted} pedidos adicionados! Total agora: ${data.total}`);
+                showDetails(`
+                    <strong>Resultado:</strong>
+                    Pedidos inseridos: ${data.inserted}<br>
+                    Total no banco: ${data.total}<br>
+                    <br>
+                    <strong>Próximos passos:</strong>
+                    1. Volte ao dashboard (aba Relatórios)<br>
+                    2. Recarregue a página (F5)<br>
+                    3. Os gráficos devem atualizar com os dados reais!
+                `);
+            } catch (error) {
+                showStatus('error', `❌ Erro: ${error.message}`);
+                showDetails(`
+                    <strong>O que fazer:</strong>
+                    • O servidor pode ainda estar fazendo deploy<br>
+                    • Aguarde 30-60 segundos e tente novamente<br>
+                    • Verifique a conexão com internet
+                `);
+            }
+        }
+
+        async function checkOrders() {
+            showStatus('loading', 'Verificando dados de pedidos...');
+            
+            try {
+                const response = await fetch(`${API}/orders?period=30`);
+                const data = await response.json();
+
+                const total = data.summary.total_orders;
+                const revenue = data.summary.total_revenue;
+                const status = total > 0 ? 'success' : 'error';
+                const message = total > 0 
+                    ? `✅ ${total} pedidos encontrados! Faturamento: R$ ${revenue}`
+                    : '⚠️ Nenhum pedido encontrado. Clique em "Adicionar Dados"';
+
+                showStatus(status, message);
+                showDetails(`
+                    <strong>Status dos Pedidos:</strong>
+                    • Total: ${data.summary.total_orders}<br>
+                    • Pagos: ${data.summary.paid_orders}<br>
+                    • Pendentes: ${data.summary.pending_orders}<br>
+                    <br>
+                    <strong>Faturamento:</strong>
+                    • Receita total: R$ ${data.summary.total_revenue}<br>
+                    • Ticket médio: R$ ${data.summary.average_ticket}<br>
+                    • Frete total: R$ ${data.summary.total_shipping}
+                `);
+            } catch (error) {
+                showStatus('error', `❌ Erro ao verificar: ${error.message}`);
+            }
+        }
+
+        function showStatus(type, message) {
+            const el = document.getElementById('status');
+            el.className = `status ${type}`;
+            if (type === 'loading') {
+                el.innerHTML = `<span class="spinner"></span>${message}`;
+            } else {
+                el.innerHTML = message;
+            }
+        }
+
+        function showDetails(content) {
+            document.getElementById('details').innerHTML = content;
+        }
+    </script>
+</body>
+</html>

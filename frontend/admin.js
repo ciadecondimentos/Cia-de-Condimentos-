@@ -91,7 +91,9 @@ function showPage(pageId, buttonElement) {
     'orders': 'Pedidos',
     'promotions': 'Promoções',
     'customers': 'Clientes',
-    'crm': 'Central de Clientes'
+    'crm': 'Central de Clientes',
+    'reports': 'Relatórios & Análises',
+    'suppliers': 'Central de Fornecedores'
   };
   
   document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';
@@ -117,6 +119,8 @@ function showPage(pageId, buttonElement) {
     initializeCrm();
   } else if (pageId === 'suppliers') {
     initializeSuppliers();
+  } else if (pageId === 'reports') {
+    loadReportsData();
   }
 }
 

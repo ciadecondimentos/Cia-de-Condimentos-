@@ -140,6 +140,7 @@ body { display: flex; }
 .stat-card.green { border-top-color: #27ae60; }
 .stat-card.orange { border-top-color: #f39c12; }
 .stat-card.blue { border-top-color: #3498db; }
+.stat-card.purple { border-top-color: #8B5CF6; }
 .stat-icon { font-size: 40px; margin-bottom: 12px; }
 .stat-value { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 900; color: var(--marrom); margin-bottom: 8px; }
 .stat-label { font-size: 12px; color: #aaa; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
@@ -1170,6 +1171,9 @@ tr:hover td { background: #faf7f2; }
   <div class="nav-item" onclick="showPage('crm', this)">
     <span class="nav-icon">👥</span> Central de Clientes
   </div>
+  <div class="nav-item" onclick="showPage('reports', this)">
+    <span class="nav-icon">📈</span> Relatórios & Análises
+  </div>
   <div class="nav-item" onclick="showPage('suppliers', this)">
     <span class="nav-icon">🏭</span> Central de Fornecedores
   </div>
@@ -1532,6 +1536,178 @@ tr:hover td { background: #faf7f2; }
       </table>
     </div>
 
+    <!-- RELATÓRIOS & ANÁLISES -->
+    <div class="page" id="page-reports">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">📈 Relatórios & Análises</h2>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-secondary" onclick="exportReportsCSV()">📥 CSV</button>
+          <button class="btn btn-primary" onclick="exportReportsPDF()">📄 PDF</button>
+          <button class="btn btn-secondary" onclick="loadReportsData()">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">🔍 Filtros do Relatório</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">De:</label>
+            <input type="date" id="reportsDateStart" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">Até:</label>
+            <input type="date" id="reportsDateEnd" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">Período:</label>
+            <select id="reportsPeriod" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
+              <option value="7">Últimos 7 dias</option>
+              <option value="30" selected>Últimos 30 dias</option>
+              <option value="90">Últimos 90 dias</option>
+              <option value="180">Últimos 6 meses</option>
+              <option value="365">Último ano</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">Tipo:</label>
+            <select id="reportsType" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
+              <option value="all" selected>Todos</option>
+              <option value="orders">Pedidos</option>
+              <option value="crm">Clientes (CRM)</option>
+              <option value="suppliers">Fornecedores</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: flex-end;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">
+              <input type="checkbox" id="reportsCompare" checked>
+              Comparar com período anterior
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÉTRICAS -->
+      <div class="stats-grid" id="reportsDashboard" style="margin-bottom: 32px;">
+        <div class="stat-card blue">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="rep-total-orders">0</div>
+          <div class="stat-label">Total de Pedidos</div>
+          <div style="font-size: 12px; color: #666; margin-top: 6px;" id="rep-orders-percent">+0%</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="rep-total-revenue">R$ 0</div>
+          <div class="stat-label">Faturamento</div>
+          <div style="font-size: 12px; color: #666; margin-top: 6px;" id="rep-revenue-percent">+0%</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-icon">👥</div>
+          <div class="stat-value" id="rep-total-customers">0</div>
+          <div class="stat-label">Clientes CRM</div>
+          <div style="font-size: 12px; color: #666; margin-top: 6px;" id="rep-customers-percent">+0%</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-icon">🏭</div>
+          <div class="stat-value" id="rep-total-suppliers">0</div>
+          <div class="stat-label">Fornecedores</div>
+          <div style="font-size: 12px; color: #666; margin-top: 6px;" id="rep-suppliers-percent">+0%</div>
+        </div>
+      </div>
+
+      <!-- GRÁFICOS (2x2) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px;" id="chartsContainer">
+        <!-- Gráfico 1: Evolução Mensal -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">📈 Evolução Mensal</h3>
+          <canvas id="chartEvolution" style="max-height: 300px;"></canvas>
+        </div>
+
+        <!-- Gráfico 2: Distribuição por Status -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">📊 Distribuição por Status</h3>
+          <canvas id="chartStatus" style="max-height: 300px;"></canvas>
+        </div>
+
+        <!-- Gráfico 3: Formas de Pagamento -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">💳 Formas de Pagamento</h3>
+          <canvas id="chartPayment" style="max-height: 300px;"></canvas>
+        </div>
+
+        <!-- Gráfico 4: Top Clientes/Produtos -->
+        <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+          <h3 style="margin: 0 0 20px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">🏆 Top Clientes
+            <button style="float: right; background: none; border: none; cursor: pointer; color: var(--marrom); font-size: 12px; text-decoration: underline;" onclick="toggleTopClientsProducts()">Ver Produtos →</button>
+          </h3>
+          <canvas id="chartTop" style="max-height: 300px;"></canvas>
+        </div>
+      </div>
+
+      <!-- TABELAS -->
+      <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">📋 Resumo de Pedidos</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f5f5f5; border-bottom: 2px solid #e8e0d4;">
+                <th style="padding: 12px; text-align: left;">ID</th>
+                <th style="padding: 12px; text-align: left;">Data</th>
+                <th style="padding: 12px; text-align: left;">Cliente</th>
+                <th style="padding: 12px; text-align: left;">Status</th>
+                <th style="padding: 12px; text-align: right;">Valor</th>
+                <th style="padding: 12px; text-align: left;">Forma Pgto</th>
+              </tr>
+            </thead>
+            <tbody id="tableOrders" style="font-size: 12px;">
+              <tr><td colspan="6" style="padding: 20px; text-align: center; color: #999;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 24px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">👥 Resumo de Clientes (CRM)</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f5f5f5; border-bottom: 2px solid #e8e0d4;">
+                <th style="padding: 12px; text-align: left;">Cliente</th>
+                <th style="padding: 12px; text-align: left;">Cidade</th>
+                <th style="padding: 12px; text-align: right;">Total Gasto</th>
+                <th style="padding: 12px; text-align: center;">Compras</th>
+                <th style="padding: 12px; text-align: left;">Situação</th>
+              </tr>
+            </thead>
+            <tbody id="tableCustomers" style="font-size: 12px;">
+              <tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">🏭 Resumo de Fornecedores</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #f5f5f5; border-bottom: 2px solid #e8e0d4;">
+                <th style="padding: 12px; text-align: left;">Fornecedor</th>
+                <th style="padding: 12px; text-align: left;">Cidade</th>
+                <th style="padding: 12px; text-align: right;">Total Comprado</th>
+                <th style="padding: 12px; text-align: center;">Compras</th>
+                <th style="padding: 12px; text-align: right;">Débito</th>
+              </tr>
+            </thead>
+            <tbody id="tableSuppliers" style="font-size: 12px;">
+              <tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">Carregando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 
@@ -1587,8 +1763,18 @@ document.addEventListener('click', function(e) {
 });
 </script>
 
+<!-- Chart.js para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<!-- jsPDF para exportar PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<!-- Papa Parse para CSV (opcional, mas útil) -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
 <script src="admin.js"></script>
 <script src="admin-crm.js"></script>
 <script src="admin-suppliers.js"></script>
+<script src="admin-reports.js"></script>
 </body>
 </html>

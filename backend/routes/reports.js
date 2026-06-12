@@ -110,6 +110,51 @@ router.get('/debug/tables', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ==================== SEED TEST DATA ====================
+router.post('/debug/seed-test-orders', async (req, res) => {
+  try {
+    console.log('🌱 Adicionando dados de teste para pedidos...');
+    
+    const orders = [
+      { customer_name: 'João Silva', total: 250.50, payment_status: 'Pago', payment_method: 'PIX', frete: 15.00 },
+      { customer_name: 'Maria Santos', total: 380.75, payment_status: 'Pago', payment_method: 'Cartão', frete: 20.00 },
+      { customer_name: 'Pedro Costa', total: 120.00, payment_status: 'Pendente', payment_method: 'Boleto', frete: 10.00 },
+      { customer_name: 'Ana Oliveira', total: 550.30, payment_status: 'Pago', payment_method: 'PIX', frete: 25.00 },
+      { customer_name: 'Carlos Souza', total: 185.60, payment_status: 'Pendente', payment_method: 'Dinheiro', frete: 0.00 },
+      { customer_name: 'Julia Rocha', total: 420.00, payment_status: 'Pago', payment_method: 'Cartão', frete: 20.00 },
+      { customer_name: 'Ricardo Lima', total: 310.45, payment_status: 'Pago', payment_method: 'PIX', frete: 15.00 },
+      { customer_name: 'Fernanda Dias', total: 95.20, payment_status: 'Pendente', payment_method: 'Boleto', frete: 8.00 },
+      { customer_name: 'Thiago Mendes', total: 725.00, payment_status: 'Pago', payment_method: 'PIX', frete: 30.00 },
+      { customer_name: 'Camila Torres', total: 210.15, payment_status: 'Pago', payment_method: 'Cartão', frete: 12.00 }
+    ];
+
+    let inserted = 0;
+    for (let i = 0; i < orders.length; i++) {
+      const order = orders[i];
+      const daysAgo = Math.floor(Math.random() * 20);
+      await db.query(
+        `INSERT INTO orders (customer_name, total, payment_status, payment_method, frete, created_at) 
+         VALUES ($1, $2, $3, $4, $5, NOW() - INTERVAL '${daysAgo} days')`,
+        [order.customer_name, order.total, order.payment_status, order.payment_method, order.frete]
+      );
+      inserted++;
+    }
+
+    const count = await db.query('SELECT COUNT(*) as total FROM orders');
+    console.log(`✅ ${inserted} pedidos adicionados. Total: ${count.rows[0].total}`);
+
+    res.json({ 
+      success: true, 
+      inserted, 
+      total: parseInt(count.rows[0].total) 
+    });
+  } catch (error) {
+    console.error('❌ Erro ao adicionar dados de teste:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {

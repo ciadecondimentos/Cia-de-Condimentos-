@@ -219,9 +219,22 @@ router.get('/orders', async (req, res) => {
 // ==================== CRM REPORT ====================
 router.get('/crm', async (req, res) => {
   try {
-    const { period = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
+    const { period = 30, mode, dateStart, dateEnd } = req.query;
+    
+    let startDate, endDate;
+    let periodLabel = `últimos ${period} dias`;
+    
+    if (mode === 'custom' && (dateStart || dateEnd)) {
+      // Modo filtro customizado
+      startDate = dateStart ? new Date(dateStart + 'T00:00:00Z') : new Date('1970-01-01');
+      endDate = dateEnd ? new Date(dateEnd + 'T23:59:59Z') : new Date();
+      periodLabel = `${dateStart || 'início'} a ${dateEnd || 'fim'}`;
+    } else {
+      // Modo padrão (período de dias)
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(period));
+    }
 
     // Query 1: Summary
     const summary = await db.query(`
@@ -229,9 +242,9 @@ router.get('/crm', async (req, res) => {
         COUNT(*)::integer as total_customers,
         COUNT(CASE WHEN is_vip = true THEN 1 END)::integer as vip_customers,
         COUNT(CASE WHEN is_inactive = false THEN 1 END)::integer as active_customers,
-        0::integer as new_customers_period
+        (SELECT COUNT(DISTINCT id) FROM crm_customers WHERE created_at >= $1 AND created_at <= $2)::integer as new_customers_period
       FROM crm_customers
-    `);
+    `, [startDate, endDate]);
 
     // Query 2: Spending
     const spending = await db.query(`
@@ -240,8 +253,8 @@ router.get('/crm', async (req, res) => {
         COUNT(*)::integer as total_transactions,
         COALESCE(CAST(AVG(total_price) AS NUMERIC(15,2)), 0)::text as average_transaction
       FROM crm_purchases
-      WHERE purchase_date >= $1
-    `, [startDate]);
+      WHERE purchase_date >= $1 AND purchase_date <= $2
+    `, [startDate, endDate]);
 
     // Query 3: Payment status
     const paymentStatus = await db.query(`
@@ -250,12 +263,13 @@ router.get('/crm', async (req, res) => {
         COUNT(*)::integer as count,
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total
       FROM crm_purchases
-      WHERE purchase_date >= $1
+      WHERE purchase_date >= $1 AND purchase_date <= $2
       GROUP BY payment_status
-    `, [startDate]);
+    `, [startDate, endDate]);
 
     res.json({
       period,
+      periodLabel,
       summary: cleanData(summary.rows[0]),
       spending: cleanData(spending.rows[0]),
       paymentStatus: (paymentStatus.rows || []).map(cleanData),
@@ -272,18 +286,31 @@ router.get('/crm', async (req, res) => {
 // ==================== SUPPLIERS REPORT ====================
 router.get('/suppliers', async (req, res) => {
   try {
-    const { period = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
+    const { period = 30, mode, dateStart, dateEnd } = req.query;
+    
+    let startDate, endDate;
+    let periodLabel = `últimos ${period} dias`;
+    
+    if (mode === 'custom' && (dateStart || dateEnd)) {
+      // Modo filtro customizado
+      startDate = dateStart ? new Date(dateStart + 'T00:00:00Z') : new Date('1970-01-01');
+      endDate = dateEnd ? new Date(dateEnd + 'T23:59:59Z') : new Date();
+      periodLabel = `${dateStart || 'início'} a ${dateEnd || 'fim'}`;
+    } else {
+      // Modo padrão (período de dias)
+      endDate = new Date();
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - parseInt(period));
+    }
 
     // Query 1: Summary
     const summary = await db.query(`
       SELECT 
         COUNT(*)::integer as total_suppliers,
         COUNT(CASE WHEN is_active = true THEN 1 END)::integer as active_suppliers,
-        0::integer as new_suppliers_period
+        (SELECT COUNT(DISTINCT id) FROM suppliers WHERE created_at >= $1 AND created_at <= $2)::integer as new_suppliers_period
       FROM suppliers
-    `);
+    `, [startDate, endDate]);
 
     // Query 2: Spending
     const spending = await db.query(`
@@ -292,8 +319,8 @@ router.get('/suppliers', async (req, res) => {
         COUNT(*)::integer as total_purchases,
         COALESCE(CAST(AVG(total_price) AS NUMERIC(15,2)), 0)::text as average_purchase
       FROM supplier_purchases
-      WHERE purchase_date >= $1
-    `, [startDate]);
+      WHERE purchase_date >= $1 AND purchase_date <= $2
+    `, [startDate, endDate]);
 
     // Query 3: Payment status
     const paymentStatus = await db.query(`
@@ -302,12 +329,13 @@ router.get('/suppliers', async (req, res) => {
         COUNT(*)::integer as count,
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total
       FROM supplier_purchases
-      WHERE purchase_date >= $1
+      WHERE purchase_date >= $1 AND purchase_date <= $2
       GROUP BY payment_status
-    `, [startDate]);
+    `, [startDate, endDate]);
 
     res.json({
       period,
+      periodLabel,
       summary: cleanData(summary.rows[0]),
       spending: cleanData(spending.rows[0]),
       paymentStatus: (paymentStatus.rows || []).map(cleanData),

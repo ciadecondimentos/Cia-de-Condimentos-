@@ -2028,9 +2028,42 @@ async function loadOrdersReport(period) {
 }
 
 // ==================== CRM REPORT ====================
-async function loadCrmReport(period) {
+function updateCrmFilter() {
+  const dateStart = document.getElementById('crmDateStart')?.value;
+  const dateEnd = document.getElementById('crmDateEnd')?.value;
+  
+  // Validação: data inicial não pode ser maior que data final
+  if (dateStart && dateEnd && dateStart > dateEnd) {
+    showToast('Data inicial não pode ser maior que data final', 'error');
+    document.getElementById('crmDateEnd').value = '';
+    return;
+  }
+  
+  // Montar URL com parâmetros customizados
+  let url = `${API_BASE}/reports/crm`;
+  
+  if (dateStart || dateEnd) {
+    // Modo filtro customizado
+    url += '?mode=custom';
+    if (dateStart) url += `&dateStart=${dateStart}`;
+    if (dateEnd) url += `&dateEnd=${dateEnd}`;
+  } else {
+    // Modo padrão (período de 30 dias)
+    url += '?period=30';
+  }
+  
+  // Chamar API com filtros aplicados
+  loadCrmReport(url);
+}
+
+async function loadCrmReport(periodOrUrl) {
   try {
-    const res = await fetch(`${API_BASE}/reports/crm?period=${period}`);
+    // Se receber URL completa, usar; caso contrário, construir
+    let url = typeof periodOrUrl === 'string' && periodOrUrl.startsWith('http') 
+      ? periodOrUrl 
+      : `${API_BASE}/reports/crm?period=${periodOrUrl || 30}`;
+    
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch CRM report');
     
     const data = await res.json();
@@ -2083,9 +2116,42 @@ async function loadCrmReport(period) {
 }
 
 // ==================== SUPPLIERS REPORT ====================
-async function loadSuppliersReport(period) {
+function updateSuppliersFilter() {
+  const dateStart = document.getElementById('suppliersDateStart')?.value;
+  const dateEnd = document.getElementById('suppliersDateEnd')?.value;
+  
+  // Validação: data inicial não pode ser maior que data final
+  if (dateStart && dateEnd && dateStart > dateEnd) {
+    showToast('Data inicial não pode ser maior que data final', 'error');
+    document.getElementById('suppliersDateEnd').value = '';
+    return;
+  }
+  
+  // Montar URL com parâmetros customizados
+  let url = `${API_BASE}/reports/suppliers`;
+  
+  if (dateStart || dateEnd) {
+    // Modo filtro customizado
+    url += '?mode=custom';
+    if (dateStart) url += `&dateStart=${dateStart}`;
+    if (dateEnd) url += `&dateEnd=${dateEnd}`;
+  } else {
+    // Modo padrão (período de 30 dias)
+    url += '?period=30';
+  }
+  
+  // Chamar API com filtros aplicados
+  loadSuppliersReport(url);
+}
+
+async function loadSuppliersReport(periodOrUrl) {
   try {
-    const res = await fetch(`${API_BASE}/reports/suppliers?period=${period}`);
+    // Se receber URL completa, usar; caso contrário, construir
+    let url = typeof periodOrUrl === 'string' && periodOrUrl.startsWith('http') 
+      ? periodOrUrl 
+      : `${API_BASE}/reports/suppliers?period=${periodOrUrl || 30}`;
+    
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch suppliers report');
     
     const data = await res.json();

@@ -1403,9 +1403,9 @@ tr:hover td { background: #faf7f2; }
       <!-- FILTROS DE DATA -->
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
         <label style="font-size: 13px; font-weight: 600; color: var(--marrom);">Filtrar por período:</label>
-        <input type="date" id="crmDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;">
+        <input type="date" id="crmDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateCrmFilter()">
         <span style="color: #999;">até</span>
-        <input type="date" id="crmDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;">
+        <input type="date" id="crmDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateCrmFilter()">
       </div>
 
       <!-- DASHBOARD CRM -->
@@ -1498,9 +1498,9 @@ tr:hover td { background: #faf7f2; }
       <!-- FILTROS DE DATA -->
       <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
         <label style="font-size: 13px; font-weight: 600; color: var(--marrom);">Filtrar por período:</label>
-        <input type="date" id="suppliersDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;">
+        <input type="date" id="suppliersDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateSuppliersFilter()">
         <span style="color: #999;">até</span>
-        <input type="date" id="suppliersDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;">
+        <input type="date" id="suppliersDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateSuppliersFilter()">
       </div>
 
       <div class="table-toolbar" style="margin-bottom: 20px;">

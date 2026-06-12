@@ -198,10 +198,6 @@ function updateReportsMetrics(showComparison = false) {
     console.error('❌ Erro ao atualizar métricas:', error);
   }
 }
-  } catch (error) {
-    console.error('Erro ao atualizar métricas:', error);
-  }
-}
 
 // Renderizar todos os gráficos
 function renderReportsCharts() {

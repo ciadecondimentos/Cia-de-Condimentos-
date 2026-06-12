@@ -1933,14 +1933,23 @@ async function loadGeneralReport(period) {
     
     const data = await res.json();
     
-    // Update stats
-    document.getElementById('gen-total-orders').textContent = formatNumber(data.sales.total_orders || 0);
+    // Update stats (with null checks)
+    const genTotalOrders = document.getElementById('gen-total-orders');
+    if (genTotalOrders) genTotalOrders.textContent = formatNumber(data.sales.total_orders || 0);
+    
     // Faturamento = Faturamento dos pedidos + Faturamento da central de clientes (CRM)
     const totalRevenue = (data.sales.total_revenue || 0) + (data.crm.total_spent_crm || 0);
-    document.getElementById('gen-total-revenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('gen-total-customers').textContent = formatNumber(data.crm.total_customers || 0);
-    document.getElementById('gen-total-suppliers').textContent = formatNumber(data.suppliers.total_suppliers || 0);
-    document.getElementById('gen-total-spent-crm').textContent = formatCurrency(data.crm.total_spent_crm || 0);
+    const genTotalRevenue = document.getElementById('gen-total-revenue');
+    if (genTotalRevenue) genTotalRevenue.textContent = formatCurrency(totalRevenue);
+    
+    const genTotalCustomers = document.getElementById('gen-total-customers');
+    if (genTotalCustomers) genTotalCustomers.textContent = formatNumber(data.crm.total_customers || 0);
+    
+    const genTotalSuppliers = document.getElementById('gen-total-suppliers');
+    if (genTotalSuppliers) genTotalSuppliers.textContent = formatNumber(data.suppliers.total_suppliers || 0);
+    
+    const genTotalSpentCrm = document.getElementById('gen-total-spent-crm');
+    if (genTotalSpentCrm) genTotalSpentCrm.textContent = formatCurrency(data.crm.total_spent_crm || 0);
     
     // Get pending payments from CRM payment status
     let totalPending = 0;
@@ -1951,20 +1960,27 @@ async function loadGeneralReport(period) {
         }
       });
     }
-    document.getElementById('gen-total-pending-crm').textContent = formatCurrency(totalPending);
+    const genTotalPendingCrm = document.getElementById('gen-total-pending-crm');
+    if (genTotalPendingCrm) genTotalPendingCrm.textContent = formatCurrency(totalPending);
     
-    // Payment methods
-    let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
-    data.paymentMethods.forEach(pm => {
-      paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total)}</td></tr>`;
-    });
-    paymentHtml += '</table>';
-    document.getElementById('gen-payment-methods').innerHTML = paymentHtml;
+    // Payment methods (with null check)
+    const paymentMethodsEl = document.getElementById('gen-payment-methods');
+    if (paymentMethodsEl) {
+      let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+      data.paymentMethods.forEach(pm => {
+        paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total)}</td></tr>`;
+      });
+      paymentHtml += '</table>';
+      paymentMethodsEl.innerHTML = paymentHtml;
+    }
     
-    // Suppliers info
-    let suppliersHtml = `<strong>Total Gasto com Fornecedores:</strong> ${formatCurrency(data.suppliers.total_spent_suppliers || 0)}<br>`;
-    suppliersHtml += `<strong>Número de Fornecedores:</strong> ${data.suppliers.total_suppliers}`;
-    document.getElementById('gen-suppliers-info').innerHTML = suppliersHtml;
+    // Suppliers info (with null check)
+    const suppliersInfoEl = document.getElementById('gen-suppliers-info');
+    if (suppliersInfoEl) {
+      let suppliersHtml = `<strong>Total Gasto com Fornecedores:</strong> ${formatCurrency(data.suppliers.total_spent_suppliers || 0)}<br>`;
+      suppliersHtml += `<strong>Número de Fornecedores:</strong> ${data.suppliers.total_suppliers}`;
+      suppliersInfoEl.innerHTML = suppliersHtml;
+    }
     
   } catch (error) {
     console.error('Error loading general report:', error);
@@ -1980,46 +1996,65 @@ async function loadOrdersReport(period) {
     
     const data = await res.json();
     
-    // Update stats
-    document.getElementById('ord-total-orders').textContent = formatNumber(data.summary.total_orders || 0);
-    document.getElementById('ord-paid-orders').textContent = formatNumber(data.summary.paid_orders || 0);
-    document.getElementById('ord-pending-orders').textContent = formatNumber(data.summary.pending_orders || 0);
-    document.getElementById('ord-average-ticket').textContent = formatCurrency(data.summary.average_ticket || 0);
+    // Update stats (with null checks)
+    const ordTotalOrders = document.getElementById('ord-total-orders');
+    if (ordTotalOrders) ordTotalOrders.textContent = formatNumber(data.summary.total_orders || 0);
     
-    // Summary table
-    let summaryHtml = '';
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Pedidos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_orders)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pagos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.paid_orders)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pendentes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.pending_orders)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Cancelados</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.cancelled_orders)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Receita Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_revenue)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Ticket Médio</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.average_ticket)}</td></tr>`;
-    summaryHtml += `<tr><td style="padding: 8px;">Frete Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_shipping)}</td></tr>`;
-    document.getElementById('ord-summary-table').innerHTML = summaryHtml;
+    const ordPaidOrders = document.getElementById('ord-paid-orders');
+    if (ordPaidOrders) ordPaidOrders.textContent = formatNumber(data.summary.paid_orders || 0);
     
-    // Status
-    let statusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Quantidade</th></tr>';
-    data.byStatus.forEach(s => {
-      statusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${s.status}</td><td style="padding: 8px; text-align: right;">${formatNumber(s.count)}</td></tr>`;
-    });
-    statusHtml += '</table>';
-    document.getElementById('ord-by-status').innerHTML = statusHtml;
+    const ordPendingOrders = document.getElementById('ord-pending-orders');
+    if (ordPendingOrders) ordPendingOrders.textContent = formatNumber(data.summary.pending_orders || 0);
     
-    // Payment methods
-    let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Quantidade</th><th style="padding: 8px; text-align: right;">Receita</th></tr>';
-    data.byPaymentMethod.forEach(pm => {
-      paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatNumber(pm.count)}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total_revenue)}</td></tr>`;
-    });
-    paymentHtml += '</table>';
-    document.getElementById('ord-payment-methods').innerHTML = paymentHtml;
+    const ordAverageTicket = document.getElementById('ord-average-ticket');
+    if (ordAverageTicket) ordAverageTicket.textContent = formatCurrency(data.summary.average_ticket || 0);
     
-    // Top customers
-    let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
-    data.topCustomers.forEach(c => {
-      customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.customer_name}">${c.customer_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
-    });
-    customersHtml += '</table>';
-    document.getElementById('ord-top-customers').innerHTML = customersHtml;
+    // Summary table (with null check)
+    const summaryTableEl = document.getElementById('ord-summary-table');
+    if (summaryTableEl) {
+      let summaryHtml = '';
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Pedidos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_orders)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pagos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.paid_orders)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Pendentes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.pending_orders)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Pedidos Cancelados</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.cancelled_orders)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Receita Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_revenue)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Ticket Médio</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.average_ticket)}</td></tr>`;
+      summaryHtml += `<tr><td style="padding: 8px;">Frete Total</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.summary.total_shipping)}</td></tr>`;
+      summaryTableEl.innerHTML = summaryHtml;
+    }
+    
+    // Status (with null check)
+    const statusEl = document.getElementById('ord-by-status');
+    if (statusEl) {
+      let statusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Quantidade</th></tr>';
+      data.byStatus.forEach(s => {
+        statusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${s.status}</td><td style="padding: 8px; text-align: right;">${formatNumber(s.count)}</td></tr>`;
+      });
+      statusHtml += '</table>';
+      statusEl.innerHTML = statusHtml;
+    }
+    
+    // Payment methods (with null check)
+    const paymentEl = document.getElementById('ord-payment-methods');
+    if (paymentEl) {
+      let paymentHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Forma de Pagamento</th><th style="padding: 8px; text-align: right;">Quantidade</th><th style="padding: 8px; text-align: right;">Receita</th></tr>';
+      data.byPaymentMethod.forEach(pm => {
+        paymentHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${pm.payment_method}</td><td style="padding: 8px; text-align: right;">${formatNumber(pm.count)}</td><td style="padding: 8px; text-align: right;">${formatCurrency(pm.total_revenue)}</td></tr>`;
+      });
+      paymentHtml += '</table>';
+      paymentEl.innerHTML = paymentHtml;
+    }
+    
+    // Top customers (with null check)
+    const topCustomersEl = document.getElementById('ord-top-customers');
+    if (topCustomersEl) {
+      let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+      data.topCustomers.forEach(c => {
+        customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.customer_name}">${c.customer_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
+      });
+      customersHtml += '</table>';
+      topCustomersEl.innerHTML = customersHtml;
+    }
     
   } catch (error) {
     console.error('Error loading orders report:', error);
@@ -2068,46 +2103,65 @@ async function loadCrmReport(periodOrUrl) {
     
     const data = await res.json();
     
-    // Update stats
-    document.getElementById('crm-total-customers').textContent = formatNumber(data.summary.total_customers || 0);
-    document.getElementById('crm-vip-customers').textContent = formatNumber(data.summary.vip_customers || 0);
-    document.getElementById('crm-total-spent').textContent = formatCurrency(data.spending.total_spent || 0);
-    document.getElementById('crm-total-pending').textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
+    // Update stats (with null checks)
+    const crmTotalCustomers = document.getElementById('crm-total-customers');
+    if (crmTotalCustomers) crmTotalCustomers.textContent = formatNumber(data.summary.total_customers || 0);
     
-    // Summary table
-    let summaryHtml = '';
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Clientes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_customers)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes VIP</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.vip_customers)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_customers)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_customers_period)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Transações</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_transactions)}</td></tr>`;
-    summaryHtml += `<tr><td style="padding: 8px;">Transação Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_transaction)}</td></tr>`;
-    document.getElementById('crm-summary-table').innerHTML = summaryHtml;
+    const crmVipCustomers = document.getElementById('crm-vip-customers');
+    if (crmVipCustomers) crmVipCustomers.textContent = formatNumber(data.summary.vip_customers || 0);
     
-    // Payment status
-    let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
-    data.paymentStatus.forEach(ps => {
-      paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
-    });
-    paymentStatusHtml += '</table>';
-    document.getElementById('crm-payment-status').innerHTML = paymentStatusHtml;
+    const crmTotalSpent = document.getElementById('crm-total-spent');
+    if (crmTotalSpent) crmTotalSpent.textContent = formatCurrency(data.spending.total_spent || 0);
     
-    // Top customers
-    let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
-    data.topCustomers.forEach(c => {
-      customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.full_name}">${c.full_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
-    });
-    customersHtml += '</table>';
-    document.getElementById('crm-top-customers').innerHTML = customersHtml;
+    const crmTotalPending = document.getElementById('crm-total-pending');
+    if (crmTotalPending) crmTotalPending.textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
     
-    // Debtors
-    let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
-    data.debtors.forEach(d => {
-      debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.full_name}">${d.full_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
-    });
-    debtorsHtml += '</table>';
-    document.getElementById('crm-debtors').innerHTML = debtorsHtml;
+    // Summary table (with null check)
+    const summaryTableEl = document.getElementById('crm-summary-table');
+    if (summaryTableEl) {
+      let summaryHtml = '';
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Clientes</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_customers)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes VIP</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.vip_customers)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Clientes Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_customers)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_customers_period)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Transações</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_transactions)}</td></tr>`;
+      summaryHtml += `<tr><td style="padding: 8px;">Transação Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_transaction)}</td></tr>`;
+      summaryTableEl.innerHTML = summaryHtml;
+    }
+    
+    // Payment status (with null check)
+    const paymentStatusEl = document.getElementById('crm-payment-status');
+    if (paymentStatusEl) {
+      let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+      data.paymentStatus.forEach(ps => {
+        paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
+      });
+      paymentStatusHtml += '</table>';
+      paymentStatusEl.innerHTML = paymentStatusHtml;
+    }
+    
+    // Top customers (with null check)
+    const topCustomersEl = document.getElementById('crm-top-customers');
+    if (topCustomersEl) {
+      let customersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+      data.topCustomers.forEach(c => {
+        customersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${c.full_name}">${c.full_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(c.total_spent)}</td></tr>`;
+      });
+      customersHtml += '</table>';
+      topCustomersEl.innerHTML = customersHtml;
+    }
+    
+    // Debtors (with null check)
+    const debtorsEl = document.getElementById('crm-debtors');
+    if (debtorsEl) {
+      let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Cliente</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
+      data.debtors.forEach(d => {
+        debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.full_name}">${d.full_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
+      });
+      debtorsHtml += '</table>';
+      debtorsEl.innerHTML = debtorsHtml;
+    }
     
   } catch (error) {
     console.error('Error loading CRM report:', error);
@@ -2156,45 +2210,64 @@ async function loadSuppliersReport(periodOrUrl) {
     
     const data = await res.json();
     
-    // Update stats
-    document.getElementById('sup-total-suppliers').textContent = formatNumber(data.summary.total_suppliers || 0);
-    document.getElementById('sup-active-suppliers').textContent = formatNumber(data.summary.active_suppliers || 0);
-    document.getElementById('sup-total-spent').textContent = formatCurrency(data.spending.total_spent || 0);
-    document.getElementById('sup-pending-debt').textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
+    // Update stats (with null checks)
+    const supTotalSuppliers = document.getElementById('sup-total-suppliers');
+    if (supTotalSuppliers) supTotalSuppliers.textContent = formatNumber(data.summary.total_suppliers || 0);
     
-    // Summary table
-    let summaryHtml = '';
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Fornecedores</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_suppliers)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Fornecedores Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_suppliers)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_suppliers_period)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
-    summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Compras</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_purchases)}</td></tr>`;
-    summaryHtml += `<tr><td style="padding: 8px;">Compra Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_purchase)}</td></tr>`;
-    document.getElementById('sup-summary-table').innerHTML = summaryHtml;
+    const supActiveSuppliers = document.getElementById('sup-active-suppliers');
+    if (supActiveSuppliers) supActiveSuppliers.textContent = formatNumber(data.summary.active_suppliers || 0);
     
-    // Payment status
-    let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
-    data.paymentStatus.forEach(ps => {
-      paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
-    });
-    paymentStatusHtml += '</table>';
-    document.getElementById('sup-payment-status').innerHTML = paymentStatusHtml;
+    const supTotalSpent = document.getElementById('sup-total-spent');
+    if (supTotalSpent) supTotalSpent.textContent = formatCurrency(data.spending.total_spent || 0);
     
-    // Top suppliers
-    let suppliersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
-    data.topSuppliers.forEach(s => {
-      suppliersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${s.company_name}">${s.company_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(s.total_spent)}</td></tr>`;
-    });
-    suppliersHtml += '</table>';
-    document.getElementById('sup-top-suppliers').innerHTML = suppliersHtml;
+    const supPendingDebt = document.getElementById('sup-pending-debt');
+    if (supPendingDebt) supPendingDebt.textContent = formatCurrency(data.paymentStatus.find(p => p.payment_status === 'pendente')?.total || 0);
     
-    // Debtors
-    let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
-    data.debtors.forEach(d => {
-      debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.company_name}">${d.company_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
-    });
-    debtorsHtml += '</table>';
-    document.getElementById('sup-debtors').innerHTML = debtorsHtml;
+    // Summary table (with null check)
+    const summaryTableEl = document.getElementById('sup-summary-table');
+    if (summaryTableEl) {
+      let summaryHtml = '';
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total de Fornecedores</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.total_suppliers)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Fornecedores Ativos</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.active_suppliers)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Novos no Período</td><td style="padding: 8px; text-align: right;">${formatNumber(data.summary.new_suppliers_period)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Total Gasto</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.total_spent)}</td></tr>`;
+      summaryHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">Compras</td><td style="padding: 8px; text-align: right;">${formatNumber(data.spending.total_purchases)}</td></tr>`;
+      summaryHtml += `<tr><td style="padding: 8px;">Compra Média</td><td style="padding: 8px; text-align: right;">${formatCurrency(data.spending.average_purchase)}</td></tr>`;
+      summaryTableEl.innerHTML = summaryHtml;
+    }
+    
+    // Payment status (with null check)
+    const paymentStatusEl = document.getElementById('sup-payment-status');
+    if (paymentStatusEl) {
+      let paymentStatusHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Status</th><th style="padding: 8px; text-align: right;">Total</th></tr>';
+      data.paymentStatus.forEach(ps => {
+        paymentStatusHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px;">${ps.payment_status}</td><td style="padding: 8px; text-align: right;">${formatCurrency(ps.total)}</td></tr>`;
+      });
+      paymentStatusHtml += '</table>';
+      paymentStatusEl.innerHTML = paymentStatusHtml;
+    }
+    
+    // Top suppliers (with null check)
+    const topSuppliersEl = document.getElementById('sup-top-suppliers');
+    if (topSuppliersEl) {
+      let suppliersHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Total Gasto</th></tr>';
+      data.topSuppliers.forEach(s => {
+        suppliersHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${s.company_name}">${s.company_name}</td><td style="padding: 8px; text-align: right;">${formatCurrency(s.total_spent)}</td></tr>`;
+      });
+      suppliersHtml += '</table>';
+      topSuppliersEl.innerHTML = suppliersHtml;
+    }
+    
+    // Debtors (with null check)
+    const debtorsEl = document.getElementById('sup-debtors');
+    if (debtorsEl) {
+      let debtorsHtml = '<table style="width: 100%; border-collapse: collapse;"><tr style="border-bottom: 1px solid #ddd;"><th style="padding: 8px; text-align: left;">Fornecedor</th><th style="padding: 8px; text-align: right;">Débito</th></tr>';
+      data.debtors.forEach(d => {
+        debtorsHtml += `<tr style="border-bottom: 1px solid #eee;"><td style="padding: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="${d.company_name}">${d.company_name}</td><td style="padding: 8px; text-align: right; color: var(--vermelho); font-weight: 700;">${formatCurrency(d.total_debt)}</td></tr>`;
+      });
+      debtorsHtml += '</table>';
+      debtorsEl.innerHTML = debtorsHtml;
+    }
     
   } catch (error) {
     console.error('Error loading suppliers report:', error);

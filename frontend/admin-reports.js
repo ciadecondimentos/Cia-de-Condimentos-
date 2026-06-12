@@ -312,7 +312,7 @@ function renderPaymentChart() {
   if (!ctx) return;
 
   // Usar dados reais de formas de pagamento
-  const paymentData = reportsData.general?.paymentMethods || [];
+  let paymentData = reportsData.general?.paymentMethods || [];
 
   if (!paymentData || paymentData.length === 0) {
     // Fallback se não houver dados

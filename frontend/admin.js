@@ -86,7 +86,7 @@ function showPage(pageId, buttonElement) {
   
   // Update page title
   const titles = {
-    'dashboard': 'Dashboard',
+    'dashboard': 'Dashboard Pedidos',
     'products': 'Produtos',
     'orders': 'Pedidos',
     'promotions': 'Promoções',

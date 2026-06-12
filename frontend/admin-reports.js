@@ -10,75 +10,127 @@ async function loadReportsData() {
   
   try {
     // Pegar filtros
+    const dateStart = document.getElementById('reportsDateStart')?.value;
+    const dateEnd = document.getElementById('reportsDateEnd')?.value;
     const period = document.getElementById('reportsPeriod')?.value || '30';
     const compare = document.getElementById('reportsCompare')?.checked;
+
+    console.log('🔍 Filtros lidos:', { dateStart, dateEnd, period, compare });
 
     // Limpar dados anteriores
     reportsData = {};
     reportsDataPrevious = {};
 
+    // Construir parâmetros da URL
+    let urlParams = '';
+    if (dateStart && dateEnd) {
+      // Modo filtro de data customizado
+      urlParams = `?mode=custom&dateStart=${dateStart}&dateEnd=${dateEnd}`;
+      console.log('📅 Usando filtro de datas customizadas:', urlParams);
+    } else {
+      // Modo período de dias
+      urlParams = `?period=${period}`;
+      console.log('📊 Usando período de dias:', period);
+    }
+
     // Carregar período ATUAL
     let promises = [
-      fetch(`${API_BASE}/reports/general?period=${period}`)
+      fetch(`${API_BASE}/reports/general${urlParams}`)
         .then(r => r.json())
-        .then(data => { reportsData.general = data; })
-        .catch(e => console.error('Erro geral:', e)),
+        .then(data => { 
+          reportsData.general = data; 
+          console.log('✅ General:', data);
+        })
+        .catch(e => console.error('❌ Erro geral:', e)),
 
-      fetch(`${API_BASE}/reports/orders?period=${period}`)
+      fetch(`${API_BASE}/reports/orders${urlParams}`)
         .then(r => r.json())
-        .then(data => { reportsData.orders = data; })
-        .catch(e => console.error('Erro orders:', e)),
+        .then(data => { 
+          reportsData.orders = data;
+          console.log('✅ Orders:', data);
+        })
+        .catch(e => console.error('❌ Erro orders:', e)),
 
-      fetch(`${API_BASE}/reports/crm?period=${period}`)
+      fetch(`${API_BASE}/reports/crm${urlParams}`)
         .then(r => r.json())
-        .then(data => { reportsData.crm = data; })
-        .catch(e => console.error('Erro crm:', e)),
+        .then(data => { 
+          reportsData.crm = data;
+          console.log('✅ CRM:', data);
+        })
+        .catch(e => console.error('❌ Erro crm:', e)),
 
-      fetch(`${API_BASE}/reports/suppliers?period=${period}`)
+      fetch(`${API_BASE}/reports/suppliers${urlParams}`)
         .then(r => r.json())
-        .then(data => { reportsData.suppliers = data; })
-        .catch(e => console.error('Erro suppliers:', e))
+        .then(data => { 
+          reportsData.suppliers = data;
+          console.log('✅ Suppliers:', data);
+        })
+        .catch(e => console.error('❌ Erro suppliers:', e))
     ];
 
     // Se comparação ativa, carregar período ANTERIOR
     if (compare) {
-      const periodInt = parseInt(period);
-      const periodDouble = periodInt * 2;
+      let prevUrlParams = '';
+      if (dateStart && dateEnd) {
+        // Calcular período anterior (mesma quantidade de dias antes)
+        const startDate = new Date(dateStart);
+        const endDate = new Date(dateEnd);
+        const diffDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+        
+        const prevEndDate = new Date(startDate);
+        prevEndDate.setDate(prevEndDate.getDate() - 1);
+        
+        const prevStartDate = new Date(prevEndDate);
+        prevStartDate.setDate(prevStartDate.getDate() - diffDays);
+        
+        prevUrlParams = `?mode=custom&dateStart=${prevStartDate.toISOString().split('T')[0]}&dateEnd=${prevEndDate.toISOString().split('T')[0]}`;
+        console.log('📅 Período anterior (datas):', prevUrlParams);
+      } else {
+        const periodInt = parseInt(period);
+        const periodDouble = periodInt * 2;
+        prevUrlParams = `?period=${periodDouble}`;
+        console.log('📊 Período anterior (dias):', periodDouble);
+      }
+
       promises.push(
-        fetch(`${API_BASE}/reports/general?period=${periodDouble}`)
+        fetch(`${API_BASE}/reports/general${prevUrlParams}`)
           .then(r => r.json())
           .then(data => { reportsDataPrevious.general = data; }),
 
-        fetch(`${API_BASE}/reports/orders?period=${periodDouble}`)
+        fetch(`${API_BASE}/reports/orders${prevUrlParams}`)
           .then(r => r.json())
           .then(data => { reportsDataPrevious.orders = data; }),
 
-        fetch(`${API_BASE}/reports/crm?period=${periodDouble}`)
+        fetch(`${API_BASE}/reports/crm${prevUrlParams}`)
           .then(r => r.json())
           .then(data => { reportsDataPrevious.crm = data; }),
 
-        fetch(`${API_BASE}/reports/suppliers?period=${periodDouble}`)
+        fetch(`${API_BASE}/reports/suppliers${prevUrlParams}`)
           .then(r => r.json())
           .then(data => { reportsDataPrevious.suppliers = data; })
       );
     }
 
+    console.log('⏳ Aguardando dados das APIs...');
     await Promise.all(promises);
 
+    console.log('🔄 Atualizando métricas...');
     // Atualizar métricas
     updateReportsMetrics(compare);
 
+    console.log('📊 Renderizando gráficos...');
     // Renderizar gráficos
     renderReportsCharts();
 
+    console.log('📋 Preenchendo tabelas...');
     // Preencher tabelas
-    fillReportsTables();
+    await fillReportsTables();
 
-    showToast('📊 Relatórios carregados com sucesso', 'success');
-    console.log('✅ Dados de relatórios carregados:', { reportsData, reportsDataPrevious });
+    showToast('✅ Relatórios atualizados com sucesso!', 'success');
+    console.log('✅ Todos os dados carregados e renderizados:', { reportsData, reportsDataPrevious });
   } catch (error) {
     console.error('❌ Erro ao carregar relatórios:', error);
-    showToast('Erro ao carregar relatórios: ' + error.message, 'error');
+    showToast('❌ Erro ao carregar relatórios: ' + error.message, 'error');
   }
 }
 
@@ -93,41 +145,59 @@ function calculatePercentChange(current, previous) {
 // Atualizar cards de métricas
 function updateReportsMetrics(showComparison = false) {
   try {
+    console.log('📊 Atualizando métricas...');
+    
     // Total de pedidos
     const totalOrders = parseFloat(reportsData.orders?.summary?.total_orders) || 0;
     const prevOrders = parseFloat(reportsDataPrevious.orders?.summary?.total_orders) || totalOrders;
     
-    document.getElementById('rep-total-orders').textContent = formatNumber(totalOrders);
-    document.getElementById('rep-orders-percent').textContent = showComparison 
+    const ordersEl = document.getElementById('rep-total-orders');
+    const ordersPercentEl = document.getElementById('rep-orders-percent');
+    if (ordersEl) ordersEl.textContent = formatNumber(totalOrders);
+    if (ordersPercentEl) ordersPercentEl.textContent = showComparison 
       ? calculatePercentChange(totalOrders, prevOrders)
       : '+0%';
+    console.log('✅ Pedidos:', totalOrders);
 
     // Faturamento
     const totalRevenue = parseFloat(reportsData.general?.sales?.total_revenue) || 0;
     const prevRevenue = parseFloat(reportsDataPrevious.general?.sales?.total_revenue) || totalRevenue;
     
-    document.getElementById('rep-total-revenue').textContent = formatCurrency(totalRevenue);
-    document.getElementById('rep-revenue-percent').textContent = showComparison 
+    const revenueEl = document.getElementById('rep-total-revenue');
+    const revenuePercentEl = document.getElementById('rep-revenue-percent');
+    if (revenueEl) revenueEl.textContent = formatCurrency(totalRevenue);
+    if (revenuePercentEl) revenuePercentEl.textContent = showComparison 
       ? calculatePercentChange(totalRevenue, prevRevenue)
       : '+0%';
+    console.log('✅ Faturamento:', totalRevenue);
 
     // Clientes CRM
     const totalCustomers = parseFloat(reportsData.crm?.summary?.total_customers) || 0;
     const prevCustomers = parseFloat(reportsDataPrevious.crm?.summary?.total_customers) || totalCustomers;
     
-    document.getElementById('rep-total-customers').textContent = formatNumber(totalCustomers);
-    document.getElementById('rep-customers-percent').textContent = showComparison 
+    const customersEl = document.getElementById('rep-total-customers');
+    const customersPercentEl = document.getElementById('rep-customers-percent');
+    if (customersEl) customersEl.textContent = formatNumber(totalCustomers);
+    if (customersPercentEl) customersPercentEl.textContent = showComparison 
       ? calculatePercentChange(totalCustomers, prevCustomers)
       : '+0%';
+    console.log('✅ Clientes:', totalCustomers);
 
     // Fornecedores
     const totalSuppliers = parseFloat(reportsData.suppliers?.summary?.total_suppliers) || 0;
     const prevSuppliers = parseFloat(reportsDataPrevious.suppliers?.summary?.total_suppliers) || totalSuppliers;
     
-    document.getElementById('rep-total-suppliers').textContent = formatNumber(totalSuppliers);
-    document.getElementById('rep-suppliers-percent').textContent = showComparison 
+    const suppliersEl = document.getElementById('rep-total-suppliers');
+    const suppliersPercentEl = document.getElementById('rep-suppliers-percent');
+    if (suppliersEl) suppliersEl.textContent = formatNumber(totalSuppliers);
+    if (suppliersPercentEl) suppliersPercentEl.textContent = showComparison 
       ? calculatePercentChange(totalSuppliers, prevSuppliers)
       : '+0%';
+    console.log('✅ Fornecedores:', totalSuppliers);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar métricas:', error);
+  }
+}
   } catch (error) {
     console.error('Erro ao atualizar métricas:', error);
   }
@@ -138,34 +208,57 @@ function renderReportsCharts() {
   console.log('📊 Renderizando gráficos...');
 
   // Destruir gráficos existentes
+  console.log('🔄 Destruindo gráficos anteriores...');
   Object.keys(chartsInstances).forEach(key => {
-    if (chartsInstances[key]) chartsInstances[key].destroy();
+    if (chartsInstances[key]) {
+      console.log(`   Destruindo: ${key}`);
+      chartsInstances[key].destroy();
+    }
   });
   chartsInstances = {};
+  console.log('✅ Todos os gráficos foram destruídos');
+
+  // Verificar se os canvas existem
+  const chartEvolution = document.getElementById('chartEvolution');
+  const chartStatus = document.getElementById('chartStatus');
+  const chartPayment = document.getElementById('chartPayment');
+  const chartTop = document.getElementById('chartTop');
+  
+  console.log('🎨 Canvas disponíveis:', {
+    evolution: !!chartEvolution,
+    status: !!chartStatus,
+    payment: !!chartPayment,
+    top: !!chartTop
+  });
 
   // Gráfico 1: Evolução Mensal
-  renderEvolutionChart();
+  if (chartEvolution) renderEvolutionChart();
 
   // Gráfico 2: Distribuição por Status
-  renderStatusChart();
+  if (chartStatus) renderStatusChart();
 
   // Gráfico 3: Formas de Pagamento
-  renderPaymentChart();
+  if (chartPayment) renderPaymentChart();
 
   // Gráfico 4: Top Clientes
-  renderTopChart('customers');
+  if (chartTop) renderTopChart('customers');
 
-  console.log('✅ Gráficos renderizados');
+  console.log('✅ Todos os gráficos renderizados com sucesso');
 }
 
 // GRÁFICO 1: Evolução Mensal (Colunas com comparação)
 function renderEvolutionChart() {
   const ctx = document.getElementById('chartEvolution');
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn('⚠️ Canvas chartEvolution não encontrado');
+    return;
+  }
 
   // Usar dados do período atual para simular evolução
   // Em produção, a API retornaria dados diários/mensais detalhados
   const currentTotal = parseFloat(reportsData.general?.sales?.total_revenue) || 0;
+  console.log('📊 Renderizando Evolution com faturamento:', currentTotal);
+  
   const labels = ['Mês -5', 'Mês -4', 'Mês -3', 'Mês -2', 'Mês -1', 'Mês Atual'];
   
   // Simular progressão (na prática viria detalhado da API)
@@ -242,13 +335,18 @@ function renderEvolutionChart() {
 // GRÁFICO 2: Distribuição por Status (Barras Horizontais)
 function renderStatusChart() {
   const ctx = document.getElementById('chartStatus');
-  if (!ctx) return;
+  if (!ctx) {
+    console.warn('⚠️ Canvas chartStatus não encontrado');
+    return;
+  }
 
   // Extrair dados reais de status dos pedidos
   const summary = reportsData.orders?.summary || {};
   const paidOrders = parseFloat(summary.paid_orders) || 0;
   const pendingOrders = parseFloat(summary.pending_orders) || 0;
   const cancelledOrders = parseFloat(summary.cancelled_orders) || 0;
+  
+  console.log('📊 Renderizando Status com:', { paidOrders, pendingOrders, cancelledOrders });
   
   // Calcular entregues (total - pago - pendente - cancelado)
   const totalOrders = parseFloat(summary.total_orders) || 0;

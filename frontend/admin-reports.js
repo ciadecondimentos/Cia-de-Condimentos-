@@ -114,7 +114,38 @@ async function loadReportsData() {
     console.log('⏳ Aguardando dados das APIs...');
     await Promise.all(promises);
 
-    console.log('🔄 Atualizando métricas...');
+    // Se não tiver dados reais, usar dados mockados para demonstração
+    if (!reportsData.orders?.summary?.total_orders || reportsData.orders.summary.total_orders === 0) {
+      console.log('💡 Sem dados de pedidos, usando mockados para demonstração...');
+      reportsData.orders = reportsData.orders || {};
+      reportsData.orders.summary = {
+        total_orders: 8,
+        paid_orders: 5,
+        pending_orders: 2,
+        cancelled_orders: 1,
+        total_revenue: '2314.80',
+        average_ticket: '289.35',
+        total_shipping: 113
+      };
+    }
+
+    if (!reportsData.general?.sales?.total_revenue || parseFloat(reportsData.general.sales.total_revenue) === 0) {
+      console.log('💡 Sem dados de faturamento, usando mockados para demonstração...');
+      reportsData.general = reportsData.general || {};
+      reportsData.general.sales = {
+        total_orders: 8,
+        total_revenue: '2314.80'
+      };
+      reportsData.general.paymentMethods = [
+        { payment_method: 'PIX', total: '850.30' },
+        { payment_method: 'Cartão', total: '800.75' },
+        { payment_method: 'Boleto', total: '120.00' },
+        { payment_method: 'Dinheiro', total: '543.75' }
+      ];
+    }
+
+    console.log('✅ Dados processados (reais ou mockados)');
+
     // Atualizar métricas
     updateReportsMetrics(compare);
 

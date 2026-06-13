@@ -4,6 +4,31 @@ let chartsInstances = {};
 let reportsData = {};
 let reportsDataPrevious = {}; // Para comparação
 
+// ==================== MOCK DATA GENERATOR ====================
+function generateMockOrdersData(days) {
+  // Gerar dados diferentes baseado no número de dias
+  // Fórmula: quanto mais dias, mais pedidos (em média)
+  const baseOrders = Math.ceil(days / 3) + Math.floor(Math.random() * 5);
+  const paidOrders = Math.ceil(baseOrders * 0.65);
+  const pendingOrders = Math.ceil(baseOrders * 0.25);
+  const cancelledOrders = Math.max(0, baseOrders - paidOrders - pendingOrders);
+  
+  // Valores variam: média de R$ 250-350 por pedido
+  const avgTicket = 250 + Math.random() * 150;
+  const totalRevenue = (paidOrders * avgTicket).toFixed(2);
+  const totalShipping = (baseOrders * (10 + Math.random() * 20)).toFixed(2);
+
+  return {
+    total_orders: baseOrders,
+    paid_orders: paidOrders,
+    pending_orders: pendingOrders,
+    cancelled_orders: cancelledOrders,
+    total_revenue: totalRevenue,
+    average_ticket: avgTicket.toFixed(2),
+    total_shipping: totalShipping
+  };
+}
+
 // Função principal para carregar dados de relatórios
 async function loadReportsData() {
   console.log('📈 Carregando dados de relatórios...');
@@ -117,30 +142,49 @@ async function loadReportsData() {
     // Se não tiver dados reais, usar dados mockados para demonstração
     if (!reportsData.orders?.summary?.total_orders || reportsData.orders.summary.total_orders === 0) {
       console.log('💡 Sem dados de pedidos, usando mockados para demonstração...');
+      
+      // Calcular número de dias para gerar dados dinâmicos
+      let daysDuration = parseInt(period);
+      
+      // Gerar dados mockados dinâmicos
+      const mockSummary = generateMockOrdersData(daysDuration);
+      
       reportsData.orders = reportsData.orders || {};
-      reportsData.orders.summary = {
-        total_orders: 8,
-        paid_orders: 5,
-        pending_orders: 2,
-        cancelled_orders: 1,
-        total_revenue: '2314.80',
-        average_ticket: '289.35',
-        total_shipping: 113
-      };
+      reportsData.orders.summary = mockSummary;
+      
+      // Gerar também para período anterior se comparando
+      if (compare) {
+        const mockSummaryPrev = generateMockOrdersData(daysDuration);
+        reportsDataPrevious.orders = reportsDataPrevious.orders || {};
+        reportsDataPrevious.orders.summary = mockSummaryPrev;
+      }
     }
 
     if (!reportsData.general?.sales?.total_revenue || parseFloat(reportsData.general.sales.total_revenue) === 0) {
       console.log('💡 Sem dados de faturamento, usando mockados para demonstração...');
+      
+      // Calcular número de dias
+      let daysDuration = parseInt(period);
+      const mockSummary = generateMockOrdersData(daysDuration);
+      
       reportsData.general = reportsData.general || {};
       reportsData.general.sales = {
-        total_orders: 8,
-        total_revenue: '2314.80'
+        total_orders: mockSummary.total_orders,
+        total_revenue: mockSummary.total_revenue
       };
+      
+      // Gerar formas de pagamento proporcional
+      const totalRevenue = parseFloat(mockSummary.total_revenue);
+      const pixTotal = (totalRevenue * 0.35).toFixed(2);
+      const cardTotal = (totalRevenue * 0.35).toFixed(2);
+      const boletoTotal = (totalRevenue * 0.15).toFixed(2);
+      const moneyTotal = (totalRevenue * 0.15).toFixed(2);
+      
       reportsData.general.paymentMethods = [
-        { payment_method: 'PIX', total: '850.30' },
-        { payment_method: 'Cartão', total: '800.75' },
-        { payment_method: 'Boleto', total: '120.00' },
-        { payment_method: 'Dinheiro', total: '543.75' }
+        { payment_method: 'PIX', total: pixTotal },
+        { payment_method: 'Cartão', total: cardTotal },
+        { payment_method: 'Boleto', total: boletoTotal },
+        { payment_method: 'Dinheiro', total: moneyTotal }
       ];
     }
 

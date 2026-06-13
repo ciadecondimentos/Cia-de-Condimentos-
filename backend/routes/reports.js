@@ -133,10 +133,13 @@ router.post('/debug/seed-test-orders', async (req, res) => {
     for (let i = 0; i < orders.length; i++) {
       const order = orders[i];
       const daysAgo = Math.floor(Math.random() * 20);
+      const createdDate = new Date();
+      createdDate.setDate(createdDate.getDate() - daysAgo);
+      
       await db.query(
         `INSERT INTO orders (customer_name, total, payment_status, payment_method, frete, created_at) 
-         VALUES ($1, $2, $3, $4, $5, NOW() - INTERVAL '${daysAgo} days')`,
-        [order.customer_name, order.total, order.payment_status, order.payment_method, order.frete]
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [order.customer_name, order.total, order.payment_status, order.payment_method, order.frete, createdDate]
       );
       inserted++;
     }
@@ -158,28 +161,41 @@ router.post('/debug/seed-test-orders', async (req, res) => {
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {
-    const { period = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
+    const { dateStart, dateEnd } = req.query;
+    
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+    }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
+    }
 
     // Sales from orders
     const sales = await db.query(`
       SELECT 
         COUNT(*)::integer as total_orders,
         COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as total_revenue
-      FROM orders WHERE created_at >= $1
-    `, [startDate]);
+      FROM orders WHERE created_at >= $1 AND created_at <= $2
+    `, [startDate, endDate]);
 
     // CRM data - SUM ALL payment statuses from crmPaymentStatus
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
         COALESCE((
-          SELECT SUM(CAST(total_price AS NUMERIC))::numeric FROM crm_purchases WHERE purchase_date >= $1
+          SELECT SUM(CAST(total_price AS NUMERIC))::numeric FROM crm_purchases WHERE purchase_date >= $1 AND purchase_date <= $2
         ), 0)::numeric as total_spent_crm
       FROM crm_purchases 
       LIMIT 1
-    `, [startDate]);
+    `, [startDate, endDate]);
 
     // CRM payment status
     const crmPaymentStatus = await db.query(`
@@ -188,9 +204,9 @@ router.get('/general', async (req, res) => {
         COUNT(*)::integer as count,
         COALESCE(SUM(CAST(total_price AS NUMERIC)), 0)::numeric as total
       FROM crm_purchases
-      WHERE purchase_date >= $1
+      WHERE purchase_date >= $1 AND purchase_date <= $2
       GROUP BY payment_status
-    `, [startDate]);
+    `, [startDate, endDate]);
 
     // Suppliers data
     const suppliersData = await db.query(`
@@ -198,8 +214,8 @@ router.get('/general', async (req, res) => {
         COUNT(DISTINCT s.id)::integer as total_suppliers,
         COALESCE(SUM(CAST(sp.total_price AS NUMERIC)), 0)::numeric as total_spent_suppliers
       FROM suppliers s
-      LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
-    `, [startDate]);
+      LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1 AND sp.purchase_date <= $2
+    `, [startDate, endDate]);
 
     // Payment methods
     const paymentMethods = await db.query(`
@@ -208,12 +224,11 @@ router.get('/general', async (req, res) => {
         COUNT(*)::integer as count,
         COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as total
       FROM orders
-      WHERE created_at >= $1
+      WHERE created_at >= $1 AND created_at <= $2
       GROUP BY payment_method
-    `, [startDate]);
+    `, [startDate, endDate]);
 
     res.json({
-      period,
       sales: cleanData(sales.rows[0]),
       crm: cleanData(crmData.rows[0]),
       crmPaymentStatus: (crmPaymentStatus.rows || []).map(cleanData),
@@ -230,24 +245,37 @@ router.get('/general', async (req, res) => {
 // ==================== ORDERS REPORT ====================
 router.get('/orders', async (req, res) => {
   try {
-    const { period = 30 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(period));
+    const { dateStart, dateEnd } = req.query;
+    
+    // Validar datas
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+    }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
+    }
 
     const summary = await db.query(`
       SELECT 
         COUNT(*)::integer as total_orders,
         COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
         COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders,
-        0::integer as cancelled_orders,
+        COUNT(CASE WHEN payment_status = 'Cancelado' THEN 1 END)::integer as cancelled_orders,
         COALESCE(CAST(SUM(CASE WHEN payment_status = 'Pago' THEN total ELSE 0 END) AS NUMERIC(15,2)), 0)::text as total_revenue,
         COALESCE(CAST(AVG(CASE WHEN payment_status = 'Pago' THEN total ELSE 0 END) AS NUMERIC(15,2)), 0)::text as average_ticket,
         COALESCE(CAST(SUM(frete) AS NUMERIC(15,2)), 0)::text as total_shipping
-      FROM orders WHERE created_at >= $1
-    `, [startDate]);
+      FROM orders WHERE created_at >= $1 AND created_at <= $2
+    `, [startDate, endDate]);
 
     res.json({
-      period,
       summary: cleanData(summary.rows[0]),
       byStatus: [],
       byPaymentMethod: [],
@@ -264,22 +292,24 @@ router.get('/orders', async (req, res) => {
 // ==================== CRM REPORT ====================
 router.get('/crm', async (req, res) => {
   try {
-    const { period = 30, mode, dateStart, dateEnd } = req.query;
+    const { dateStart, dateEnd } = req.query;
     
-    let startDate, endDate;
-    let periodLabel = `últimos ${period} dias`;
-    
-    if (mode === 'custom' && (dateStart || dateEnd)) {
-      // Modo filtro customizado
-      startDate = dateStart ? new Date(dateStart + 'T00:00:00Z') : new Date('1970-01-01');
-      endDate = dateEnd ? new Date(dateEnd + 'T23:59:59Z') : new Date();
-      periodLabel = `${dateStart || 'início'} a ${dateEnd || 'fim'}`;
-    } else {
-      // Modo padrão (período de dias)
-      endDate = new Date();
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(period));
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
     }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
+    }
+    
+    const periodLabel = `${dateStart} a ${dateEnd}`;
 
     // Query 1: Summary
     const summary = await db.query(`
@@ -331,22 +361,24 @@ router.get('/crm', async (req, res) => {
 // ==================== SUPPLIERS REPORT ====================
 router.get('/suppliers', async (req, res) => {
   try {
-    const { period = 30, mode, dateStart, dateEnd } = req.query;
+    const { dateStart, dateEnd } = req.query;
     
-    let startDate, endDate;
-    let periodLabel = `últimos ${period} dias`;
-    
-    if (mode === 'custom' && (dateStart || dateEnd)) {
-      // Modo filtro customizado
-      startDate = dateStart ? new Date(dateStart + 'T00:00:00Z') : new Date('1970-01-01');
-      endDate = dateEnd ? new Date(dateEnd + 'T23:59:59Z') : new Date();
-      periodLabel = `${dateStart || 'início'} a ${dateEnd || 'fim'}`;
-    } else {
-      // Modo padrão (período de dias)
-      endDate = new Date();
-      startDate = new Date();
-      startDate.setDate(startDate.getDate() - parseInt(period));
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
     }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
+    }
+    
+    const periodLabel = `${dateStart} a ${dateEnd}`;
 
     // Query 1: Summary
     const summary = await db.query(`

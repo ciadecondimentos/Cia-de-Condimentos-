@@ -622,8 +622,10 @@ router.get('/daily-sales', async (req, res) => {
     const { dateStart, dateEnd } = req.query;
     
     if (!dateStart || !dateEnd) {
-      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios', params: req.query });
     }
+    
+    console.log(`DEBUG: daily-sales called with dateStart=${dateStart}, dateEnd=${dateEnd}`);
     
     const startDate = new Date(dateStart + 'T00:00:00Z');
     const endDate = new Date(dateEnd + 'T23:59:59Z');
@@ -636,45 +638,46 @@ router.get('/daily-sales', async (req, res) => {
       return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
     }
 
+    console.log(`DEBUG: Querying from ${startDate} to ${endDate}`);
+
     // Vendas por dia - simplified query
     let dailySales = [];
     try {
+      console.log('DEBUG: Starting orders query');
       const result = await db.query(`
         SELECT 
           created_at::date as date,
           COUNT(*)::integer as orders,
-          COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as revenue,
-          COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
-          COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
+          COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as revenue
         FROM orders
         WHERE created_at >= $1 AND created_at <= $2
         GROUP BY created_at::date
         ORDER BY created_at::date ASC
       `, [startDate, endDate]);
       dailySales = (result.rows || []).map(cleanData);
+      console.log(`DEBUG: Orders query returned ${dailySales.length} rows`);
     } catch (e) {
-      console.error('Orders daily-sales query error:', e.message);
+      console.error('Orders daily-sales query error:', e);
       dailySales = [];
     }
 
     // Compras CRM por dia - simplified
     let dailyCRM = [];
     try {
+      console.log('DEBUG: Starting CRM query');
       const result = await db.query(`
         SELECT 
           purchase_date::date as date,
-          COUNT(*)::integer as transactions,
-          COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total,
-          COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
-          COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
+          COUNT(*)::integer as transactions
         FROM crm_purchases
         WHERE purchase_date >= $1 AND purchase_date <= $2
         GROUP BY purchase_date::date
         ORDER BY purchase_date::date ASC
       `, [startDate, endDate]);
       dailyCRM = (result.rows || []).map(cleanData);
+      console.log(`DEBUG: CRM query returned ${dailyCRM.length} rows`);
     } catch (e) {
-      console.error('CRM daily-sales query error:', e.message);
+      console.error('CRM daily-sales query error:', e);
       dailyCRM = [];
     }
 
@@ -684,8 +687,8 @@ router.get('/daily-sales', async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Erro em /daily-sales:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Erro em /daily-sales (outer):', error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 

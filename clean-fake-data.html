@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpeza de Dados Fictícios</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 { 
+            color: #333; 
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .info { 
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #555;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .btn-clean {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-clean:hover { background: #dc2626; transform: translateY(-2px); box-shadow: 0 10px 20px rgba(239,68,68,0.3); }
+        .btn-cancel {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn-cancel:hover { background: #d1d5db; }
+        #output {
+            background: #1f2937;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 6px;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.loading { background: #fef3c7; color: #92400e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpeza de Dados Fictícios</h1>
+        
+        <div class="info">
+            ⚠️ Esta ação irá <strong>remover permanentemente</strong> todos os 10 pedidos de teste fictícios criados durante a implementação. Apenas dados reais permanecerão no banco de dados.
+        </div>
+
+        <div class="button-group">
+            <button class="btn-clean" onclick="cleanTestData()">🗑️ Remover Dados Fictícios</button>
+            <button class="btn-cancel" onclick="location.reload()">❌ Cancelar</button>
+        </div>
+
+        <div id="output"></div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://cia-de-condimentos.onrender.com/api';
+        const output = document.getElementById('output');
+        const status = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            const prefix = {
+                'info': '📋',
+                'success': '✅',
+                'error': '❌',
+                'loading': '⏳'
+            }[type] || '•';
+            
+            output.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        async function cleanTestData() {
+            const btn = event.target;
+            btn.disabled = true;
+
+            try {
+                log('Iniciando limpeza de dados fictícios...', 'loading');
+                log('Conectando ao servidor...', 'loading');
+
+                const response = await fetch(`${API_BASE}/reports/debug/clean-test-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status}`);
+                }
+
+                const result = await response.json();
+
+                log(`Pedidos fictícios encontrados: ${result.deleted}`, 'info');
+                log(`Pedidos reais restantes: ${result.totalRemaining}`, 'info');
+                log(`${result.message}`, 'success');
+
+                if (result.sampleRealOrders && result.sampleRealOrders.length > 0) {
+                    log('\n📋 Exemplo de pedidos reais que permanecem:', 'info');
+                    result.sampleRealOrders.forEach((order, idx) => {
+                        log(`  ${idx + 1}. ${order.customer_name} - ${order.customer_email} - R$ ${order.total}`, 'info');
+                    });
+                }
+
+                showStatus('✅ Limpeza concluída com sucesso!', 'success');
+                btn.textContent = '✅ Concluído!';
+                btn.disabled = true;
+
+            } catch (error) {
+                log(`Erro ao limpar dados: ${error.message}`, 'error');
+                showStatus('❌ Erro ao limpar dados!', 'error');
+                btn.disabled = false;
+                btn.textContent = '🗑️ Remover Dados Fictícios';
+            }
+        }
+
+        function showStatus(message, type) {
+            status.className = `status ${type}`;
+            status.textContent = message;
+        }
+
+        // Log inicial
+        log('🧹 Ferramenta de Limpeza de Dados Fictícios', 'info');
+        log('Clique em "Remover Dados Fictícios" para iniciar...', 'info');
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 let chartsInstances = {};
 let reportsData = {};
 
-const API_BASE = 'https://cia-de-condimentos.onrender.com/api';
+// API_BASE já definido em admin.js, reutilizar a mesma
 
 // ==================== INICIALIZAR DATAS PADRÃO ====================
 function initializeDates() {

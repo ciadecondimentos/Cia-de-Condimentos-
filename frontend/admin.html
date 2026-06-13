@@ -1547,23 +1547,14 @@ tr:hover td { background: #faf7f2; }
         </div>
       </div>
 
-      <!-- FILTROS -->
+      <!-- CONTROLES DE PERÍODO -->
       <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">🔍 Filtros do Relatório</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: flex-end;">
-          <div>
-            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">De:</label>
-            <input type="date" id="reportsDateStart" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
-          </div>
-          <div>
-            <label style="font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px;">Até:</label>
-            <input type="date" id="reportsDateEnd" style="width: 100%; padding: 10px 14px; border: 2px solid #e8e0d4; border-radius: 4px; font-size: 13px;">
-          </div>
-          <div>
-            <button onclick="loadReportsData()" style="width: 100%; padding: 10px 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer;">
-              🔄 Carregar
-            </button>
-          </div>
+        <h3 style="margin: 0 0 16px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">📅 Período do Dashboard</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="reports-period-btn btn btn-secondary active" data-days="7" onclick="setReportsPeriod(7, this)">Últimos 7 dias</button>
+          <button class="reports-period-btn btn btn-secondary" data-days="14" onclick="setReportsPeriod(14, this)">Últimos 14 dias</button>
+          <button class="reports-period-btn btn btn-secondary" data-days="21" onclick="setReportsPeriod(21, this)">Últimos 21 dias</button>
+          <button class="reports-period-btn btn btn-secondary" data-days="30" onclick="setReportsPeriod(30, this)">Últimos 30 dias</button>
         </div>
       </div>
 

@@ -2,50 +2,32 @@
 
 let chartsInstances = {};
 let reportsData = {};
+let currentReportsPeriod = 30;
 
 // API_BASE já definido em admin.js, reutilizar a mesma
 
-// ==================== INICIALIZAR DATAS PADRÃO ====================
-function initializeDates() {
-  const today = new Date();
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(today.getDate() - 30);
-
-  const formatDate = (date) => date.toISOString().split('T')[0];
-
-  const startInput = document.getElementById('reportsDateStart');
-  const endInput = document.getElementById('reportsDateEnd');
-
-  if (startInput && !startInput.value) startInput.value = formatDate(thirtyDaysAgo);
-  if (endInput && !endInput.value) endInput.value = formatDate(today);
+function formatDateForInput(date) {
+  return date.toISOString().split('T')[0];
 }
 
-// ==================== VALIDAR DATAS ====================
-function validateDates() {
-  const dateStart = document.getElementById('reportsDateStart')?.value;
-  const dateEnd = document.getElementById('reportsDateEnd')?.value;
+function getPeriodRange(days) {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date();
+  start.setDate(end.getDate() - (days - 1));
+  start.setHours(0, 0, 0, 0);
 
-  if (!dateStart || !dateEnd) {
-    showToast('⚠️ Selecione data de início e fim', 'error');
-    return false;
-  }
+  return {
+    dateStart: formatDateForInput(start),
+    dateEnd: formatDateForInput(end)
+  };
+}
 
-  const start = new Date(dateStart);
-  const end = new Date(dateEnd);
-  const today = new Date();
-  today.setHours(23, 59, 59, 999);
-
-  if (start > end) {
-    showToast('⚠️ Data de início não pode ser posterior à data de fim', 'error');
-    return false;
-  }
-
-  if (end > today) {
-    showToast('⚠️ Data de fim não pode ser no futuro', 'error');
-    return false;
-  }
-
-  return true;
+function setReportsPeriod(days, button) {
+  currentReportsPeriod = days;
+  document.querySelectorAll('.reports-period-btn').forEach(btn => btn.classList.remove('active'));
+  if (button) button.classList.add('active');
+  loadReportsData(days);
 }
 
 // ==================== FORMATAR NÚMEROS ====================
@@ -61,16 +43,14 @@ function formatCurrency(num) {
 }
 
 // ==================== CARREGAR DADOS DOS RELATÓRIOS ====================
-async function loadReportsData() {
+async function loadReportsData(periodDays = currentReportsPeriod) {
   console.log('📈 Carregando dados de relatórios (versão refatorada)...');
   
   try {
-    if (!validateDates()) return;
+    const { dateStart, dateEnd } = getPeriodRange(periodDays);
+    currentReportsPeriod = periodDays;
 
-    const dateStart = document.getElementById('reportsDateStart').value;
-    const dateEnd = document.getElementById('reportsDateEnd').value;
-
-    console.log(`📅 Período: ${dateStart} a ${dateEnd}`);
+    console.log(`📅 Período automático: ${dateStart} a ${dateEnd} (${periodDays} dias)`);
 
     // Chamar TODAS as APIs em paralelo
     const promises = [
@@ -423,8 +403,7 @@ async function fillReportsTables() {
 
 // ==================== EXPORTAR CSV ====================
 async function exportReportsCSV() {
-  const dateStart = document.getElementById('reportsDateStart').value;
-  const dateEnd = document.getElementById('reportsDateEnd').value;
+  const { dateStart, dateEnd } = getPeriodRange(currentReportsPeriod);
 
   let csv = 'RELATÓRIO DE VENDAS - 100% REAL\n';
   csv += `Período: ${dateStart} a ${dateEnd}\n\n`;
@@ -450,17 +429,7 @@ async function exportReportsCSV() {
 // ==================== INICIALIZAÇÃO ====================
 window.addEventListener('load', () => {
   console.log('🚀 Inicializando Dashboard de Relatórios (v3 - 100% Real)...');
-  initializeDates();
-  
-  const loadBtn = document.querySelector('button[onclick="loadReportsData()"]');
-  if (loadBtn) {
-    loadBtn.addEventListener('click', loadReportsData);
-  }
-
-  const dateInputs = document.querySelectorAll('#reportsDateStart, #reportsDateEnd');
-  dateInputs.forEach(input => {
-    input.addEventListener('change', loadReportsData);
-  });
-
+  currentReportsPeriod = 30;
+  setReportsPeriod(30, document.querySelector('.reports-period-btn[data-days="30"]'));
   console.log('✅ Dashboard inicializado e pronto para uso');
 });

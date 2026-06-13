@@ -59,23 +59,35 @@ router.get('/diagnose', async (req, res) => {
     `);
     
     // Check crm_purchases schema
-    const crmSchema = await db.query(`
-      SELECT column_name, data_type FROM information_schema.columns 
-      WHERE table_name = 'crm_purchases' ORDER BY ordinal_position
-    `);
+    let crmSchema = [];
+    try {
+      const result = await db.query(`
+        SELECT column_name, data_type FROM information_schema.columns 
+        WHERE table_name = 'crm_purchases' ORDER BY ordinal_position
+      `);
+      crmSchema = result.rows || [];
+    } catch (e) {
+      console.log('CRM schema query failed:', e.message);
+    }
     
     // Sample orders data
     const sampleOrders = await db.query('SELECT * FROM orders LIMIT 2');
     
     // Sample CRM purchases
-    const sampleCRM = await db.query('SELECT * FROM crm_purchases LIMIT 2');
+    let sampleCRM = [];
+    try {
+      const result = await db.query('SELECT * FROM crm_purchases LIMIT 2');
+      sampleCRM = result.rows || [];
+    } catch (e) {
+      console.log('CRM sample query failed:', e.message);
+    }
     
     res.json({
       tables,
       ordersSchema: ordersSchema.rows,
-      crmSchema: crmSchema.rows,
+      crmSchema,
       sampleOrders: sampleOrders.rows,
-      sampleCRM: sampleCRM.rows,
+      sampleCRM,
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
@@ -624,37 +636,51 @@ router.get('/daily-sales', async (req, res) => {
       return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
     }
 
-    // Vendas por dia
-    const dailySales = await db.query(`
-      SELECT 
-        created_at::date as date,
-        COUNT(*)::integer as orders,
-        COALESCE(SUM(total), 0)::text as revenue,
-        COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
-        COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
-      FROM orders
-      WHERE created_at >= $1 AND created_at <= $2
-      GROUP BY created_at::date
-      ORDER BY created_at::date ASC
-    `, [startDate, endDate]);
+    // Vendas por dia - simplified query
+    let dailySales = [];
+    try {
+      const result = await db.query(`
+        SELECT 
+          created_at::date as date,
+          COUNT(*)::integer as orders,
+          COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as revenue,
+          COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
+          COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
+        FROM orders
+        WHERE created_at >= $1 AND created_at <= $2
+        GROUP BY created_at::date
+        ORDER BY created_at::date ASC
+      `, [startDate, endDate]);
+      dailySales = (result.rows || []).map(cleanData);
+    } catch (e) {
+      console.error('Orders daily-sales query error:', e.message);
+      dailySales = [];
+    }
 
-    // Compras CRM por dia
-    const dailyCRM = await db.query(`
-      SELECT 
-        purchase_date::date as date,
-        COUNT(*)::integer as transactions,
-        COALESCE(SUM(total_price), 0)::text as total,
-        COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
-        COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
-      FROM crm_purchases
-      WHERE purchase_date >= $1 AND purchase_date <= $2
-      GROUP BY purchase_date::date
-      ORDER BY purchase_date::date ASC
-    `, [startDate, endDate]);
+    // Compras CRM por dia - simplified
+    let dailyCRM = [];
+    try {
+      const result = await db.query(`
+        SELECT 
+          purchase_date::date as date,
+          COUNT(*)::integer as transactions,
+          COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total,
+          COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
+          COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
+        FROM crm_purchases
+        WHERE purchase_date >= $1 AND purchase_date <= $2
+        GROUP BY purchase_date::date
+        ORDER BY purchase_date::date ASC
+      `, [startDate, endDate]);
+      dailyCRM = (result.rows || []).map(cleanData);
+    } catch (e) {
+      console.error('CRM daily-sales query error:', e.message);
+      dailyCRM = [];
+    }
 
     res.json({
-      orders: (dailySales.rows || []).map(cleanData),
-      crm: (dailyCRM.rows || []).map(cleanData),
+      orders: dailySales,
+      crm: dailyCRM,
       generatedAt: new Date().toISOString()
     });
   } catch (error) {

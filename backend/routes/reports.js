@@ -58,13 +58,24 @@ router.get('/diagnose', async (req, res) => {
       WHERE table_name = 'orders' ORDER BY ordinal_position
     `);
     
+    // Check crm_purchases schema
+    const crmSchema = await db.query(`
+      SELECT column_name, data_type FROM information_schema.columns 
+      WHERE table_name = 'crm_purchases' ORDER BY ordinal_position
+    `);
+    
     // Sample orders data
     const sampleOrders = await db.query('SELECT * FROM orders LIMIT 2');
+    
+    // Sample CRM purchases
+    const sampleCRM = await db.query('SELECT * FROM crm_purchases LIMIT 2');
     
     res.json({
       tables,
       ordersSchema: ordersSchema.rows,
+      crmSchema: crmSchema.rows,
       sampleOrders: sampleOrders.rows,
+      sampleCRM: sampleCRM.rows,
       generatedAt: new Date().toISOString()
     });
   } catch (error) {

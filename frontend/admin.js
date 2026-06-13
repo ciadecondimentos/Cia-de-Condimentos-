@@ -219,14 +219,19 @@ function changeReportPeriod(days, element) {
 
 async function renderSalesChart(period) {
   const salesChart = document.getElementById('salesChart');
-  
+
   try {
-    // Fetch paid orders only
-    const ordersRes = await fetch(`${API_BASE}/orders`);
+    const [ordersRes, customersRes] = await Promise.all([
+      fetch(`${API_BASE}/orders`),
+      fetch(`${API_BASE}/crm/customers`)
+    ]);
+
     if (!ordersRes.ok) throw new Error('Failed to fetch orders');
-    
+    if (!customersRes.ok) throw new Error('Failed to fetch CRM customers');
+
     const orders = await ordersRes.json();
-    const paidOrders = orders.filter(o => o.payment_status === 'Pago');
+    const customers = await customersRes.json();
+    const paidOrders = orders.filter(o => String(o.payment_status || '').toLowerCase() === 'pago');
     
     // Determine grouping by period
     const now = new Date();
@@ -253,28 +258,52 @@ async function renderSalesChart(period) {
         labels.push(date.getDate());
       }
     } else if (period === 'year') {
-      // Group by month for last 12 months
-      for (let i = 11; i >= 0; i--) {
-        const date = new Date(now);
-        date.setMonth(date.getMonth() - i);
-        const monthKey = date.toISOString().substring(0, 7); // YYYY-MM
+      // Group by month for the full 2026 year
+      for (let month = 0; month < 12; month++) {
+        const date = new Date(2026, month, 1);
+        const monthKey = date.toISOString().substring(0, 7);
         groupedData[monthKey] = 0;
-        labels.push(date.toLocaleString('pt-BR', { month: 'short' }).toUpperCase());
+        labels.push(date.toLocaleString('pt-BR', { month: 'long' }));
       }
     }
     
-    // Group orders by period
+    // Group paid orders by period
     paidOrders.forEach(order => {
+      const orderDate = new Date(order.created_at);
+      const year = orderDate.getFullYear();
       let key;
+
       if (period === 'year') {
-        key = order.created_at.substring(0, 7); // YYYY-MM
+        key = `${year}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
       } else {
-        key = order.created_at.split('T')[0]; // YYYY-MM-DD
+        key = order.created_at.split('T')[0];
       }
-      
+
       if (groupedData.hasOwnProperty(key)) {
-        groupedData[key] += parseFloat(order.total || 0);
+        groupedData[key] += parseMoney(order.total || 0);
       }
+    });
+
+    // Group paid CRM purchases using the same period logic as orders
+    customers.forEach(customer => {
+      (customer.purchases || []).forEach(purchase => {
+        if (String(purchase.payment_status || '').toLowerCase() !== 'pago') return;
+
+        const purchaseDate = new Date(purchase.purchase_date || purchase.created_at);
+        if (isNaN(purchaseDate.getTime())) return;
+
+        let key;
+        if (period === 'year') {
+          if (purchaseDate.getFullYear() !== 2026) return;
+          key = `${purchaseDate.getFullYear()}-${String(purchaseDate.getMonth() + 1).padStart(2, '0')}`;
+        } else {
+          key = purchaseDate.toISOString().split('T')[0];
+        }
+
+        if (groupedData.hasOwnProperty(key)) {
+          groupedData[key] += parseMoney(purchase.total_price || 0);
+        }
+      });
     });
     
     // Get sorted data
@@ -1922,6 +1951,23 @@ function loadAllReports() {
   loadSuppliersReport(period);
   
   showToast('Relatórios atualizados com sucesso!', 'success');
+}
+
+function parseMoney(value) {
+  if (value === null || value === undefined || value === '') return 0;
+  if (typeof value === 'number') return isFinite(value) ? value : 0;
+
+  const normalized = String(value).trim().replace(/\s+/g, '');
+
+  if (normalized.includes(',') && normalized.includes('.')) {
+    return Number(normalized.replace(/\./g, '').replace(',', '.')) || 0;
+  }
+
+  if (normalized.includes(',')) {
+    return Number(normalized.replace(',', '.')) || 0;
+  }
+
+  return Number(normalized.replace(/[R$]/g, '')) || 0;
 }
 
 function formatCurrency(value) {

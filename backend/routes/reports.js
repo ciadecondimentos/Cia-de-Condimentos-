@@ -622,10 +622,8 @@ router.get('/daily-sales', async (req, res) => {
     const { dateStart, dateEnd } = req.query;
     
     if (!dateStart || !dateEnd) {
-      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios', params: req.query });
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
     }
-    
-    console.log(`DEBUG: daily-sales called with dateStart=${dateStart}, dateEnd=${dateEnd}`);
     
     const startDate = new Date(dateStart + 'T00:00:00Z');
     const endDate = new Date(dateEnd + 'T23:59:59Z');
@@ -638,12 +636,9 @@ router.get('/daily-sales', async (req, res) => {
       return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
     }
 
-    console.log(`DEBUG: Querying from ${startDate} to ${endDate}`);
-
-    // Vendas por dia - simplified query
+    // Vendas por dia
     let dailySales = [];
     try {
-      console.log('DEBUG: Starting orders query');
       const result = await db.query(`
         SELECT 
           TO_CHAR(created_at, 'YYYY-MM-DD') as date,
@@ -657,16 +652,14 @@ router.get('/daily-sales', async (req, res) => {
         ORDER BY TO_CHAR(created_at, 'YYYY-MM-DD') ASC
       `, [startDate, endDate]);
       dailySales = (result.rows || []).map(cleanData);
-      console.log(`DEBUG: Orders query returned ${dailySales.length} rows`);
     } catch (e) {
       console.error('Orders daily-sales query error:', e);
       dailySales = [];
     }
 
-    // Compras CRM por dia - simplified
+    // Compras CRM por dia
     let dailyCRM = [];
     try {
-      console.log('DEBUG: Starting CRM query');
       const result = await db.query(`
         SELECT 
           TO_CHAR(purchase_date::timestamp, 'YYYY-MM-DD') as date,
@@ -680,7 +673,6 @@ router.get('/daily-sales', async (req, res) => {
         ORDER BY TO_CHAR(purchase_date::timestamp, 'YYYY-MM-DD') ASC
       `, [startDate, endDate]);
       dailyCRM = (result.rows || []).map(cleanData);
-      console.log(`DEBUG: CRM query returned ${dailyCRM.length} rows`);
     } catch (e) {
       console.error('CRM daily-sales query error:', e);
       dailyCRM = [];
@@ -692,8 +684,8 @@ router.get('/daily-sales', async (req, res) => {
       generatedAt: new Date().toISOString()
     });
   } catch (error) {
-    console.error('Erro em /daily-sales (outer):', error);
-    res.status(500).json({ error: error.message, stack: error.stack });
+    console.error('Erro em /daily-sales:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -646,13 +646,15 @@ router.get('/daily-sales', async (req, res) => {
       console.log('DEBUG: Starting orders query');
       const result = await db.query(`
         SELECT 
-          created_at::date as date,
+          TO_CHAR(created_at, 'YYYY-MM-DD') as date,
           COUNT(*)::integer as orders,
-          COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as revenue
+          COALESCE(CAST(SUM(total) AS NUMERIC(15,2)), 0)::text as revenue,
+          COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
+          COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
         FROM orders
         WHERE created_at >= $1 AND created_at <= $2
-        GROUP BY created_at::date
-        ORDER BY created_at::date ASC
+        GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
+        ORDER BY TO_CHAR(created_at, 'YYYY-MM-DD') ASC
       `, [startDate, endDate]);
       dailySales = (result.rows || []).map(cleanData);
       console.log(`DEBUG: Orders query returned ${dailySales.length} rows`);
@@ -667,12 +669,15 @@ router.get('/daily-sales', async (req, res) => {
       console.log('DEBUG: Starting CRM query');
       const result = await db.query(`
         SELECT 
-          purchase_date::date as date,
-          COUNT(*)::integer as transactions
+          TO_CHAR(purchase_date::timestamp, 'YYYY-MM-DD') as date,
+          COUNT(*)::integer as transactions,
+          COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total,
+          COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
+          COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
         FROM crm_purchases
-        WHERE purchase_date >= $1 AND purchase_date <= $2
-        GROUP BY purchase_date::date
-        ORDER BY purchase_date::date ASC
+        WHERE purchase_date::timestamp >= $1 AND purchase_date::timestamp <= $2
+        GROUP BY TO_CHAR(purchase_date::timestamp, 'YYYY-MM-DD')
+        ORDER BY TO_CHAR(purchase_date::timestamp, 'YYYY-MM-DD') ASC
       `, [startDate, endDate]);
       dailyCRM = (result.rows || []).map(cleanData);
       console.log(`DEBUG: CRM query returned ${dailyCRM.length} rows`);

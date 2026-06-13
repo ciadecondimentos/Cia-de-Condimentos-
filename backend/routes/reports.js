@@ -129,6 +129,43 @@ router.get('/debug/orders-structure', async (req, res) => {
   }
 });
 
+// Test single order insertion
+router.post('/debug/test-insert-order', async (req, res) => {
+  try {
+    const testOrder = {
+      customer_name: 'Teste Silva',
+      customer_email: 'teste@email.com',
+      customer_address: 'Rua Teste, 123',
+      subtotal: 100.00,
+      total: 115.00,
+      payment_status: 'Pago',
+      payment_method: 'PIX',
+      frete: 15.00
+    };
+
+    console.log('🧪 Tentando inserir pedido de teste:', testOrder);
+
+    const result = await db.query(
+      `INSERT INTO orders (customer_name, customer_email, customer_address, subtotal, total, payment_status, payment_method, frete, created_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`,
+      [testOrder.customer_name, testOrder.customer_email, testOrder.customer_address, testOrder.subtotal, testOrder.total, testOrder.payment_status, testOrder.payment_method, testOrder.frete]
+    );
+
+    res.json({ 
+      success: true, 
+      inserted_id: result.rows[0].id,
+      message: 'Pedido de teste inserido com sucesso'
+    });
+  } catch (error) {
+    console.error('❌ Erro ao inserir teste:', error);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.code,
+      detail: error.detail
+    });
+  }
+});
+
 // ==================== SEED TEST DATA ====================
 router.post('/debug/seed-test-orders', async (req, res) => {
   try {

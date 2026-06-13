@@ -9,7 +9,13 @@ function cleanData(obj) {
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       let val = obj[key];
-      if (typeof val === 'string') {
+      // Only convert numeric-like fields
+      const isNumericField = key.includes('count') || key.includes('total') || key.includes('revenue') || 
+                             key.includes('spending') || key.includes('price') || key.includes('spent') ||
+                             key.includes('orders') || key.includes('transactions') || key.includes('sum') ||
+                             key.includes('pending') || key.includes('paid') || key.includes('cancelled');
+      
+      if (typeof val === 'string' && isNumericField) {
         if (val === 'NaN' || val === 'null' || val === '') {
           result[key] = 0;
         } else {
@@ -19,7 +25,7 @@ function cleanData(obj) {
       } else if (typeof val === 'number') {
         result[key] = isNaN(val) ? 0 : val;
       } else if (val === null || val === undefined) {
-        result[key] = 0;
+        result[key] = isNumericField ? 0 : null;
       } else {
         result[key] = val;
       }

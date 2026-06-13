@@ -48,12 +48,11 @@ router.get('/debug/crm-purchases', async (req, res) => {
     const result = await db.query(`
       SELECT 
         COUNT(*) as total_records,
-        SUM(CAST(total AS NUMERIC)) as sum_total,
         SUM(CAST(total_price AS NUMERIC)) as sum_total_price,
         COUNT(DISTINCT payment_status) as status_count
       FROM crm_purchases LIMIT 1
     `);
-    const sample = await db.query('SELECT id, customer_id, total, total_price, payment_status, purchase_date FROM crm_purchases LIMIT 5');
+    const sample = await db.query('SELECT id, customer_id, total_price, payment_status, purchase_date FROM crm_purchases LIMIT 5');
     res.json({ 
       success: true, 
       summary: result.rows[0],

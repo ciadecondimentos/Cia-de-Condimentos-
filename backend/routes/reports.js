@@ -194,16 +194,17 @@ router.post('/debug/seed-test-orders', async (req, res) => {
       createdDate.setDate(createdDate.getDate() - daysAgo);
       
       try {
-        await db.query(
+        console.log(`Inserindo pedido ${i + 1}/${orders.length}: ${order.customer_name}, data: ${createdDate}`);
+        const result = await db.query(
           `INSERT INTO orders (customer_name, customer_email, customer_address, subtotal, total, payment_status, payment_method, frete, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
           [order.customer_name, order.customer_email, order.customer_address, order.subtotal, order.total, order.payment_status, order.payment_method, order.frete, createdDate]
         );
         inserted++;
-        console.log(`✅ Pedido ${inserted} inserido: ${order.customer_name}`);
+        console.log(`✅ Pedido ${inserted} inserido: ID=${result.rows[0].id}, ${order.customer_name}`);
       } catch (insertError) {
-        console.error(`❌ Erro ao inserir pedido ${i + 1}:`, insertError.message);
-        errors.push({ index: i + 1, error: insertError.message });
+        console.error(`❌ Erro ao inserir pedido ${i + 1}:`, insertError.message, insertError.code, insertError.detail);
+        errors.push({ index: i + 1, name: order.customer_name, error: insertError.message });
       }
     }
 

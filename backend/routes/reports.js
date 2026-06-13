@@ -843,4 +843,52 @@ router.get('/payment-summary', async (req, res) => {
   }
 });
 
+// ==================== REMOVE SEED DATA (desenvolvedor) ====================
+router.post('/debug/remove-seed-data', async (req, res) => {
+  try {
+    console.log('🗑️  Removendo dados do seed...');
+    
+    const seedCustomers = [
+      'Mercado Central Frutos',
+      'Supermercado Bom Preço',
+      'Restaurante Tempero da Casa',
+      'Distribuidora A&B',
+      'Padaria Artesanal Pão Quente',
+      'Restaurante Gourmet Premium',
+      'Açougue do Bairro',
+      'Hortifrúti Premium',
+      'Confeitaria Sabor Caseiro',
+      'Mercearia Central',
+      'Pizzaria Napoli',
+      'Lanchonete Rápido Saudável',
+      'Sorveteria Gelato Italiano',
+      'Café Gourmet',
+      'Trattoria Bella Itália',
+      'Comida Árabe Especial',
+      'Churrascaria Estância',
+      'Pastelaria Dom Benevenuto',
+      'Restaurante do Porto',
+      'Padaria Nova Era'
+    ];
+
+    // Delete seed orders
+    const result = await db.query(
+      `DELETE FROM orders WHERE customer_name = ANY($1)`,
+      [seedCustomers]
+    );
+
+    const remainingOrders = await db.query('SELECT COUNT(*) as count FROM orders');
+
+    res.json({
+      success: true,
+      deleted: result.rowCount || 0,
+      remaining: parseInt(remainingOrders.rows[0]?.count || 0),
+      message: `✅ ${result.rowCount || 0} pedidos do seed removidos. ${remainingOrders.rows[0]?.count || 0} pedidos reais permanecem.`
+    });
+  } catch (error) {
+    console.error('Erro ao remover seed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

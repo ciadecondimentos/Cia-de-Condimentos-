@@ -493,4 +493,63 @@ router.get('/suppliers', async (req, res) => {
   }
 });
 
+// ==================== CLEAN TEST DATA ====================
+router.post('/debug/clean-test-data', async (req, res) => {
+  try {
+    console.log('🧹 Removendo dados fictícios de teste...');
+    
+    const fakeCustomerNames = [
+      'João Silva',
+      'Maria Santos',
+      'Pedro Costa',
+      'Ana Oliveira',
+      'Carlos Souza',
+      'Julia Rocha',
+      'Ricardo Lima',
+      'Fernanda Dias',
+      'Thiago Mendes',
+      'Camila Torres'
+    ];
+
+    // Contar pedidos fictícios antes de deletar
+    const beforeCount = await db.query(
+      `SELECT COUNT(*) as total FROM orders WHERE customer_name = ANY($1)`,
+      [fakeCustomerNames]
+    );
+
+    console.log(`📊 Pedidos fictícios encontrados: ${beforeCount.rows[0].total}`);
+
+    // Deletar pedidos fictícios
+    const deleteResult = await db.query(
+      `DELETE FROM orders WHERE customer_name = ANY($1)`,
+      [fakeCustomerNames]
+    );
+
+    console.log(`🗑️  Pedidos fictícios removidos: ${deleteResult.rowCount}`);
+
+    // Contar total de pedidos restantes
+    const afterCount = await db.query('SELECT COUNT(*) as total FROM orders');
+    console.log(`✅ Total de pedidos reais restantes: ${afterCount.rows[0].total}`);
+
+    // Mostrar alguns pedidos reais ainda no banco
+    const sampleOrders = await db.query(
+      `SELECT id, customer_name, customer_email, total, created_at FROM orders LIMIT 5`
+    );
+
+    res.json({
+      success: true,
+      deleted: deleteResult.rowCount,
+      totalRemaining: parseInt(afterCount.rows[0].total),
+      message: `✅ ${deleteResult.rowCount} pedidos fictícios removidos. ${afterCount.rows[0].total} pedidos reais permanecem no banco.`,
+      sampleRealOrders: sampleOrders.rows
+    });
+  } catch (error) {
+    console.error('❌ Erro ao limpar dados:', error);
+    res.status(500).json({ 
+      error: error.message,
+      details: error.toString()
+    });
+  }
+});
+
 module.exports = router;

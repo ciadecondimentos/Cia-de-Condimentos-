@@ -616,29 +616,29 @@ router.get('/daily-sales', async (req, res) => {
     // Vendas por dia
     const dailySales = await db.query(`
       SELECT 
-        TO_CHAR(created_at, 'YYYY-MM-DD') as date,
+        created_at::date as date,
         COUNT(*)::integer as orders,
-        COALESCE(SUM(total), 0)::numeric as revenue,
+        COALESCE(SUM(total), 0)::text as revenue,
         COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
         COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
       FROM orders
       WHERE created_at >= $1 AND created_at <= $2
-      GROUP BY TO_CHAR(created_at, 'YYYY-MM-DD')
-      ORDER BY TO_CHAR(created_at, 'YYYY-MM-DD') ASC
+      GROUP BY created_at::date
+      ORDER BY created_at::date ASC
     `, [startDate, endDate]);
 
     // Compras CRM por dia
     const dailyCRM = await db.query(`
       SELECT 
-        TO_CHAR(purchase_date, 'YYYY-MM-DD') as date,
+        purchase_date::date as date,
         COUNT(*)::integer as transactions,
-        COALESCE(SUM(total_price), 0)::numeric as total,
+        COALESCE(SUM(total_price), 0)::text as total,
         COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
         COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
       FROM crm_purchases
       WHERE purchase_date >= $1 AND purchase_date <= $2
-      GROUP BY TO_CHAR(purchase_date, 'YYYY-MM-DD')
-      ORDER BY TO_CHAR(purchase_date, 'YYYY-MM-DD') ASC
+      GROUP BY purchase_date::date
+      ORDER BY purchase_date::date ASC
     `, [startDate, endDate]);
 
     res.json({

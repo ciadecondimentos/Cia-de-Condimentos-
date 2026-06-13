@@ -179,6 +179,14 @@ function updateReportsMetrics() {
     el4.textContent = formatNumber(totalSuppliers);
     console.log(`✅ Fornecedores: ${totalSuppliers}`);
   }
+
+  // Total de Compras do CRM
+  const totalCRMPurchases = parseFloat(reportsData.crm?.totalPurchasesCount) || 0;
+  const el5 = document.getElementById('rep-crm-purchases');
+  if (el5) {
+    el5.textContent = formatNumber(totalCRMPurchases);
+    console.log(`✅ Compras CRM: ${totalCRMPurchases}`);
+  }
 }
 
 // ==================== RENDERIZAR GRÁFICOS ====================

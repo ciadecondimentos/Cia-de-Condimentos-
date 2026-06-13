@@ -416,6 +416,7 @@ router.get('/crm', async (req, res) => {
       summary: cleanData(summary.rows[0]),
       spending: cleanData(spending.rows[0]),
       paymentStatus: (paymentStatus.rows || []).map(cleanData),
+      totalPurchasesCount: cleanData(spending.rows[0]).total_transactions || 0,
       topCustomers: [],
       debtors: [],
       generatedAt: new Date().toISOString()

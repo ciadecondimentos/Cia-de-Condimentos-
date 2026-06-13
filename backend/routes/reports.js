@@ -38,6 +38,40 @@ function cleanData(obj) {
 router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// Diagnose tables
+router.get('/diagnose', async (req, res) => {
+  try {
+    const tables = {};
+    
+    // Check orders table
+    const ordersCheck = await db.query('SELECT COUNT(*) as cnt FROM orders LIMIT 1');
+    tables.orders = { count: parseInt(ordersCheck.rows[0]?.cnt || 0), status: 'ok' };
+    
+    // Check crm_purchases table
+    const crmCheck = await db.query('SELECT COUNT(*) as cnt FROM crm_purchases LIMIT 1');
+    tables.crm_purchases = { count: parseInt(crmCheck.rows[0]?.cnt || 0), status: 'ok' };
+    
+    // Check orders schema
+    const ordersSchema = await db.query(`
+      SELECT column_name, data_type FROM information_schema.columns 
+      WHERE table_name = 'orders' ORDER BY ordinal_position
+    `);
+    
+    // Sample orders data
+    const sampleOrders = await db.query('SELECT * FROM orders LIMIT 2');
+    
+    res.json({
+      tables,
+      ordersSchema: ordersSchema.rows,
+      sampleOrders: sampleOrders.rows,
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message, stack: error.stack });
+  }
+});
+
 // Test CRM table query
 router.get('/test-crm', async (req, res) => {
   try {

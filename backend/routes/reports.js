@@ -553,4 +553,147 @@ router.post('/debug/clean-test-data', async (req, res) => {
   }
 });
 
+// ==================== DAILY SALES (para gráficos) ====================
+router.get('/daily-sales', async (req, res) => {
+  try {
+    const { dateStart, dateEnd } = req.query;
+    
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+    }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+    
+    if (startDate > endDate) {
+      return res.status(400).json({ error: 'dateStart não pode ser maior que dateEnd' });
+    }
+
+    // Vendas por dia
+    const dailySales = await db.query(`
+      SELECT 
+        DATE(created_at) as date,
+        COUNT(*)::integer as orders,
+        COALESCE(SUM(total), 0)::numeric as revenue,
+        COUNT(CASE WHEN payment_status = 'Pago' THEN 1 END)::integer as paid_orders,
+        COUNT(CASE WHEN payment_status = 'Pendente' THEN 1 END)::integer as pending_orders
+      FROM orders
+      WHERE created_at >= $1 AND created_at <= $2
+      GROUP BY DATE(created_at)
+      ORDER BY DATE(created_at) ASC
+    `, [startDate, endDate]);
+
+    // Compras CRM por dia
+    const dailyCRM = await db.query(`
+      SELECT 
+        DATE(purchase_date) as date,
+        COUNT(*)::integer as transactions,
+        COALESCE(SUM(total_price), 0)::numeric as total,
+        COUNT(CASE WHEN payment_status = 0 THEN 1 END)::integer as pending,
+        COUNT(CASE WHEN payment_status != 0 THEN 1 END)::integer as paid
+      FROM crm_purchases
+      WHERE purchase_date >= $1 AND purchase_date <= $2
+      GROUP BY DATE(purchase_date)
+      ORDER BY DATE(purchase_date) ASC
+    `, [startDate, endDate]);
+
+    res.json({
+      orders: (dailySales.rows || []).map(cleanData),
+      crm: (dailyCRM.rows || []).map(cleanData),
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Erro em /daily-sales:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== TOP CUSTOMERS (para gráficos) ====================
+router.get('/top-customers', async (req, res) => {
+  try {
+    const { dateStart, dateEnd, limit = 10 } = req.query;
+    
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+    }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: 'Formato de data inválido. Use YYYY-MM-DD' });
+    }
+
+    const topCustomers = await db.query(`
+      SELECT 
+        customer_name,
+        COUNT(*)::integer as orders,
+        COALESCE(SUM(total), 0)::numeric as total_spent
+      FROM orders
+      WHERE created_at >= $1 AND created_at <= $2
+      GROUP BY customer_name
+      ORDER BY total_spent DESC
+      LIMIT $3
+    `, [startDate, endDate, parseInt(limit)]);
+
+    res.json({
+      customers: (topCustomers.rows || []).map(cleanData),
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Erro em /top-customers:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PAYMENT STATUS SUMMARY ====================
+router.get('/payment-summary', async (req, res) => {
+  try {
+    const { dateStart, dateEnd } = req.query;
+    
+    if (!dateStart || !dateEnd) {
+      return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
+    }
+    
+    const startDate = new Date(dateStart + 'T00:00:00Z');
+    const endDate = new Date(dateEnd + 'T23:59:59Z');
+
+    // Status de pedidos
+    const orderStatus = await db.query(`
+      SELECT 
+        payment_status as status,
+        COUNT(*)::integer as count,
+        COALESCE(SUM(total), 0)::numeric as total
+      FROM orders
+      WHERE created_at >= $1 AND created_at <= $2
+      GROUP BY payment_status
+    `, [startDate, endDate]);
+
+    // Formas de pagamento
+    const paymentMethods = await db.query(`
+      SELECT 
+        payment_method as method,
+        COUNT(*)::integer as count,
+        COALESCE(SUM(total), 0)::numeric as total
+      FROM orders
+      WHERE created_at >= $1 AND created_at <= $2
+      GROUP BY payment_method
+      ORDER BY total DESC
+    `, [startDate, endDate]);
+
+    res.json({
+      orderStatus: (orderStatus.rows || []).map(cleanData),
+      paymentMethods: (paymentMethods.rows || []).map(cleanData),
+      generatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Erro em /payment-summary:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = router;

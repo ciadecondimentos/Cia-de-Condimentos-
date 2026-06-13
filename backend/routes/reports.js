@@ -39,257 +39,6 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Diagnose tables
-router.get('/diagnose', async (req, res) => {
-  try {
-    const tables = {};
-    
-    // Check orders table
-    const ordersCheck = await db.query('SELECT COUNT(*) as cnt FROM orders LIMIT 1');
-    tables.orders = { count: parseInt(ordersCheck.rows[0]?.cnt || 0), status: 'ok' };
-    
-    // Check crm_purchases table
-    const crmCheck = await db.query('SELECT COUNT(*) as cnt FROM crm_purchases LIMIT 1');
-    tables.crm_purchases = { count: parseInt(crmCheck.rows[0]?.cnt || 0), status: 'ok' };
-    
-    // Check orders schema
-    const ordersSchema = await db.query(`
-      SELECT column_name, data_type FROM information_schema.columns 
-      WHERE table_name = 'orders' ORDER BY ordinal_position
-    `);
-    
-    // Check crm_purchases schema
-    let crmSchema = [];
-    try {
-      const result = await db.query(`
-        SELECT column_name, data_type FROM information_schema.columns 
-        WHERE table_name = 'crm_purchases' ORDER BY ordinal_position
-      `);
-      crmSchema = result.rows || [];
-    } catch (e) {
-      console.log('CRM schema query failed:', e.message);
-    }
-    
-    // Sample orders data
-    const sampleOrders = await db.query('SELECT * FROM orders LIMIT 2');
-    
-    // Sample CRM purchases
-    let sampleCRM = [];
-    try {
-      const result = await db.query('SELECT * FROM crm_purchases LIMIT 2');
-      sampleCRM = result.rows || [];
-    } catch (e) {
-      console.log('CRM sample query failed:', e.message);
-    }
-    
-    res.json({
-      tables,
-      ordersSchema: ordersSchema.rows,
-      crmSchema,
-      sampleOrders: sampleOrders.rows,
-      sampleCRM,
-      generatedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message, stack: error.stack });
-  }
-});
-
-// Test CRM table query
-router.get('/test-crm', async (req, res) => {
-  try {
-    const result = await db.query('SELECT COUNT(*) as cnt FROM crm_customers');
-    res.json({ success: true, crm_customers: result.rows[0] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Debug CRM purchases data
-router.get('/debug/crm-purchases', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT 
-        COUNT(*) as total_records,
-        SUM(CAST(total_price AS NUMERIC)) as sum_total_price,
-        COUNT(DISTINCT payment_status) as status_count
-      FROM crm_purchases LIMIT 1
-    `);
-    const sample = await db.query('SELECT id, customer_id, total_price, payment_status, purchase_date FROM crm_purchases LIMIT 5');
-    res.json({ 
-      success: true, 
-      summary: result.rows[0],
-      samples: sample.rows
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-// Debug general report queries
-router.get('/debug/general', async (req, res) => {
-  try {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 30);
-
-    const crmData = await db.query(`
-      SELECT 
-        (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
-        COALESCE(SUM(total_price::numeric), 0)::numeric as total_spent_crm
-      FROM crm_purchases
-      WHERE purchase_date >= $1
-    `, [startDate]);
-
-    const suppliersData = await db.query(`
-      SELECT 
-        COUNT(DISTINCT s.id)::integer as total_suppliers,
-        COALESCE(SUM(CAST(sp.total_price AS NUMERIC)), 0)::numeric as total_spent_suppliers
-      FROM suppliers s
-      LEFT JOIN supplier_purchases sp ON s.id = sp.supplier_id AND sp.purchase_date >= $1
-    `, [startDate]);
-
-    res.json({
-      startDate,
-      crmData: crmData.rows[0],
-      suppliersData: suppliersData.rows[0]
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// List all tables
-router.get('/debug/tables', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT table_name FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      ORDER BY table_name
-    `);
-    res.json({ tables: result.rows.map(r => r.table_name) });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Check orders table structure
-router.get('/debug/orders-structure', async (req, res) => {
-  try {
-    const result = await db.query(`
-      SELECT column_name, data_type, is_nullable 
-      FROM information_schema.columns 
-      WHERE table_name = 'orders'
-      ORDER BY ordinal_position
-    `);
-    const count = await db.query('SELECT COUNT(*) as total FROM orders');
-    res.json({ 
-      columns: result.rows,
-      totalOrders: count.rows[0].total
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Test single order insertion
-router.post('/debug/test-insert-order', async (req, res) => {
-  try {
-    const testOrder = {
-      customer_name: 'Teste Silva',
-      customer_email: 'teste@email.com',
-      customer_address: 'Rua Teste, 123',
-      subtotal: 100.00,
-      total: 115.00,
-      payment_status: 'Pago',
-      payment_method: 'PIX',
-      frete: 15.00
-    };
-
-    console.log('🧪 Tentando inserir pedido de teste:', testOrder);
-
-    const result = await db.query(
-      `INSERT INTO orders (customer_name, customer_email, customer_address, subtotal, total, payment_status, payment_method, frete, created_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW()) RETURNING id`,
-      [testOrder.customer_name, testOrder.customer_email, testOrder.customer_address, testOrder.subtotal, testOrder.total, testOrder.payment_status, testOrder.payment_method, testOrder.frete]
-    );
-
-    res.json({ 
-      success: true, 
-      inserted_id: result.rows[0].id,
-      message: 'Pedido de teste inserido com sucesso'
-    });
-  } catch (error) {
-    console.error('❌ Erro ao inserir teste:', error);
-    res.status(500).json({ 
-      error: error.message,
-      code: error.code,
-      detail: error.detail
-    });
-  }
-});
-
-// ==================== SEED TEST DATA ====================
-router.post('/debug/seed-test-orders', async (req, res) => {
-  try {
-    console.log('🌱 Iniciando seed de dados de teste para pedidos...');
-    
-    const orders = [
-      { customer_name: 'João Silva', customer_email: 'joao@email.com', customer_address: 'Rua A, 123', subtotal: 235.50, total: 250.50, payment_status: 'Pago', payment_method: 'PIX', frete: 15.00 },
-      { customer_name: 'Maria Santos', customer_email: 'maria@email.com', customer_address: 'Rua B, 456', subtotal: 360.75, total: 380.75, payment_status: 'Pago', payment_method: 'Cartão', frete: 20.00 },
-      { customer_name: 'Pedro Costa', customer_email: 'pedro@email.com', customer_address: 'Rua C, 789', subtotal: 110.00, total: 120.00, payment_status: 'Pendente', payment_method: 'Boleto', frete: 10.00 },
-      { customer_name: 'Ana Oliveira', customer_email: 'ana@email.com', customer_address: 'Rua D, 321', subtotal: 525.30, total: 550.30, payment_status: 'Pago', payment_method: 'PIX', frete: 25.00 },
-      { customer_name: 'Carlos Souza', customer_email: 'carlos@email.com', customer_address: 'Rua E, 654', subtotal: 185.60, total: 185.60, payment_status: 'Pendente', payment_method: 'Dinheiro', frete: 0.00 },
-      { customer_name: 'Julia Rocha', customer_email: 'julia@email.com', customer_address: 'Rua F, 987', subtotal: 400.00, total: 420.00, payment_status: 'Pago', payment_method: 'Cartão', frete: 20.00 },
-      { customer_name: 'Ricardo Lima', customer_email: 'ricardo@email.com', customer_address: 'Rua G, 147', subtotal: 295.45, total: 310.45, payment_status: 'Pago', payment_method: 'PIX', frete: 15.00 },
-      { customer_name: 'Fernanda Dias', customer_email: 'fernanda@email.com', customer_address: 'Rua H, 258', subtotal: 87.20, total: 95.20, payment_status: 'Pendente', payment_method: 'Boleto', frete: 8.00 },
-      { customer_name: 'Thiago Mendes', customer_email: 'thiago@email.com', customer_address: 'Rua I, 369', subtotal: 695.00, total: 725.00, payment_status: 'Pago', payment_method: 'PIX', frete: 30.00 },
-      { customer_name: 'Camila Torres', customer_email: 'camila@email.com', customer_address: 'Rua J, 741', subtotal: 198.15, total: 210.15, payment_status: 'Pago', payment_method: 'Cartão', frete: 12.00 }
-    ];
-
-    let inserted = 0;
-    let errors = [];
-
-    for (let i = 0; i < orders.length; i++) {
-      const order = orders[i];
-      const daysAgo = Math.floor(Math.random() * 20);
-      const createdDate = new Date();
-      createdDate.setDate(createdDate.getDate() - daysAgo);
-      
-      try {
-        console.log(`Inserindo pedido ${i + 1}/${orders.length}: ${order.customer_name}, data: ${createdDate}`);
-        const result = await db.query(
-          `INSERT INTO orders (customer_name, customer_email, customer_address, subtotal, total, payment_status, payment_method, frete, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-          [order.customer_name, order.customer_email, order.customer_address, order.subtotal, order.total, order.payment_status, order.payment_method, order.frete, createdDate]
-        );
-        inserted++;
-        console.log(`✅ Pedido ${inserted} inserido: ID=${result.rows[0].id}, ${order.customer_name}`);
-      } catch (insertError) {
-        console.error(`❌ Erro ao inserir pedido ${i + 1}:`, insertError.message, insertError.code, insertError.detail);
-        errors.push({ index: i + 1, name: order.customer_name, error: insertError.message });
-      }
-    }
-
-    const count = await db.query('SELECT COUNT(*) as total FROM orders');
-    console.log(`✅ ${inserted} pedidos adicionados com sucesso. Total no banco: ${count.rows[0].total}`);
-
-    res.json({ 
-      success: true, 
-      inserted, 
-      total: parseInt(count.rows[0].total),
-      errors: errors.length > 0 ? errors : undefined,
-      message: `${inserted} de ${orders.length} pedidos inseridos com sucesso`
-    });
-  } catch (error) {
-    console.error('❌ Erro geral ao adicionar dados de teste:', error);
-    res.status(500).json({ 
-      error: error.message,
-      details: error.toString()
-    });
-  }
-});
-
 // ==================== GENERAL REPORT ====================
 router.get('/general', async (req, res) => {
   try {
@@ -318,7 +67,7 @@ router.get('/general', async (req, res) => {
       FROM orders WHERE created_at >= $1 AND created_at <= $2
     `, [startDate, endDate]);
 
-    // CRM data - SUM ALL payment statuses from crmPaymentStatus
+    // CRM data
     const crmData = await db.query(`
       SELECT 
         (SELECT COUNT(DISTINCT id) FROM crm_customers)::integer as total_customers,
@@ -379,7 +128,6 @@ router.get('/orders', async (req, res) => {
   try {
     const { dateStart, dateEnd } = req.query;
     
-    // Validar datas
     if (!dateStart || !dateEnd) {
       return res.status(400).json({ error: 'dateStart e dateEnd são obrigatórios' });
     }
@@ -557,66 +305,7 @@ router.get('/suppliers', async (req, res) => {
   }
 });
 
-// ==================== CLEAN TEST DATA ====================
-router.post('/debug/clean-test-data', async (req, res) => {
-  try {
-    console.log('🧹 Removendo dados fictícios de teste...');
-    
-    const fakeCustomerNames = [
-      'João Silva',
-      'Maria Santos',
-      'Pedro Costa',
-      'Ana Oliveira',
-      'Carlos Souza',
-      'Julia Rocha',
-      'Ricardo Lima',
-      'Fernanda Dias',
-      'Thiago Mendes',
-      'Camila Torres'
-    ];
-
-    // Contar pedidos fictícios antes de deletar
-    const beforeCount = await db.query(
-      `SELECT COUNT(*) as total FROM orders WHERE customer_name = ANY($1)`,
-      [fakeCustomerNames]
-    );
-
-    console.log(`📊 Pedidos fictícios encontrados: ${beforeCount.rows[0].total}`);
-
-    // Deletar pedidos fictícios
-    const deleteResult = await db.query(
-      `DELETE FROM orders WHERE customer_name = ANY($1)`,
-      [fakeCustomerNames]
-    );
-
-    console.log(`🗑️  Pedidos fictícios removidos: ${deleteResult.rowCount}`);
-
-    // Contar total de pedidos restantes
-    const afterCount = await db.query('SELECT COUNT(*) as total FROM orders');
-    console.log(`✅ Total de pedidos reais restantes: ${afterCount.rows[0].total}`);
-
-    // Mostrar alguns pedidos reais ainda no banco
-    const sampleOrders = await db.query(
-      `SELECT id, customer_name, customer_email, total, created_at FROM orders LIMIT 5`
-    );
-
-    res.json({
-      success: true,
-      deleted: deleteResult.rowCount,
-      totalRemaining: parseInt(afterCount.rows[0].total),
-      message: `✅ ${deleteResult.rowCount} pedidos fictícios removidos. ${afterCount.rows[0].total} pedidos reais permanecem no banco.`,
-      sampleRealOrders: sampleOrders.rows
-    });
-  } catch (error) {
-    console.error('❌ Erro ao limpar dados:', error);
-    res.status(500).json({ 
-      error: error.message,
-      details: error.toString()
-    });
-  }
-});
-
-// ==================== DAILY SALES (para gráficos) ====================
+// ==================== DAILY SALES ====================
 router.get('/daily-sales', async (req, res) => {
   try {
     const { dateStart, dateEnd } = req.query;
@@ -689,7 +378,7 @@ router.get('/daily-sales', async (req, res) => {
   }
 });
 
-// ==================== TOP CUSTOMERS (para gráficos) ====================
+// ==================== TOP CUSTOMERS ====================
 router.get('/top-customers', async (req, res) => {
   try {
     const { dateStart, dateEnd, limit = 10 } = req.query;
@@ -727,77 +416,7 @@ router.get('/top-customers', async (req, res) => {
   }
 });
 
-// ==================== SEED REAL ORDERS ====================
-router.post('/debug/seed-real-orders', async (req, res) => {
-  try {
-    console.log('🌱 Iniciando seed de dados reais...');
-    
-    const realOrders = [
-      { name: 'Mercado Central Frutos', email: 'compras@mercadocentral.com.br', address: 'Av. Paulista, 1000 - São Paulo', total: 450.00, method: 'PIX', status: 'Pago', shipping: 25.00, daysAgo: 1 },
-      { name: 'Supermercado Bom Preço', email: 'fornecedores@bompreco.com.br', address: 'Rua Principal, 500 - Rio de Janeiro', total: 320.50, method: 'Transferência', status: 'Pago', shipping: 20.00, daysAgo: 2 },
-      { name: 'Restaurante Tempero da Casa', email: 'pedidos@temperodasaca.com.br', address: 'Av. Atlântica, 250 - Rio de Janeiro', total: 680.00, method: 'Cartão', status: 'Pago', shipping: 30.00, daysAgo: 3 },
-      { name: 'Distribuidora A&B', email: 'vendas@distribab.com.br', address: 'Km 5 Rodovia BR-116 - São Paulo', total: 1200.00, method: 'Boleto', status: 'Pago', shipping: 50.00, daysAgo: 4 },
-      { name: 'Padaria Artesanal Pão Quente', email: 'suprimentos@paoquente.com.br', address: 'Rua das Flores, 120 - Curitiba', total: 290.30, method: 'PIX', status: 'Pago', shipping: 18.00, daysAgo: 5 },
-      { name: 'Restaurante Gourmet Premium', email: 'chef@gourmerpremium.com.br', address: 'Av. Paulista, 1500 - São Paulo', total: 950.00, method: 'Transferência', status: 'Pago', shipping: 40.00, daysAgo: 6 },
-      { name: 'Loja de Produtos Naturais Vida Saudável', email: 'pedidos@vidasaudavel.com.br', address: 'Rua Getúlio Vargas, 800 - Belo Horizonte', total: 420.75, method: 'Cartão', status: 'Pago', shipping: 22.00, daysAgo: 7 },
-      { name: 'Cooperativa de Agricultores da Região', email: 'compras@cooperativa.com.br', address: 'Fazenda Santa Rita - Interior SP', total: 1450.00, method: 'PIX', status: 'Pago', shipping: 60.00, daysAgo: 8 },
-      { name: 'Churrascaria Dom Brás', email: 'fornecedores@dombras.com.br', address: 'Av. Imigrantes, 3000 - São Paulo', total: 580.20, method: 'Boleto', status: 'Pago', shipping: 28.00, daysAgo: 9 },
-      { name: 'Pizzaria Italiana Autêntica', email: 'suprimentos@pizzariaitaliana.com.br', address: 'Rua Roma, 450 - São Paulo', total: 340.00, method: 'PIX', status: 'Pendente', shipping: 18.00, daysAgo: 10 },
-      { name: 'Confeitaria Doce Tentação', email: 'pedidos@docetentacao.com.br', address: 'Av. Getúlio Vargas, 200 - Brasília', total: 520.50, method: 'Cartão', status: 'Pago', shipping: 25.00, daysAgo: 11 },
-      { name: 'Buffet Corporativo Elite', email: 'vendas@buffet-elite.com.br', address: 'Rua Pamplona, 1250 - São Paulo', total: 890.00, method: 'Transferência', status: 'Pago', shipping: 38.00, daysAgo: 12 },
-      { name: 'Sorveteria Gelado Perfeito', email: 'fornecedores@gelado-perfeito.com.br', address: 'Av. Brasil, 5000 - Porto Alegre', total: 270.80, method: 'PIX', status: 'Pago', shipping: 16.00, daysAgo: 13 },
-      { name: 'Indústria de Alimentos Brasil', email: 'compras@industrialiimentos.com.br', address: 'Zona Industrial, Lot 10 - Sorocaba', total: 2100.00, method: 'Boleto', status: 'Pago', shipping: 80.00, daysAgo: 14 },
-      { name: 'Mercearia do Bairro', email: 'pedidos@merceariadobairro.com.br', address: 'Rua Central, 45 - Curitiba', total: 185.30, method: 'Dinheiro', status: 'Pago', shipping: 10.00, daysAgo: 15 },
-      { name: 'Farmácia Saúde Plus', email: 'compras@farmaciasaude.com.br', address: 'Av. Santos Dumont, 800 - São Paulo', total: 350.00, method: 'PIX', status: 'Pago', shipping: 18.00, daysAgo: 16 },
-      { name: 'Café Especial Artesanal', email: 'fornecedores@cafeartesanal.com.br', address: 'Rua Consolação, 150 - São Paulo', total: 420.25, method: 'Cartão', status: 'Pago', shipping: 20.00, daysAgo: 17 },
-      { name: 'Hotel 5 Estrelas Luxo', email: 'suprimentos@hotel5estrelas.com.br', address: 'Av. Atlântica, 1000 - Rio de Janeiro', total: 1680.00, method: 'Transferência', status: 'Pago', shipping: 70.00, daysAgo: 18 },
-      { name: 'Bar e Restaurante Boteco Tradicional', email: 'pedidos@botecotrad.com.br', address: 'Rua do Povo, 200 - Brasília', total: 540.50, method: 'PIX', status: 'Pendente', shipping: 25.00, daysAgo: 19 },
-      { name: 'Lanchonete Rápida Qualidade', email: 'compras@lanchequalidade.com.br', address: 'Av. Paulista, 2000 - São Paulo', total: 280.00, method: 'Cartão', status: 'Pago', shipping: 14.00, daysAgo: 20 },
-    ];
-
-    let inserted = 0;
-
-    for (const order of realOrders) {
-      const createdDate = new Date();
-      createdDate.setDate(createdDate.getDate() - order.daysAgo);
-
-      try {
-        await db.query(
-          `INSERT INTO orders (customer_name, customer_email, customer_address, subtotal, total, payment_status, payment_method, frete, created_at) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [
-            order.name,
-            order.email,
-            order.address,
-            parseFloat((order.total - order.shipping).toFixed(2)),
-            order.total,
-            order.status,
-            order.method,
-            order.shipping,
-            createdDate
-          ]
-        );
-        inserted++;
-      } catch (error) {
-        console.warn(`⚠️  Skipped ${order.name}:`, error.message);
-      }
-    }
-
-    const count = await db.query('SELECT COUNT(*) as total FROM orders');
-
-    res.json({
-      success: true,
-      inserted,
-      total: parseInt(count.rows[0].total),
-      message: `✅ ${inserted} pedidos reais inseridos. Total no banco: ${count.rows[0].total}`,
-    });
-  } catch (error) {
-    console.error('❌ Erro ao fazer seed:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==================== PAYMENT STATUS SUMMARY ====================
+// ==================== PAYMENT SUMMARY ====================
 router.get('/payment-summary', async (req, res) => {
   try {
     const { dateStart, dateEnd } = req.query;
@@ -839,54 +458,6 @@ router.get('/payment-summary', async (req, res) => {
     });
   } catch (error) {
     console.error('Erro em /payment-summary:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// ==================== REMOVE SEED DATA (desenvolvedor) ====================
-router.post('/debug/remove-seed-data', async (req, res) => {
-  try {
-    console.log('🗑️  Removendo dados do seed...');
-    
-    const seedCustomers = [
-      'Mercado Central Frutos',
-      'Supermercado Bom Preço',
-      'Restaurante Tempero da Casa',
-      'Distribuidora A&B',
-      'Padaria Artesanal Pão Quente',
-      'Restaurante Gourmet Premium',
-      'Açougue do Bairro',
-      'Hortifrúti Premium',
-      'Confeitaria Sabor Caseiro',
-      'Mercearia Central',
-      'Pizzaria Napoli',
-      'Lanchonete Rápido Saudável',
-      'Sorveteria Gelato Italiano',
-      'Café Gourmet',
-      'Trattoria Bella Itália',
-      'Comida Árabe Especial',
-      'Churrascaria Estância',
-      'Pastelaria Dom Benevenuto',
-      'Restaurante do Porto',
-      'Padaria Nova Era'
-    ];
-
-    // Delete seed orders
-    const result = await db.query(
-      `DELETE FROM orders WHERE customer_name = ANY($1)`,
-      [seedCustomers]
-    );
-
-    const remainingOrders = await db.query('SELECT COUNT(*) as count FROM orders');
-
-    res.json({
-      success: true,
-      deleted: result.rowCount || 0,
-      remaining: parseInt(remainingOrders.rows[0]?.count || 0),
-      message: `✅ ${result.rowCount || 0} pedidos do seed removidos. ${remainingOrders.rows[0]?.count || 0} pedidos reais permanecem.`
-    });
-  } catch (error) {
-    console.error('Erro ao remover seed:', error);
     res.status(500).json({ error: error.message });
   }
 });

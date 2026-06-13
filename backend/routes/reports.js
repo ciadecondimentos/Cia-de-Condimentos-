@@ -412,7 +412,6 @@ router.get('/crm', async (req, res) => {
     `, [startDate, endDate]);
 
     res.json({
-      period,
       periodLabel,
       summary: cleanData(summary.rows[0]),
       spending: cleanData(spending.rows[0]),
@@ -480,7 +479,6 @@ router.get('/suppliers', async (req, res) => {
     `, [startDate, endDate]);
 
     res.json({
-      period,
       periodLabel,
       summary: cleanData(summary.rows[0]),
       spending: cleanData(spending.rows[0]),

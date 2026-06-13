@@ -110,10 +110,29 @@ router.get('/debug/tables', async (req, res) => {
   }
 });
 
+// Check orders table structure
+router.get('/debug/orders-structure', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT column_name, data_type, is_nullable 
+      FROM information_schema.columns 
+      WHERE table_name = 'orders'
+      ORDER BY ordinal_position
+    `);
+    const count = await db.query('SELECT COUNT(*) as total FROM orders');
+    res.json({ 
+      columns: result.rows,
+      totalOrders: count.rows[0].total
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== SEED TEST DATA ====================
 router.post('/debug/seed-test-orders', async (req, res) => {
   try {
-    console.log('🌱 Adicionando dados de teste para pedidos...');
+    console.log('🌱 Iniciando seed de dados de teste para pedidos...');
     
     const orders = [
       { customer_name: 'João Silva', total: 250.50, payment_status: 'Pago', payment_method: 'PIX', frete: 15.00 },
@@ -135,25 +154,34 @@ router.post('/debug/seed-test-orders', async (req, res) => {
       const createdDate = new Date();
       createdDate.setDate(createdDate.getDate() - daysAgo);
       
-      await db.query(
-        `INSERT INTO orders (customer_name, total, payment_status, payment_method, frete, created_at) 
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [order.customer_name, order.total, order.payment_status, order.payment_method, order.frete, createdDate]
-      );
-      inserted++;
+      try {
+        await db.query(
+          `INSERT INTO orders (customer_name, total, payment_status, payment_method, frete, created_at) 
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [order.customer_name, order.total, order.payment_status, order.payment_method, order.frete, createdDate]
+        );
+        inserted++;
+        console.log(`✅ Pedido ${inserted} inserido: ${order.customer_name}`);
+      } catch (insertError) {
+        console.error(`❌ Erro ao inserir pedido ${i + 1}:`, insertError.message);
+      }
     }
 
     const count = await db.query('SELECT COUNT(*) as total FROM orders');
-    console.log(`✅ ${inserted} pedidos adicionados. Total: ${count.rows[0].total}`);
+    console.log(`✅ ${inserted} pedidos adicionados com sucesso. Total de pedidos: ${count.rows[0].total}`);
 
     res.json({ 
       success: true, 
       inserted, 
-      total: parseInt(count.rows[0].total) 
+      total: parseInt(count.rows[0].total),
+      message: `${inserted} pedidos inseridos com sucesso`
     });
   } catch (error) {
     console.error('❌ Erro ao adicionar dados de teste:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ 
+      error: error.message,
+      details: error.toString()
+    });
   }
 });
 

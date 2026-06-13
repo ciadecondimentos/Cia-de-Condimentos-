@@ -11,6 +11,18 @@ const BACKEND_BASE = (window.location.hostname === 'localhost' || window.locatio
 let currentReportPeriod = '7';
 let currentCrmPeriod = 30;
 
+function getDateRangeForPeriod(days) {
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date();
+  start.setDate(end.getDate() - (days - 1));
+  start.setHours(0, 0, 0, 0);
+  return {
+    dateStart: start.toISOString().split('T')[0],
+    dateEnd: end.toISOString().split('T')[0]
+  };
+}
+
 // ==================== IMAGE URL HANDLER ====================
 function getImageUrl(imageUrl) {
   if (!imageUrl) return '';
@@ -1426,7 +1438,8 @@ function setCrmPeriod(days, button) {
   currentCrmPeriod = days;
   document.querySelectorAll('.crm-period-btn').forEach(btn => btn.classList.remove('active'));
   if (button) button.classList.add('active');
-  loadCrmReport(`?period=${days}`);
+  const { dateStart, dateEnd } = getDateRangeForPeriod(days);
+  loadCrmReport(`${API_BASE}/reports/crm?dateStart=${dateStart}&dateEnd=${dateEnd}`);
 }
 
 function exportCustomers() {

@@ -163,6 +163,14 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/admin.html'));
 });
 
+app.get('/clean-fake-data.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/clean-fake-data.html'));
+});
+
+app.get('/test-scripts.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/test-scripts.html'));
+});
+
 // Endpoint para corrigir URLs das imagens (remove domínio onrender se houver)
 app.post('/api/fix-urls', async (req, res) => {
   try {

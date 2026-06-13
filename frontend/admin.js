@@ -9,6 +9,7 @@ const BACKEND_BASE = (window.location.hostname === 'localhost' || window.locatio
 
 // Global variable to track current report period
 let currentReportPeriod = '7';
+let currentCrmPeriod = 30;
 
 // ==================== IMAGE URL HANDLER ====================
 function getImageUrl(imageUrl) {
@@ -1421,6 +1422,13 @@ function deleteCustomer(id) {
   });
 }
 
+function setCrmPeriod(days, button) {
+  currentCrmPeriod = days;
+  document.querySelectorAll('.crm-period-btn').forEach(btn => btn.classList.remove('active'));
+  if (button) button.classList.add('active');
+  loadCrmReport(`?period=${days}`);
+}
+
 function exportCustomers() {
   fetch(`${API_BASE}/crm/customers`)
     .then(res => res.json())
@@ -1430,19 +1438,12 @@ function exportCustomers() {
         return;
       }
 
-      const dateStart = document.getElementById('crmDateStart')?.value;
-      const dateEnd = document.getElementById('crmDateEnd')?.value;
-      
-      let startDate = null;
-      let endDate = null;
-      let dateLabel = '';
-      
-      if (dateStart) startDate = new Date(dateStart);
-      if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59');
-      
-      if (dateStart || dateEnd) {
-        dateLabel = ` (${dateStart || 'início'} a ${dateEnd || 'fim'})`;
-      }
+      const now = new Date();
+      const startDate = new Date(now.getTime() - currentCrmPeriod * 24 * 60 * 60 * 1000);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date();
+      endDate.setHours(23, 59, 59, 999);
+      const dateLabel = ` (${currentCrmPeriod} dias)`;
       
       // Prepare CSV headers
       const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total de Pedidos', 'Faturamento', 'Notas'];
@@ -1450,10 +1451,7 @@ function exportCustomers() {
       // Prepare CSV rows - filtrar por data se aplicável
       const rows = customers
         .filter(customer => {
-          // Só incluir clientes que têm compras no período
           const purchases = customer.purchases || [];
-          if (!startDate && !endDate) return true; // Se sem filtro, incluir todos
-          
           return purchases.some(p => {
             const pDate = new Date(p.purchase_date);
             const afterStart = !startDate || pDate >= startDate;
@@ -1467,25 +1465,18 @@ function exportCustomers() {
           let totalSpent = 0;
           
           // Calcular totais apenas do período selecionado
-          if (!startDate && !endDate) {
-            // Sem filtro: usar dados completos
-            totalPurchaseCount = parseInt(customer.stats?.total_purchases) || 0;
-            totalSpent = safeNumber(customer.stats?.total_spent || 0);
-          } else {
-            // Com filtro: contar compras do período
-            const purchaseDates = new Set();
-            purchases.forEach(p => {
+          const purchaseDates = new Set();
+          purchases.forEach(p => {
               const pDate = new Date(p.purchase_date);
               const afterStart = !startDate || pDate >= startDate;
               const beforeEnd = !endDate || pDate <= endDate;
               
               if (afterStart && beforeEnd) {
-                purchaseDates.add(p.purchase_date); // Contar datas únicas
+                purchaseDates.add(p.purchase_date);
                 totalSpent += safeNumber(p.total_price || 0);
               }
             });
-            totalPurchaseCount = purchaseDates.size;
-          }
+          totalPurchaseCount = purchaseDates.size;
           
           return [
             customer.full_name || customer.name || 'N/A',
@@ -2096,10 +2087,14 @@ function updateCrmFilter() {
 
 async function loadCrmReport(periodOrUrl) {
   try {
-    // Se receber URL completa, usar; caso contrário, construir
-    let url = typeof periodOrUrl === 'string' && periodOrUrl.startsWith('http') 
-      ? periodOrUrl 
-      : `${API_BASE}/reports/crm?period=${periodOrUrl || 30}`;
+    let url;
+    if (typeof periodOrUrl === 'string' && periodOrUrl.startsWith('http')) {
+      url = periodOrUrl;
+    } else if (typeof periodOrUrl === 'string' && periodOrUrl.startsWith('?')) {
+      url = `${API_BASE}/reports/crm${periodOrUrl}`;
+    } else {
+      url = `${API_BASE}/reports/crm?period=${periodOrUrl || 30}`;
+    }
     
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch CRM report');

@@ -1404,12 +1404,15 @@ tr:hover td { background: #faf7f2; }
         </div>
       </div>
 
-      <!-- FILTROS DE DATA -->
-      <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
-        <label style="font-size: 13px; font-weight: 600; color: var(--marrom);">Filtrar por período:</label>
-        <input type="date" id="crmDateStart" placeholder="Data Início" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateCrmFilter()">
-        <span style="color: #999;">até</span>
-        <input type="date" id="crmDateEnd" placeholder="Data Fim" style="padding:10px 14px; border:2px solid #e8e0d4; border-radius:4px; font-size:13px; outline:none;" onchange="updateCrmFilter()">
+      <!-- CONTROLES DE PERÍODO CRM -->
+      <div style="background: white; padding: 18px; border-radius: 8px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: var(--marrom);">📅 Período da Central de Clientes</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="crm-period-btn btn btn-secondary active" data-days="7" onclick="setCrmPeriod(7, this)">Últimos 7 dias</button>
+          <button class="crm-period-btn btn btn-secondary" data-days="14" onclick="setCrmPeriod(14, this)">Últimos 14 dias</button>
+          <button class="crm-period-btn btn btn-secondary" data-days="21" onclick="setCrmPeriod(21, this)">Últimos 21 dias</button>
+          <button class="crm-period-btn btn btn-secondary" data-days="30" onclick="setCrmPeriod(30, this)">Últimos 30 dias</button>
+        </div>
       </div>
 
       <!-- DASHBOARD CRM -->

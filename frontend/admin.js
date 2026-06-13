@@ -176,10 +176,9 @@ function fetchDashboardStats() {
       document.getElementById('dash-pending').textContent = pending;
     })
     .catch(() => {
-      // Mock data for demo
-      document.getElementById('dash-orders').textContent = '12';
-      document.getElementById('dash-revenue').textContent = 'R$ 3.450,50';
-      document.getElementById('dash-pending').textContent = '3';
+      document.getElementById('dash-orders').textContent = '0';
+      document.getElementById('dash-revenue').textContent = 'R$ 0,00';
+      document.getElementById('dash-pending').textContent = '0';
     });
 
   fetch(`${API_BASE}/products`)

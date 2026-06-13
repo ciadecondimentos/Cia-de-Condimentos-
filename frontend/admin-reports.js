@@ -4,31 +4,6 @@ let chartsInstances = {};
 let reportsData = {};
 let reportsDataPrevious = {}; // Para comparação
 
-// ==================== MOCK DATA GENERATOR ====================
-function generateMockOrdersData(days) {
-  // Gerar dados diferentes baseado no número de dias
-  // Fórmula: quanto mais dias, mais pedidos (em média)
-  const baseOrders = Math.ceil(days / 3) + Math.floor(Math.random() * 5);
-  const paidOrders = Math.ceil(baseOrders * 0.65);
-  const pendingOrders = Math.ceil(baseOrders * 0.25);
-  const cancelledOrders = Math.max(0, baseOrders - paidOrders - pendingOrders);
-  
-  // Valores variam: média de R$ 250-350 por pedido
-  const avgTicket = 250 + Math.random() * 150;
-  const totalRevenue = (paidOrders * avgTicket).toFixed(2);
-  const totalShipping = (baseOrders * (10 + Math.random() * 20)).toFixed(2);
-
-  return {
-    total_orders: baseOrders,
-    paid_orders: paidOrders,
-    pending_orders: pendingOrders,
-    cancelled_orders: cancelledOrders,
-    total_revenue: totalRevenue,
-    average_ticket: avgTicket.toFixed(2),
-    total_shipping: totalShipping
-  };
-}
-
 // Função principal para carregar dados de relatórios
 async function loadReportsData() {
   console.log('📈 Carregando dados de relatórios...');
@@ -139,56 +114,15 @@ async function loadReportsData() {
     console.log('⏳ Aguardando dados das APIs...');
     await Promise.all(promises);
 
-    // Se não tiver dados reais, usar dados mockados para demonstração
     if (!reportsData.orders?.summary?.total_orders || reportsData.orders.summary.total_orders === 0) {
-      console.log('💡 Sem dados de pedidos, usando mockados para demonstração...');
-      
-      // Calcular número de dias para gerar dados dinâmicos
-      let daysDuration = parseInt(period);
-      
-      // Gerar dados mockados dinâmicos
-      const mockSummary = generateMockOrdersData(daysDuration);
-      
-      reportsData.orders = reportsData.orders || {};
-      reportsData.orders.summary = mockSummary;
-      
-      // Gerar também para período anterior se comparando
-      if (compare) {
-        const mockSummaryPrev = generateMockOrdersData(daysDuration);
-        reportsDataPrevious.orders = reportsDataPrevious.orders || {};
-        reportsDataPrevious.orders.summary = mockSummaryPrev;
-      }
+      console.log('⚠️ Nenhum dado real encontrado para o período selecionado.');
     }
 
     if (!reportsData.general?.sales?.total_revenue || parseFloat(reportsData.general.sales.total_revenue) === 0) {
-      console.log('💡 Sem dados de faturamento, usando mockados para demonstração...');
-      
-      // Calcular número de dias
-      let daysDuration = parseInt(period);
-      const mockSummary = generateMockOrdersData(daysDuration);
-      
-      reportsData.general = reportsData.general || {};
-      reportsData.general.sales = {
-        total_orders: mockSummary.total_orders,
-        total_revenue: mockSummary.total_revenue
-      };
-      
-      // Gerar formas de pagamento proporcional
-      const totalRevenue = parseFloat(mockSummary.total_revenue);
-      const pixTotal = (totalRevenue * 0.35).toFixed(2);
-      const cardTotal = (totalRevenue * 0.35).toFixed(2);
-      const boletoTotal = (totalRevenue * 0.15).toFixed(2);
-      const moneyTotal = (totalRevenue * 0.15).toFixed(2);
-      
-      reportsData.general.paymentMethods = [
-        { payment_method: 'PIX', total: pixTotal },
-        { payment_method: 'Cartão', total: cardTotal },
-        { payment_method: 'Boleto', total: boletoTotal },
-        { payment_method: 'Dinheiro', total: moneyTotal }
-      ];
+      console.log('⚠️ Nenhum faturamento real encontrado para o período selecionado.');
     }
 
-    console.log('✅ Dados processados (reais ou mockados)');
+    console.log('✅ Dados processados com valores reais');
 
     // Atualizar métricas
     updateReportsMetrics(compare);
@@ -585,15 +519,8 @@ async function renderTopChart(type = 'customers') {
       chartLabel = 'Top 5 Produtos';
     }
 
-    // Fallback com dados mockados
     if (!topData || topData.length === 0) {
-      topData = type === 'customers' 
-        ? [
-            { full_name: 'Sem dados de clientes', total_spent: 1 }
-          ]
-        : [
-            { name: 'Sem dados de produtos', quantity: 1 }
-          ];
+      topData = [];
     }
 
     const labels = topData.map(d => d.full_name || d.name);

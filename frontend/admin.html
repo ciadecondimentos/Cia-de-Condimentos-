@@ -1405,6 +1405,18 @@ tr:hover td { background: #faf7f2; }
       </div>
 
       <!-- DASHBOARD CRM -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="card-header">
+          <span class="card-title">Vendas por Período</span>
+          <div class="period-tabs">
+            <button class="crm-period-tab active" onclick="changeCrmChartPeriod('week', this)">Semana</button>
+            <button class="crm-period-tab" onclick="changeCrmChartPeriod('month', this)">Mês</button>
+            <button class="crm-period-tab" onclick="changeCrmChartPeriod('year', this)">Ano</button>
+          </div>
+        </div>
+        <div class="bar-chart" id="crmSalesChart"></div>
+      </div>
+
       <div class="stats-grid" id="crmDashboard" style="margin-bottom: 32px;">
         <div class="stat-card yellow">
           <div class="stat-icon">👥</div>

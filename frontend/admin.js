@@ -210,6 +210,12 @@ function changePeriod(period, element) {
   renderSalesChart(period);
 }
 
+function changeCrmChartPeriod(period, element) {
+  document.querySelectorAll('.crm-period-tab').forEach(tab => tab.classList.remove('active'));
+  element.classList.add('active');
+  renderSalesChart(period, 'crmSalesChart');
+}
+
 function changeReportPeriod(days, element) {
   currentReportPeriod = days;
   document.querySelectorAll('.period-tab').forEach(tab => tab.classList.remove('active'));
@@ -217,8 +223,9 @@ function changeReportPeriod(days, element) {
   loadReportData(days);
 }
 
-async function renderSalesChart(period) {
-  const salesChart = document.getElementById('salesChart');
+async function renderSalesChart(period, targetId = 'salesChart') {
+  const salesChart = document.getElementById(targetId);
+  if (!salesChart) return;
 
   try {
     const [ordersRes, customersRes] = await Promise.all([

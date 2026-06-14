@@ -2193,6 +2193,8 @@ function updateCrmDashboardByDateRange() {
 
 // Inicializar CRM quando a página for carregada
 function initializeCrm() {
+  renderSalesChart('week', 'crmSalesChart');
+
   // ✅ NOVO: Configurar listeners para sincronização entre abas
   setupCrmPixStorageListener();
   

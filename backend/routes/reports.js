@@ -205,7 +205,7 @@ router.get('/crm', async (req, res) => {
     const spending = await db.query(`
       SELECT 
         COALESCE(CAST(SUM(total_price) AS NUMERIC(15,2)), 0)::text as total_spent,
-        COUNT(*)::integer as total_transactions,
+        COUNT(DISTINCT customer_id::text || '-' || purchase_date::text)::integer as total_transactions,
         COALESCE(CAST(AVG(total_price) AS NUMERIC(15,2)), 0)::text as average_transaction
       FROM crm_purchases
       WHERE purchase_date >= $1 AND purchase_date <= $2

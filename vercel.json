@@ -1,6 +1,7 @@
 {
   "name": "cia-de-condimentos",
-  "outputDirectory": "frontend",
+  "buildCommand": "npm run build",
+  "outputDirectory": "out",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [

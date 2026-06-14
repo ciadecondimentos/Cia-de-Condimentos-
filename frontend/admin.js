@@ -213,7 +213,29 @@ function changePeriod(period, element) {
 function changeCrmChartPeriod(period, element) {
   document.querySelectorAll('.crm-period-tab').forEach(tab => tab.classList.remove('active'));
   element.classList.add('active');
+  currentCrmPeriod = period === 'week' ? 7 : period === 'month' ? 30 : 365;
   renderSalesChart(period, 'crmSalesChart');
+}
+
+function getCrmExportDateRange() {
+  const period = String(currentCrmPeriod).toLowerCase();
+
+  if (period === 'year' || period === '365') {
+    const year = new Date().getFullYear();
+    return {
+      start: new Date(year, 0, 1, 0, 0, 0, 0),
+      end: new Date(year, 11, 31, 23, 59, 59, 999)
+    };
+  }
+
+  const days = parseInt(period, 10) || 30;
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date();
+  start.setDate(end.getDate() - days + 1);
+  start.setHours(0, 0, 0, 0);
+
+  return { start, end };
 }
 
 function changeReportPeriod(days, element) {
@@ -1487,12 +1509,9 @@ function exportCustomers() {
         return;
       }
 
-      const now = new Date();
-      const startDate = new Date(now.getTime() - currentCrmPeriod * 24 * 60 * 60 * 1000);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date();
-      endDate.setHours(23, 59, 59, 999);
-      const dateLabel = ` (${currentCrmPeriod} dias)`;
+      const { start: startDate, end: endDate } = getCrmExportDateRange();
+      const periodLabel = currentCrmPeriod === 7 ? 'Semana' : currentCrmPeriod === 30 ? 'Mês' : 'Ano';
+      const dateLabel = ` (${periodLabel})`;
       
       // Prepare CSV headers
       const headers = ['Nome', 'Email', 'Telefone', 'CPF', 'Endereço', 'Cidade', 'Estado', 'CEP', 'Total de Pedidos', 'Faturamento', 'Notas'];

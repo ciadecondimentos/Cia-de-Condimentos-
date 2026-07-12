@@ -1433,15 +1433,18 @@ async function openAddCrmPurchase(customerId) {
 
     let productsHtml = products.map(p => `
       <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="crm-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
-        <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${p.price})">
+        <input type="checkbox" id="crmProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" data-sale-unit="${(p.sale_unit||'un')}" onchange="toggleCrmProduct(${p.id}, '${p.name}', ${p.price}, '${(p.sale_unit||'un')}')">
         <div style="flex: 1;">
           <label for="crmProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
-          <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+            <span style="font-size:11px;color:#888;border:1px solid #eee;padding:2px 6px;border-radius:4px;background:#fff;">${((p.sale_unit||'un')||'un').toUpperCase()}</span>
+          </div>
         </div>
         <div style="display: none;" id="crmProdQty-${p.id}-container" class="crm-qty-container">
           <div style="display: flex; align-items: center; gap: 6px;">
             <button onclick="decrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
-            <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+            <input type="number" id="crmProdQty-${p.id}" placeholder="Qtd" min="1" step="${((p.sale_unit||'un').toLowerCase() === 'kg') ? '0.1' : '1'}" value="1" onchange="calculateCrmGrandTotal()" oninput="calculateCrmGrandTotal()" style="width: 70px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
             <button onclick="incrementQty('crmProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
             <span id="crmProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">${formatMoney(p.price)}</span>
           </div>
@@ -1520,16 +1523,30 @@ async function openAddCrmPurchase(customerId) {
 }
 
 // Alternar seleção de produto e exibir/ocultar campo de quantidade
-function toggleCrmProduct(productId, productName, productPrice) {
+function toggleCrmProduct(productId, productName, productPrice, saleUnit = 'un') {
   const checkbox = document.getElementById(`crmProd-${productId}`);
   const qtyContainer = document.getElementById(`crmProdQty-${productId}-container`);
 
   if (checkbox.checked) {
+    const qtyInput = document.getElementById(`crmProdQty-${productId}`);
+    // Configure step/min based on sale unit
+    if (qtyInput) {
+      if ((saleUnit || '').toLowerCase() === 'kg') {
+        qtyInput.step = '0.1';
+        qtyInput.min = '0.1';
+      } else {
+        qtyInput.step = '1';
+        qtyInput.min = '1';
+      }
+      qtyInput.value = qtyInput.value || 1;
+    }
+
     crmSelectedProducts[productId] = {
       id: productId,
       name: productName,
       price: productPrice,
-      quantity: 1
+      quantity: parseFloat(qtyInput ? qtyInput.value : 1),
+      sale_unit: (saleUnit || 'un')
     };
     qtyContainer.style.display = 'inline-flex';
   } else {
@@ -1546,7 +1563,7 @@ function calculateCrmGrandTotal() {
 
   Object.values(crmSelectedProducts).forEach(product => {
     const qtyInput = document.getElementById(`crmProdQty-${product.id}`);
-    const quantity = parseInt(qtyInput.value) || 0;
+    const quantity = parseFloat(qtyInput.value) || 0;
     const subtotal = quantity * product.price;
 
     // Atualizar subtotal do produto
@@ -2005,6 +2022,7 @@ async function saveCrmPurchase() {
         product_name: product.name,
         quantity: product.quantity,
         unit_price: product.price,
+        sale_unit: product.sale_unit || 'un',
         purchase_date: purchaseDate,
         payment_method: paymentMethod,
         payment_status: paymentStatus,

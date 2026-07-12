@@ -235,6 +235,7 @@ function renderProducts() {
         }
       }
       
+      const unitLabel = ((p.sale_unit || 'un') || 'un').toUpperCase();
       return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer; position: relative;">' +
         '<div class="product-img" style="position: relative;">' + 
           imgHtml + 
@@ -246,6 +247,7 @@ function renderProducts() {
           '<div class="product-desc">' + (p.description || '') + '</div>' +
           '<div class="product-footer">' +
             priceHtml +
+            '<div style="font-size:12px;color:#666;margin-left:8px;display:inline-block">/' + unitLabel + '</div>' +
             '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
               (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
             '</button>' +

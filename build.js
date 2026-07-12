@@ -34,4 +34,19 @@ function copyDir(src, dest) {
 console.log('📁 Copying frontend files...');
 copyDir('frontend', outputDir);
 
+// Also create a copy inside the frontend folder (frontend/out)
+// This ensures Vercel finds the output directory whether project root
+// is repository root or the `frontend` subfolder.
+try {
+  const frontendOut = path.join('frontend', 'out');
+  if (fs.existsSync(frontendOut)) {
+    // remove existing frontend/out to avoid stale files
+    fs.rmSync(frontendOut, { recursive: true, force: true });
+  }
+  copyDir(outputDir, frontendOut);
+  console.log(`  ✓ ${frontendOut}`);
+} catch (err) {
+  console.warn('⚠️  Não foi possível criar frontend/out:', err.message);
+}
+
 console.log('✅ Build complete!');

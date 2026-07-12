@@ -78,7 +78,7 @@ router.get('/:id', async (req, res) => {
 // POST create product (admin)
 router.post('/', async (req, res) => {
   try {
-    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active } = req.body;
+    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active, sale_unit } = req.body;
 
     if (!name || price === undefined || stock === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -88,12 +88,13 @@ router.post('/', async (req, res) => {
     const finalPrice = parseFloat(price);
     const finalStock = parseInt(stock) || 0;
     const finalActive = active !== false && active !== 'false';
+    const finalSaleUnit = (sale_unit || 'un').toLowerCase();
 
     const result = await db.query(
-      `INSERT INTO products (name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `INSERT INTO products (name, category, price, stock, description, barcode, cod, weight, origin, brand, expiry, active, sale_unit)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
        RETURNING *`,
-      [name, category || null, finalPrice, finalStock, description || '', barcode || '', cod || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', finalActive]
+      [name, category || null, finalPrice, finalStock, description || '', barcode || '', cod || '', weight || '', origin || '', brand || 'Cia. Condimentos e Especiarias', expiry || '', finalActive, finalSaleUnit]
     );
 
     const product = result.rows[0];
@@ -181,12 +182,13 @@ router.delete('/:id/images/:imageId', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active } = req.body;
+    const { name, category, price, stock, description, images, barcode, cod, weight, origin, brand, expiry, active, sale_unit } = req.body;
 
     // Garantir tipos corretos
     const finalPrice = price !== undefined ? parseFloat(price) : undefined;
     const finalStock = stock !== undefined ? parseInt(stock) : undefined;
     const finalActive = active !== undefined ? (active !== false && active !== 'false') : undefined;
+    const finalSaleUnit = sale_unit !== undefined ? (sale_unit || 'un').toLowerCase() : undefined;
 
     const result = await db.query(
       `UPDATE products 
@@ -201,10 +203,11 @@ router.put('/:id', async (req, res) => {
            origin = COALESCE($9, origin),
            brand = COALESCE($10, brand),
            expiry = COALESCE($11, expiry),
-           active = COALESCE($12, active)
-       WHERE id = $13
+           active = COALESCE($12, active),
+           sale_unit = COALESCE($13, sale_unit)
+       WHERE id = $14
        RETURNING *`,
-      [name, category, finalPrice, finalStock, description, barcode, cod, weight, origin, brand, expiry, finalActive, id]
+      [name, category, finalPrice, finalStock, description, barcode, cod, weight, origin, brand, expiry, finalActive, finalSaleUnit, id]
     );
 
     if (result.rows.length === 0) {

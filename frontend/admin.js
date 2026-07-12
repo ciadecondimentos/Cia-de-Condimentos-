@@ -565,9 +565,18 @@ function openAddProduct() {
     </div>
     <div class="form-row-2">
       <div class="fg">
+        <label>Como será vendido *</label>
+        <select id="prodSaleUnit">
+          <option value="un">UN</option>
+          <option value="kg">KG</option>
+        </select>
+      </div>
+      <div class="fg">
         <label>Estoque *</label>
         <input type="number" id="prodStock" placeholder="0">
       </div>
+    </div>
+    <div class="form-row-2">
       <div class="fg">
         <label>Status</label>
         <select id="prodStatus">
@@ -687,6 +696,7 @@ function saveProduct() {
   const category = document.getElementById('prodCategory')?.value;
   const price = parseFloat(document.getElementById('prodPrice')?.value) || 0;
   const stock = parseInt(document.getElementById('prodStock')?.value) || 0;
+  const saleUnit = document.getElementById('prodSaleUnit')?.value || 'un';
   const status = document.getElementById('prodStatus')?.value === 'active';
   const description = document.getElementById('prodDescription')?.value?.trim();
   
@@ -753,6 +763,7 @@ function saveProduct() {
     category,
     price,
     stock,
+    sale_unit: saleUnit,
     active: status,
     description
   };
@@ -994,9 +1005,18 @@ function openEditProduct(product) {
     </div>
     <div class="form-row-2">
       <div class="fg">
+        <label>Como será vendido *</label>
+        <select id="prodSaleUnit">
+          <option value="un" ${((product.sale_unit || 'un').toLowerCase() === 'un') ? 'selected' : ''}>UN</option>
+          <option value="kg" ${((product.sale_unit || 'un').toLowerCase() === 'kg') ? 'selected' : ''}>KG</option>
+        </select>
+      </div>
+      <div class="fg">
         <label>Estoque *</label>
         <input type="number" id="prodStock" placeholder="0" value="${product.stock || 0}">
       </div>
+    </div>
+    <div class="form-row-2">
       <div class="fg">
         <label>Status</label>
         <select id="prodStatus">

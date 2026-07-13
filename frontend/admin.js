@@ -556,6 +556,7 @@ function openAddProduct() {
           <option>Ervas</option>
           <option>Molhos</option>
           <option>Especiarias</option>
+          <option>KG</option>
         </select>
       </div>
       <div class="fg">
@@ -996,6 +997,7 @@ function openEditProduct(product) {
           <option ${product.category === 'Ervas' ? 'selected' : ''}>Ervas</option>
           <option ${product.category === 'Molhos' ? 'selected' : ''}>Molhos</option>
           <option ${product.category === 'Especiarias' ? 'selected' : ''}>Especiarias</option>
+          <option ${product.category === 'KG' ? 'selected' : ''}>KG</option>
         </select>
       </div>
       <div class="fg">

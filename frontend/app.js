@@ -235,7 +235,9 @@ function renderProducts() {
         }
       }
       
-      const unitLabel = ((p.sale_unit || 'un') || 'un').toUpperCase();
+      var unitLabel = ((p.sale_unit || 'un') || 'un').toUpperCase();
+      var unitClass = unitLabel === 'KG' ? 'product-unit-kg' : 'product-unit-un';
+      var unitBadgeHtml = '<div class="product-unit-badge ' + unitClass + '">/' + unitLabel + '</div>';
       return '<div class="product-card" onclick="openProductDetail(' + JSON.stringify(p).replace(/"/g, '&quot;') + ')" style="cursor: pointer; position: relative;">' +
         '<div class="product-img" style="position: relative;">' + 
           imgHtml + 
@@ -246,8 +248,10 @@ function renderProducts() {
           '<div class="product-name">' + p.name + '</div>' +
           '<div class="product-desc">' + (p.description || '') + '</div>' +
           '<div class="product-footer">' +
-            priceHtml +
-            '<div style="font-size:12px;color:#666;margin-left:8px;display:inline-block">/' + unitLabel + '</div>' +
+            '<div class="product-price-group">' +
+              priceHtml +
+              unitBadgeHtml +
+            '</div>' +
             '<button class="add-cart-btn" onclick="event.stopPropagation(); addToCart(' + p.id + ')" ' + (p.stock === 0 ? 'disabled' : '') + '>' +
               (p.stock === 0 ? 'Esgotado' : 'Adicionar') +
             '</button>' +
@@ -354,7 +358,8 @@ function openProductDetail(product) {
   if (descEl) descEl.textContent = product.description || 'Sem descrição disponível';
   
   var priceEl = document.getElementById('productDetailPrice');
-  if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',');
+  var detailUnitLabel = ((product.sale_unit || 'un') || 'un').toUpperCase();
+  if (priceEl) priceEl.textContent = 'R$ ' + product.price.toFixed(2).replace('.', ',') + ' / ' + detailUnitLabel;
   
   var imgEl = document.getElementById('productDetailImage');
   if (imgEl) imgEl.innerHTML = imgHtml;
@@ -459,7 +464,8 @@ function openQuantityModal(product) {
   }
   
   var priceEl = document.getElementById('quantityProductPrice');
-  if (priceEl) priceEl.textContent = 'UN R$ ' + product.price.toFixed(2).replace('.', ',');
+  var quantityUnitLabel = ((product.sale_unit || 'un') || 'un').toUpperCase();
+  if (priceEl) priceEl.textContent = quantityUnitLabel + ' R$ ' + product.price.toFixed(2).replace('.', ',');
   
   var qtyDisplay = document.getElementById('quantityDisplay');
   if (qtyDisplay) qtyDisplay.textContent = selectedQuantity;

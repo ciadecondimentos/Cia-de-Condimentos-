@@ -146,7 +146,9 @@ function loadActivePromotions() {
 function renderProducts() {
   getProducts().then(function(products) {
     var filtered = products.filter(function(p) {
-      return p.active && (currentFilter === 'all' || p.category === currentFilter);
+      var matchesFilter = currentFilter === 'all' ||
+        (currentFilter === 'KG' ? ((p.sale_unit || '').toLowerCase() === 'kg') : p.category === currentFilter);
+      return p.active && matchesFilter;
     });
     if (currentSearch) {
       filtered = filtered.filter(function(p) {

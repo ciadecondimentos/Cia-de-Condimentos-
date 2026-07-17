@@ -542,16 +542,30 @@ function closeSupplierDetailModal() {
 // ==================== PURCHASES MANAGEMENT ====================
 
 // Alternar seleção de produto e exibir/ocultar campo de quantidade
-function toggleSupplierProduct(productId, productName, productPrice) {
+function toggleSupplierProduct(productId, productName, productPrice, saleUnit = 'un') {
   const checkbox = document.getElementById(`supplierProd-${productId}`);
   const qtyContainer = document.getElementById(`supplierProdQty-${productId}-container`);
 
   if (checkbox.checked) {
+    const qtyInput = document.getElementById(`supplierProdQty-${productId}`);
+    // Configure step/min based on sale unit
+    if (qtyInput) {
+      if ((saleUnit || '').toLowerCase() === 'kg') {
+        qtyInput.step = '0.1';
+        qtyInput.min = '0.1';
+      } else {
+        qtyInput.step = '1';
+        qtyInput.min = '1';
+      }
+      qtyInput.value = qtyInput.value || 1;
+    }
+
     suppliersSelectedProducts[productId] = {
       id: productId,
       name: productName,
       price: productPrice,
-      quantity: 1
+      quantity: parseFloat(qtyInput ? qtyInput.value : 1),
+      sale_unit: (saleUnit || 'un')
     };
     qtyContainer.style.display = 'inline-flex';
   } else {
@@ -568,7 +582,7 @@ function calculateSupplierGrandTotal() {
 
   Object.values(suppliersSelectedProducts).forEach(product => {
     const qtyInput = document.getElementById(`supplierProdQty-${product.id}`);
-    const quantity = parseInt(qtyInput.value) || 0;
+    const quantity = parseFloat(qtyInput.value) || 0;
     const subtotal = quantity * product.price;
 
     // Atualizar subtotal do produto
@@ -605,23 +619,35 @@ async function openAddSupplierPurchase(supplierId) {
     const response = await fetch(`${API_BASE}/products/admin/all`);
     const products = await response.json();
 
-    let productsHtml = products.map(p => `
-      <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="supplier-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
-        <input type="checkbox" id="supplierProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" onchange="toggleSupplierProduct(${p.id}, '${p.name}', ${p.price})">
-        <div style="flex: 1;">
-          <label for="supplierProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
-          <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
-        </div>
-        <div style="display: none;" id="supplierProdQty-${p.id}-container" class="supplier-qty-container">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <button onclick="decrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
-            <input type="number" id="supplierProdQty-${p.id}" placeholder="Qtd" min="1" step="1" value="1" onchange="calculateSupplierGrandTotal()" oninput="calculateSupplierGrandTotal()" style="width: 50px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
-            <button onclick="incrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
-            <span id="supplierProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">${formatMoney(p.price)}</span>
+    // Separar produtos por unidade
+    const productsUN = products.filter(p => (p.sale_unit || 'un').toLowerCase() === 'un');
+    const productsKG = products.filter(p => (p.sale_unit || 'un').toLowerCase() === 'kg');
+
+    const renderProductList = (productsList) => {
+      return productsList.map(p => `
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 10px; background: #fafafa;" class="supplier-product-item" data-product-name="${p.name.toLowerCase()}" data-product-id="${p.id}">
+          <input type="checkbox" id="supplierProd-${p.id}" data-product-id="${p.id}" data-product-name="${p.name}" data-product-price="${p.price}" data-sale-unit="${(p.sale_unit||'un')}" onchange="toggleSupplierProduct(${p.id}, '${p.name}', ${p.price}, '${(p.sale_unit||'un')}')">
+          <div style="flex: 1;">
+            <label for="supplierProd-${p.id}" style="cursor: pointer; font-weight: 600; margin-bottom: 4px; display: block;">${p.name}</label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size: 12px; color: #666;">R$ ${parseFloat(p.price).toFixed(2)}</span>
+              <span style="font-size:11px;color:#888;border:1px solid #eee;padding:2px 6px;border-radius:4px;background:#fff;">${((p.sale_unit||'un')||'un').toUpperCase()}</span>
+            </div>
+          </div>
+          <div style="display: none;" id="supplierProdQty-${p.id}-container" class="supplier-qty-container">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button onclick="decrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">−</button>
+              <input type="number" id="supplierProdQty-${p.id}" placeholder="Qtd" min="1" step="${((p.sale_unit||'un').toLowerCase() === 'kg') ? '0.1' : '1'}" value="1" onchange="calculateSupplierGrandTotal()" oninput="calculateSupplierGrandTotal()" style="width: 70px; text-align: center; padding: 6px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+              <button onclick="incrementQty('supplierProdQty-${p.id}')" class="btn btn-sm" style="min-width: 36px; padding: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-weight: 600;">+</button>
+              <span id="supplierProdSubtotal-${p.id}" style="margin-left: 10px; font-weight: 700; color: #2c3e50;">${formatMoney(p.price)}</span>
+            </div>
           </div>
         </div>
-      </div>
-    `).join('');
+      `).join('');
+    };
+
+    const productsUnHtml = renderProductList(productsUN);
+    const productsKgHtml = renderProductList(productsKG);
 
     body.innerHTML = `
       <div style="margin-bottom: 15px;">
@@ -630,11 +656,31 @@ async function openAddSupplierPurchase(supplierId) {
         <div style="font-size: 12px; color: #999; margin-top: 4px;" id="supplierSearchResults">Mostrando ${products.length} produto(s)</div>
       </div>
 
+      <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+        <button type="button" id="supplierToggleUnBtn" onclick="toggleSupplierProductTable('un')" style="flex: 1; padding: 12px; background: var(--amarelo, #F5C518); color: #333; border: 2px solid var(--amarelo, #F5C518); border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+          📦 Produtos em UN (${productsUN.length})
+        </button>
+        <button type="button" id="supplierToggleKgBtn" onclick="toggleSupplierProductTable('kg')" style="flex: 1; padding: 12px; background: #e8e8e8; color: #333; border: 2px solid #ddd; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px; transition: all 0.2s;">
+          ⚖️ Produtos em KG (${productsKG.length})
+        </button>
+      </div>
+
       <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
-        <div style="margin-bottom: 15px;">
-          <label style="font-weight: 600; display: block; margin-bottom: 10px;">📦 Selecione os Produtos *</label>
-          <div id="supplierProductsList">
-            ${productsHtml}
+        <div id="supplierProductsUNContainer" style="display: block;">
+          <div style="margin-bottom: 15px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">📦 Produtos em UN</label>
+            <div id="supplierProductsUNList" class="supplier-products-table">
+              ${productsUnHtml}
+            </div>
+          </div>
+        </div>
+
+        <div id="supplierProductsKGContainer" style="display: none;">
+          <div style="margin-bottom: 15px;">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">⚖️ Produtos em KG</label>
+            <div id="supplierProductsKGList" class="supplier-products-table">
+              ${productsKgHtml}
+            </div>
           </div>
         </div>
       </div>
@@ -695,6 +741,24 @@ async function openAddSupplierPurchase(supplierId) {
 }
 
 // Filtrar produtos por busca
+// Alternar visibilidade das tabelas de produtos UN/KG
+function toggleSupplierProductTable(type) {
+  const unContainer = document.getElementById('supplierProductsUNContainer');
+  const kgContainer = document.getElementById('supplierProductsKGContainer');
+  const unBtn = document.getElementById('supplierToggleUnBtn');
+  const kgBtn = document.getElementById('supplierToggleKgBtn');
+
+  if (type === 'un') {
+    unContainer.style.display = unContainer.style.display === 'none' ? 'block' : 'none';
+    unBtn.style.background = unContainer.style.display === 'block' ? 'var(--amarelo, #F5C518)' : '#e8e8e8';
+    unBtn.style.borderColor = unContainer.style.display === 'block' ? 'var(--amarelo, #F5C518)' : '#ddd';
+  } else if (type === 'kg') {
+    kgContainer.style.display = kgContainer.style.display === 'none' ? 'block' : 'none';
+    kgBtn.style.background = kgContainer.style.display === 'block' ? 'var(--amarelo, #F5C518)' : '#e8e8e8';
+    kgBtn.style.borderColor = kgContainer.style.display === 'block' ? 'var(--amarelo, #F5C518)' : '#ddd';
+  }
+}
+
 function filterSupplierProducts(query, totalProducts) {
   const items = document.querySelectorAll('.supplier-product-item');
   let visibleCount = 0;

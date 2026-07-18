@@ -1146,6 +1146,21 @@ tr:hover td { background: #faf7f2; }
   </div>
 </div>
 
+<!-- MODAL: TRANSAÇÃO FLUXO DE CAIXA -->
+<div class="modal-overlay" id="cashflowModal">
+  <div class="modal" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 id="cashflowModalTitle">➕ Registrar Entrada</h3>
+      <button class="close" onclick="closeCashflowModal()">✕</button>
+    </div>
+    <div class="modal-body" id="cashflowModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeCashflowModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCashflowTransaction()">Salvar Transação</button>
+    </div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
@@ -1176,6 +1191,9 @@ tr:hover td { background: #faf7f2; }
   </div>
   <div class="nav-item" onclick="showPage('suppliers', this)">
     <span class="nav-icon">🏭</span> Central de Fornecedores
+  </div>
+  <div class="nav-item" onclick="showPage('cashflow', this)">
+    <span class="nav-icon">💰</span> Fluxo de Caixa
   </div>
   <div class="sidebar-bottom">
     <div class="store-link" onclick="window.open('loja.html','_blank')">
@@ -1670,6 +1688,79 @@ tr:hover td { background: #faf7f2; }
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- FLUXO DE CAIXA -->
+    <div class="page" id="page-cashflow">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+        <h2 style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 900; color: var(--marrom);">💰 Fluxo de Caixa</h2>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary" onclick="openAddCashflowModal('entrada')">➕ Entrada</button>
+          <button class="btn btn-secondary" onclick="openAddCashflowModal('saida')">➖ Saída</button>
+          <button class="btn btn-secondary" onclick="loadCashflowData()">🔄 Atualizar</button>
+        </div>
+      </div>
+
+      <!-- RESUMO FINANCEIRO -->
+      <div class="stats-grid" id="cashflowSummary" style="margin-bottom: 32px;">
+        <div class="stat-card green">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="cashflow-total-entrada">R$ 0.00</div>
+          <div class="stat-label">Total de Entradas</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-icon">📉</div>
+          <div class="stat-value" id="cashflow-total-saida">R$ 0.00</div>
+          <div class="stat-label">Total de Saídas</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-icon">💹</div>
+          <div class="stat-value" id="cashflow-saldo">R$ 0.00</div>
+          <div class="stat-label">Saldo Líquido</div>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div style="background: white; padding: 16px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <input type="date" id="cashflowFilterStart" placeholder="Data Inicial" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+        <input type="date" id="cashflowFilterEnd" placeholder="Data Final" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+        <select id="cashflowFilterType" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          <option value="">Todos os Tipos</option>
+          <option value="entrada">Entradas</option>
+          <option value="saida">Saídas</option>
+        </select>
+        <select id="cashflowFilterCategory" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+          <option value="">Todas as Categorias</option>
+          <option value="combustivel">🛢️ Combustível</option>
+          <option value="produto">📦 Compra de Produto</option>
+          <option value="venda">💵 Venda</option>
+          <option value="devolucao">↩️ Devolução</option>
+          <option value="outro">📝 Outro</option>
+        </select>
+        <button class="btn btn-secondary" onclick="filterCashflowData()">🔍 Filtrar</button>
+        <button class="btn btn-ghost" onclick="clearCashflowFilters()">✕ Limpar</button>
+      </div>
+
+      <!-- TABELA DE TRANSAÇÕES -->
+      <div style="background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <thead style="background: #f5f5f5; border-bottom: 2px solid #e0e0e0;">
+            <tr>
+              <th style="padding: 12px; text-align: left; font-weight: 600; color: #333; font-size: 13px;">Data</th>
+              <th style="padding: 12px; text-align: left; font-weight: 600; color: #333; font-size: 13px;">Tipo</th>
+              <th style="padding: 12px; text-align: left; font-weight: 600; color: #333; font-size: 13px;">Categoria</th>
+              <th style="padding: 12px; text-align: left; font-weight: 600; color: #333; font-size: 13px;">Descrição</th>
+              <th style="padding: 12px; text-align: right; font-weight: 600; color: #333; font-size: 13px;">Valor</th>
+              <th style="padding: 12px; text-align: center; font-weight: 600; color: #333; font-size: 13px;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="cashflowTableBody">
+            <tr>
+              <td colspan="6" style="padding: 24px; text-align: center; color: #999;">Nenhuma transação registrada</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 

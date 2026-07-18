@@ -106,7 +106,8 @@ function showPage(pageId, buttonElement) {
     'customers': 'Clientes',
     'crm': 'Central de Clientes',
     'reports': 'Relatórios & Análises',
-    'suppliers': 'Central de Fornecedores'
+    'suppliers': 'Central de Fornecedores',
+    'cashflow': 'Fluxo de Caixa'
   };
   
   document.getElementById('pageTitle').textContent = titles[pageId] || 'Dashboard';
@@ -134,6 +135,8 @@ function showPage(pageId, buttonElement) {
     initializeSuppliers();
   } else if (pageId === 'reports') {
     loadReportsData();
+  } else if (pageId === 'cashflow') {
+    loadCashflowData();
   }
 }
 
@@ -3237,6 +3240,272 @@ function closeConfirm() {
 }
 
 
+
+// ==================== FLUXO DE CAIXA ====================
+
+// Abrir modal para registrar entrada/saída
+function openAddCashflowModal(type) {
+  const modal = document.getElementById('cashflowModal');
+  const title = document.getElementById('cashflowModalTitle');
+  const body = document.getElementById('cashflowModalBody');
+
+  const isEntrada = type === 'entrada';
+  title.textContent = isEntrada ? '➕ Registrar Entrada' : '➖ Registrar Saída';
+  
+  // Categorias conforme o tipo
+  let categoryOptions = '';
+  if (isEntrada) {
+    categoryOptions = `
+      <option value="venda">💵 Venda</option>
+      <option value="devolucao">↩️ Devolução</option>
+      <option value="outro">📝 Outro</option>
+    `;
+  } else {
+    categoryOptions = `
+      <option value="combustivel">🛢️ Combustível</option>
+      <option value="produto">📦 Compra de Produto</option>
+      <option value="outro">📝 Outro</option>
+    `;
+  }
+
+  body.innerHTML = `
+    <div class="fg">
+      <label>Data *</label>
+      <input type="date" id="cashflowDate" value="${getLocalDateString(new Date())}" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+    </div>
+
+    <div class="fg">
+      <label>Categoria *</label>
+      <select id="cashflowCategory" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+        ${categoryOptions}
+      </select>
+    </div>
+
+    <div class="fg">
+      <label>Descrição</label>
+      <input type="text" id="cashflowDescription" placeholder="Ex: Combustível para entrega..." style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+    </div>
+
+    <div class="fg">
+      <label>Valor (R$) *</label>
+      <input type="number" id="cashflowValue" placeholder="0.00" min="0" step="0.01" style="padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 100%;">
+    </div>
+  `;
+
+  modal.dataset.type = type;
+  modal.classList.add('open');
+}
+
+// Fechar modal de cashflow
+function closeCashflowModal() {
+  document.getElementById('cashflowModal').classList.remove('open');
+  document.getElementById('cashflowModalBody').innerHTML = '';
+}
+
+// Salvar transação de cashflow
+async function saveCashflowTransaction() {
+  const modal = document.getElementById('cashflowModal');
+  const type = modal.dataset.type;
+  const date = document.getElementById('cashflowDate').value;
+  const category = document.getElementById('cashflowCategory').value;
+  const description = document.getElementById('cashflowDescription').value;
+  const value = parseFloat(document.getElementById('cashflowValue').value);
+
+  if (!date || !category || !value || value <= 0) {
+    showToast('Preencha todos os campos obrigatórios', 'warning');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/cashflow/transactions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: type,
+        category: category,
+        description: description || '',
+        value: value,
+        transaction_date: date
+      })
+    });
+
+    if (response.ok) {
+      showToast('Transação registrada com sucesso!', 'success');
+      closeCashflowModal();
+      loadCashflowData();
+    } else {
+      showToast('Erro ao registrar transação', 'error');
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    showToast('Erro ao registrar transação', 'error');
+  }
+}
+
+// Carregar dados de cashflow
+async function loadCashflowData() {
+  try {
+    const response = await fetch(`${API_BASE}/cashflow/transactions`);
+    const transactions = await response.json();
+
+    let totalEntrada = 0;
+    let totalSaida = 0;
+    let tableHtml = '';
+
+    transactions.forEach(t => {
+      const value = parseFloat(t.value);
+      const isEntrada = t.type === 'entrada';
+      
+      if (isEntrada) {
+        totalEntrada += value;
+      } else {
+        totalSaida += value;
+      }
+
+      const categoryEmoji = {
+        'combustivel': '🛢️',
+        'produto': '📦',
+        'venda': '💵',
+        'devolucao': '↩️',
+        'outro': '📝'
+      }[t.category] || '📝';
+
+      const typeLabel = isEntrada ? '📈 Entrada' : '📉 Saída';
+      const typeColor = isEntrada ? '#00b050' : '#c00000';
+
+      tableHtml += `
+        <tr style="border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 12px; font-size: 13px; color: #666;">${new Date(t.transaction_date).toLocaleDateString('pt-BR')}</td>
+          <td style="padding: 12px; font-size: 13px;"><span style="color: ${typeColor}; font-weight: 600;">${typeLabel}</span></td>
+          <td style="padding: 12px; font-size: 13px;">${categoryEmoji} ${t.category.charAt(0).toUpperCase() + t.category.slice(1)}</td>
+          <td style="padding: 12px; font-size: 13px;">${t.description || '-'}</td>
+          <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 13px; color: ${typeColor};">R$ ${value.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">
+            <button class="btn btn-sm btn-ghost" onclick="deleteCashflowTransaction(${t.id})" style="color: #c00000;">🗑️</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    const saldo = totalEntrada - totalSaida;
+    const saldoColor = saldo >= 0 ? '#00b050' : '#c00000';
+
+    document.getElementById('cashflow-total-entrada').textContent = `R$ ${totalEntrada.toFixed(2)}`;
+    document.getElementById('cashflow-total-saida').textContent = `R$ ${totalSaida.toFixed(2)}`;
+    document.getElementById('cashflow-saldo').textContent = `R$ ${saldo.toFixed(2)}`;
+    document.getElementById('cashflow-saldo').style.color = saldoColor;
+
+    const tbody = document.getElementById('cashflowTableBody');
+    tbody.innerHTML = tableHtml || '<tr><td colspan="6" style="padding: 24px; text-align: center; color: #999;">Nenhuma transação registrada</td></tr>';
+  } catch (error) {
+    console.error('Erro ao carregar dados:', error);
+    showToast('Erro ao carregar transações', 'error');
+  }
+}
+
+// Filtrar dados de cashflow
+async function filterCashflowData() {
+  try {
+    const startDate = document.getElementById('cashflowFilterStart').value;
+    const endDate = document.getElementById('cashflowFilterEnd').value;
+    const type = document.getElementById('cashflowFilterType').value;
+    const category = document.getElementById('cashflowFilterCategory').value;
+
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    if (type) params.append('type', type);
+    if (category) params.append('category', category);
+
+    const response = await fetch(`${API_BASE}/cashflow/transactions?${params.toString()}`);
+    const transactions = await response.json();
+
+    let totalEntrada = 0;
+    let totalSaida = 0;
+    let tableHtml = '';
+
+    transactions.forEach(t => {
+      const value = parseFloat(t.value);
+      const isEntrada = t.type === 'entrada';
+      
+      if (isEntrada) {
+        totalEntrada += value;
+      } else {
+        totalSaida += value;
+      }
+
+      const categoryEmoji = {
+        'combustivel': '🛢️',
+        'produto': '📦',
+        'venda': '💵',
+        'devolucao': '↩️',
+        'outro': '📝'
+      }[t.category] || '📝';
+
+      const typeLabel = isEntrada ? '📈 Entrada' : '📉 Saída';
+      const typeColor = isEntrada ? '#00b050' : '#c00000';
+
+      tableHtml += `
+        <tr style="border-bottom: 1px solid #f0f0f0;">
+          <td style="padding: 12px; font-size: 13px; color: #666;">${new Date(t.transaction_date).toLocaleDateString('pt-BR')}</td>
+          <td style="padding: 12px; font-size: 13px;"><span style="color: ${typeColor}; font-weight: 600;">${typeLabel}</span></td>
+          <td style="padding: 12px; font-size: 13px;">${categoryEmoji} ${t.category.charAt(0).toUpperCase() + t.category.slice(1)}</td>
+          <td style="padding: 12px; font-size: 13px;">${t.description || '-'}</td>
+          <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 13px; color: ${typeColor};">R$ ${value.toFixed(2)}</td>
+          <td style="padding: 12px; text-align: center; font-size: 13px;">
+            <button class="btn btn-sm btn-ghost" onclick="deleteCashflowTransaction(${t.id})" style="color: #c00000;">🗑️</button>
+          </td>
+        </tr>
+      `;
+    });
+
+    const saldo = totalEntrada - totalSaida;
+    const saldoColor = saldo >= 0 ? '#00b050' : '#c00000';
+
+    document.getElementById('cashflow-total-entrada').textContent = `R$ ${totalEntrada.toFixed(2)}`;
+    document.getElementById('cashflow-total-saida').textContent = `R$ ${totalSaida.toFixed(2)}`;
+    document.getElementById('cashflow-saldo').textContent = `R$ ${saldo.toFixed(2)}`;
+    document.getElementById('cashflow-saldo').style.color = saldoColor;
+
+    const tbody = document.getElementById('cashflowTableBody');
+    tbody.innerHTML = tableHtml || '<tr><td colspan="6" style="padding: 24px; text-align: center; color: #999;">Nenhuma transação encontrada</td></tr>';
+  } catch (error) {
+    console.error('Erro ao filtrar:', error);
+    showToast('Erro ao filtrar transações', 'error');
+  }
+}
+
+// Limpar filtros
+function clearCashflowFilters() {
+  document.getElementById('cashflowFilterStart').value = '';
+  document.getElementById('cashflowFilterEnd').value = '';
+  document.getElementById('cashflowFilterType').value = '';
+  document.getElementById('cashflowFilterCategory').value = '';
+  loadCashflowData();
+}
+
+// Deletar transação
+async function deleteCashflowTransaction(transactionId) {
+  if (!confirm('Tem certeza que deseja deletar esta transação?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE}/cashflow/transactions/${transactionId}`, {
+      method: 'DELETE'
+    });
+
+    if (response.ok) {
+      showToast('Transação deletada com sucesso!', 'success');
+      loadCashflowData();
+    } else {
+      showToast('Erro ao deletar transação', 'error');
+    }
+  } catch (error) {
+    console.error('Erro:', error);
+    showToast('Erro ao deletar transação', 'error');
+  }
+}
 
 // ==================== RELOAD ====================
 function reloadAll() {

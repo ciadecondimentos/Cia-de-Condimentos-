@@ -4,6 +4,7 @@
   "description": "Render-compatible wrapper for the backend",
   "main": "index.js",
   "scripts": {
+    "preinstall": "npm install --prefix \"./../BACKEND PARA VER SE É UTIL PARA RESOLVER O PROBLEMA DO PIX/backend\"",
     "start": "node render-start.js",
     "dev": "node render-start.js",
     "migrate": "node migrate.js",
